@@ -36,16 +36,12 @@ struct CameraRowView: View {
                 BatteryView(percentage: camera.status.batteryPercentage)
             }
 
-            // Recording indicator
-            if camera.status.recordingStatus.isRecording {
-                Image(systemName: "record.circle.fill")
-                    .foregroundStyle(.red)
-                    .symbolEffect(.pulse)
-            }
-
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
+            // Recording indicator — always occupies space so layout doesn't shift.
+            // Opacity hides it when not recording; isActive stops the pulse animation too.
+            Image(systemName: "record.circle.fill")
+                .foregroundStyle(.red)
+                .symbolEffect(.pulse, isActive: camera.status.recordingStatus.isRecording)
+                .opacity(camera.status.recordingStatus.isRecording ? 1 : 0)
         }
         .padding(.vertical, 2)
     }

@@ -6,7 +6,7 @@ struct ContentView: View {
 
     var body: some View {
         NavigationStack {
-            CameraListView()
+            CameraListView(manager: manager)
         }
     }
 }

@@ -56,6 +56,17 @@ public final class OsmoCameraManager: NSObject {
         centralManager = CBCentralManager(delegate: self, queue: .main)
     }
 
+#if DEBUG
+    /// Preview/test initializer. Skips UserDefaults and populates cameras directly.
+    /// BLE is still initialised but will report `.poweredOff` / `.unsupported` in a
+    /// non-device context, so no scanning or reconnect logic will run.
+    internal convenience init(previewCameras: [OsmoCamera]) {
+        self.init()
+        cameras = previewCameras
+        stalenessTimeout = 0   // disable watchdog so fixture states stay put
+    }
+#endif
+
     // MARK: - Scanning
 
     public func startScanning() {

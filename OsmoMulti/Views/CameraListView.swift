@@ -1,12 +1,26 @@
 import DJIOsmoKit
 import SwiftUI
 
+#if DEBUG
+#Preview("Camera List") {
+    let manager = OsmoCameraManager.makePreview()
+    NavigationStack {
+        CameraListView(manager: manager)
+    }
+    .environment(manager)   // child views (SettingsView etc.) read from environment
+}
+#endif
+
 /// Main screen: list of all paired cameras grouped by enabled/disabled status,
 /// with global controls at the top.
 struct CameraListView: View {
 
-    @State private var viewModel = CameraListViewModel()
+    @State private var viewModel: CameraListViewModel
     @State private var showSettings = false
+
+    init(manager: OsmoCameraManager = .shared) {
+        _viewModel = State(wrappedValue: CameraListViewModel(manager: manager))
+    }
 
     var body: some View {
         VStack(spacing: 0) {
