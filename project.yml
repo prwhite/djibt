@@ -1,0 +1,55 @@
+name: OsmoMulti
+options:
+  bundleIdPrefix: me.payton
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+
+targets:
+  DJIOsmoKit:
+    type: framework
+    platform: iOS
+    sources:
+      - path: DJIOsmoKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: me.payton.DJIOsmoKit
+        GENERATE_INFOPLIST_FILE: YES
+        SKIP_INSTALL: YES
+
+  DJIOsmoKitTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: DJIOsmoKitTests
+    dependencies:
+      - target: DJIOsmoKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: me.payton.DJIOsmoKitTests
+        GENERATE_INFOPLIST_FILE: YES
+
+  OsmoMulti:
+    type: application
+    platform: iOS
+    sources:
+      - path: OsmoMulti
+    info:
+      path: OsmoMulti/Info.plist
+      properties:
+        NSBluetoothAlwaysUsageDescription: "OsmoMulti requires Bluetooth to connect to and control DJI Osmo cameras."
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    dependencies:
+      - target: DJIOsmoKit
+        embed: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: me.payton.OsmoMulti
