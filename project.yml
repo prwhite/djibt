@@ -8,6 +8,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.9"
+    DEVELOPMENT_TEAM: L485BLVU52
+    CODE_SIGN_STYLE: Automatic
 
 targets:
   DJIOsmoKit:

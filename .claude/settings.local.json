@@ -54,7 +54,10 @@
       "Bash(pip3 install pymobiledevice3 --break-system-packages)",
       "WebFetch(domain:support.dji.com)",
       "WebFetch(domain:forum.dji.com)",
-      "WebFetch(domain:gps-for-action.pages.dev)"
+      "WebFetch(domain:gps-for-action.pages.dev)",
+      "WebFetch",
+      "WebSearch",
+      "Search"
     ]
   }
 }
