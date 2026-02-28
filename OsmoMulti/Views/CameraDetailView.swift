@@ -9,6 +9,9 @@ struct CameraDetailView: View {
 
     var body: some View {
         List {
+            if camera.connectionState == .failed {
+                retrySection
+            }
             statusSection
             controlsSection
             diagnosticsSection
@@ -17,18 +20,51 @@ struct CameraDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
+    // MARK: - Retry Banner (failed state)
+
+    private var retrySection: some View {
+        Section {
+            Button {
+                viewModel.retryCamera(camera)
+            } label: {
+                HStack {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.red)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Connection Failed")
+                            .font(.headline)
+                        Text("Gave up after \(camera.retryCount) attempt(s). Tap to retry.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "arrow.clockwise")
+                        .foregroundStyle(.blue)
+                }
+            }
+        }
+    }
+
     // MARK: - Status
+
+    private var hasLiveStatus: Bool {
+        camera.connectionState == .connected || camera.connectionState == .sleeping
+    }
 
     private var statusSection: some View {
         Section("Status") {
             LabeledContent("Connection", value: camera.connectionState.displayLabel)
-            LabeledContent("Mode", value: camera.status.mode?.displayName ?? "Unknown")
-            LabeledContent("Battery", value: "\(camera.status.batteryPercentage)%")
+            LabeledContent("Mode", value: hasLiveStatus ? (camera.status.mode?.displayName ?? "Unknown") : "—")
+            LabeledContent("Battery", value: hasLiveStatus ? "\(camera.status.batteryPercentage)%" : "—")
 
-            if camera.status.recordingStatus.isRecording {
-                LabeledContent("Recording", value: formatDuration(camera.status.recordingSeconds))
+            if hasLiveStatus {
+                if camera.status.recordingStatus.isRecording {
+                    LabeledContent("Recording", value: formatDuration(camera.status.recordingSeconds))
+                } else {
+                    LabeledContent("Recording", value: camera.status.recordingStatus == .liveView ? "Live View" : "Idle")
+                }
             } else {
-                LabeledContent("Recording", value: camera.status.recordingStatus == .liveView ? "Live View" : "Idle")
+                LabeledContent("Recording", value: "—")
             }
 
             if let lastSeen = camera.lastSeenDate {
@@ -56,12 +92,10 @@ struct CameraDetailView: View {
             .disabled(!camera.connectionState.isUsable)
 
             Button {
-                Task {
-                    if camera.connectionState == .sleeping {
-                        try? await camera.sendWake()
-                    } else {
-                        try? await camera.sendSleep()
-                    }
+                if camera.connectionState == .sleeping {
+                    viewModel.wakeCamera(camera)
+                } else {
+                    Task { try? await camera.sendSleep() }
                 }
             } label: {
                 Label(camera.connectionState == .sleeping ? "Wake Camera" : "Sleep Camera",
@@ -98,7 +132,7 @@ struct CameraDetailView: View {
     private func forceReconnect() async {
         camera.forceDisconnect()
         try? await Task.sleep(for: .seconds(1))
-        await OsmoCameraManager.shared.connect(camera: camera)
+        await viewModel.retryCameraAsync(camera)
     }
 
     private func formatDuration(_ seconds: Int) -> String {

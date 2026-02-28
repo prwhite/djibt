@@ -22,6 +22,7 @@ public extension OsmoCameraManager {
             recordingStatus: .recording,
             recordingSeconds: 142,
             batteryPercentage: 87,
+            powerMode: .normal,
             rawMode: CameraMode.video.rawValue
         )
 
@@ -34,6 +35,7 @@ public extension OsmoCameraManager {
             recordingStatus: .liveView,
             recordingSeconds: 0,
             batteryPercentage: 14,
+            powerMode: .normal,
             rawMode: CameraMode.photo.rawValue
         )
 
@@ -46,6 +48,7 @@ public extension OsmoCameraManager {
             recordingStatus: .liveView,
             recordingSeconds: 0,
             batteryPercentage: 55,
+            powerMode: .normal,
             rawMode: CameraMode.video.rawValue
         )
 
@@ -62,6 +65,7 @@ public extension OsmoCameraManager {
             recordingStatus: .screenOff,
             recordingSeconds: 0,
             batteryPercentage: 62,
+            powerMode: .sleep,
             rawMode: CameraMode.video.rawValue
         )
 

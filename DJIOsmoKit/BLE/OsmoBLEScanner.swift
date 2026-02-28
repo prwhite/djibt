@@ -89,10 +89,7 @@ extension OsmoBLEScanner: CBCentralManagerDelegate {
                                 didDiscover peripheral: CBPeripheral,
                                 advertisementData: [String: Any],
                                 rssi RSSI: NSNumber) {
-        guard OsmoBLEScanner.isDJICamera(advertisementData) else {
-            OsmoLog.scan.debug("Rejected peripheral \(peripheral.identifier, privacy: .public) — not a DJI camera")
-            return
-        }
+        guard OsmoBLEScanner.isDJICamera(advertisementData) else { return }
         let rssiValue = RSSI.intValue
         guard rssiValue >= -80 else {
             OsmoLog.scan.debug("Rejected peripheral \(peripheral.identifier, privacy: .public) — RSSI \(rssiValue) dBm below threshold")

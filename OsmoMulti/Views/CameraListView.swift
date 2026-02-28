@@ -91,6 +91,13 @@ struct CameraListView: View {
         } label: {
             CameraRowView(camera: camera)
         }
+        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                viewModel.removeCamera(camera)
+            } label: {
+                Label("Remove", systemImage: "trash")
+            }
+        }
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button {
                 viewModel.toggleEnabled(camera)
@@ -99,12 +106,6 @@ struct CameraListView: View {
                       systemImage: enabled ? "pause.circle" : "play.circle")
             }
             .tint(enabled ? .orange : .green)
-
-            Button(role: .destructive) {
-                viewModel.removeCamera(camera)
-            } label: {
-                Label("Remove", systemImage: "trash")
-            }
         }
     }
 

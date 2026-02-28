@@ -24,15 +24,15 @@ struct CameraRowView: View {
                     Text(subtitleText)
                         .font(.caption)
                         .lineLimit(1)
-                        .foregroundStyle(isSubtitleStale ? .orange : .secondary)
+                        .foregroundStyle(subtitleColor)
                 }
             }
             .fixedSize(horizontal: false, vertical: true)
 
             Spacer()
 
-            // Battery
-            if camera.connectionState == .connected {
+            // Battery (show for connected and sleeping — last-known value is still valid)
+            if camera.connectionState == .connected || camera.connectionState == .sleeping {
                 BatteryView(percentage: camera.status.batteryPercentage)
             }
 
@@ -56,7 +56,8 @@ struct CameraRowView: View {
              .handshaking,
              .connecting,
              .scanning:      return .yellow
-        case .disconnected:  return .red
+        case .disconnected,
+             .failed:        return .red
         }
     }
 
@@ -71,6 +72,11 @@ struct CameraRowView: View {
         (elapsedSeconds ?? 0) >= 2
     }
 
+    private var subtitleColor: Color {
+        if camera.connectionState == .failed { return .red }
+        return isSubtitleStale ? .orange : .secondary
+    }
+
     private var subtitleText: String {
         switch camera.connectionState {
         case .connected:
@@ -79,6 +85,8 @@ struct CameraRowView: View {
                 return "\(mode) · \(elapsed)s ago"
             }
             return mode
+        case .failed:
+            return "Connection Failed · Tap to retry"
         default:
             return camera.connectionState.displayLabel
         }

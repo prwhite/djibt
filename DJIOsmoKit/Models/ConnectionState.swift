@@ -16,6 +16,8 @@ public enum ConnectionState: Equatable {
     case sleeping
     /// Connection lost; automatic reconnection is in progress.
     case reconnecting
+    /// Maximum reconnection retries exceeded. Manual intervention required.
+    case failed
 
     public var isUsable: Bool {
         self == .connected
@@ -30,6 +32,7 @@ public enum ConnectionState: Equatable {
         case .connected:     return "Connected"
         case .sleeping:      return "Sleeping"
         case .reconnecting:  return "Reconnecting…"
+        case .failed:        return "Connection Failed"
         }
     }
 }

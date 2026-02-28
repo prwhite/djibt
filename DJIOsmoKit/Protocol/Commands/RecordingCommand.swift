@@ -18,8 +18,15 @@ enum RecordingCommand {
         build(deviceID: deviceID, control: 0x01, seq: seq)
     }
 
+    /// Payload matches record_control_command_frame_t (packed, 9 bytes):
+    ///   uint32_t device_id      — controller type (1 = external controller)
+    ///   uint8_t  record_ctrl    — 0 = start, 1 = stop
+    ///   uint8_t  reserved[4]
     private static func build(deviceID: UInt8, control: UInt8, seq: UInt16) -> Data {
-        let payload = Data([deviceID, control, 0x00, 0x00])
+        var payload = Data()
+        payload.appendLE(UInt32(deviceID))                         // device_id (4 bytes)
+        payload.append(control)                                    // record_ctrl
+        payload.append(contentsOf: [0x00, 0x00, 0x00, 0x00])      // reserved[4]
         return FrameBuilder.build(OutgoingFrame(
             cmdType: 0x02,
             seq: seq,

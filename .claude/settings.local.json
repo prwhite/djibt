@@ -57,7 +57,12 @@
       "WebFetch(domain:gps-for-action.pages.dev)",
       "WebFetch",
       "WebSearch",
-      "Search"
+      "Search",
+      "Bash(curl -sL https://raw.githubusercontent.com/dji-sdk/Osmo-GPS-Controller-Demo/main/logic/connect_logic.c)",
+      "Bash(curl -sL https://raw.githubusercontent.com/dji-sdk/Osmo-GPS-Controller-Demo/main/data/dji_protocol_data_structures.h)",
+      "Bash(curl -sL https://api.github.com/repos/dji-sdk/Osmo-GPS-Controller-Demo/git/trees/main?recursive=1)",
+      "Bash(python3 -c \"import sys,json; [print\\(x[''path'']\\) for x in json.loads\\(sys.stdin.read\\(\\)\\)[''tree'']]\")",
+      "Bash(curl -sL https://raw.githubusercontent.com/dji-sdk/Osmo-GPS-Controller-Demo/main/protocol/dji_protocol_data_structures.h)"
     ]
   }
 }

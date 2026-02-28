@@ -17,7 +17,7 @@ struct GlobalControlsView: View {
             Divider().frame(height: 36)
 
             ControlButton(systemImage: "camera", label: "Photo",
-                          tint: .primary) { /* photo via shutter */ }
+                          tint: .primary) { viewModel.photoAll() }
 
             Divider().frame(height: 36)
 

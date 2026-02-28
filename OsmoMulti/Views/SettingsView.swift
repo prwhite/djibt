@@ -6,6 +6,8 @@ struct SettingsView: View {
     @Environment(OsmoCameraManager.self) var manager
     @Environment(\.dismiss) private var dismiss
 
+    @State private var showClearConfirmation = false
+
     private let timeoutOptions: [(label: String, seconds: TimeInterval)] = [
         ("2 seconds",  2),
         ("3 seconds",  3),
@@ -13,6 +15,13 @@ struct SettingsView: View {
         ("10 seconds", 10),
         ("30 seconds", 30),
         ("Off",        0),
+    ]
+
+    private let retryOptions: [(label: String, count: Int)] = [
+        ("3 attempts",  3),
+        ("5 attempts",  5),
+        ("10 attempts", 10),
+        ("Unlimited",   0),
     ]
 
     var body: some View {
@@ -33,6 +42,32 @@ struct SettingsView: View {
                 } footer: {
                     Text("How long a camera can go without sending a status update before the connection is reset and the app reconnects. Set to Off to rely on Bluetooth's own timeout (~10–30 s).")
                 }
+
+                Section {
+                    Picker("Max Retries", selection: Binding(
+                        get: { manager.maxRetries },
+                        set: { manager.maxRetries = $0 }
+                    )) {
+                        ForEach(retryOptions, id: \.count) { option in
+                            Text(option.label).tag(option.count)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                } header: {
+                    Text("Reconnection Retries")
+                } footer: {
+                    Text("How many times the app will automatically retry a failed connection before giving up. Tap a failed camera to retry manually.")
+                }
+
+                Section {
+                    Button(role: .destructive) {
+                        showClearConfirmation = true
+                    } label: {
+                        Label("Clear All Cameras", systemImage: "trash")
+                    }
+                } footer: {
+                    Text("Removes all paired cameras from the app. You will need to pair them again.")
+                }
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
@@ -40,6 +75,19 @@ struct SettingsView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
+            }
+            .confirmationDialog(
+                "Clear all cameras?",
+                isPresented: $showClearConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Clear All", role: .destructive) {
+                    manager.clearAllCameras()
+                    dismiss()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will remove all \(manager.cameras.count) paired camera(s). This cannot be undone.")
             }
         }
     }

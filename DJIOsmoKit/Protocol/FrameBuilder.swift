@@ -79,7 +79,7 @@ enum FrameBuilder {
 
 // MARK: - Data helpers
 
-private extension Data {
+extension Data {
     mutating func appendLE(_ value: UInt16) {
         append(UInt8(value & 0xFF))
         append(UInt8((value >> 8) & 0xFF))

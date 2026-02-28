@@ -60,18 +60,37 @@ final class OsmoBLEConnection: NSObject {
     // MARK: - Lifecycle
 
     /// Connects to the peripheral and discovers the DJI service + characteristics.
-    func connect() async throws {
+    /// Throws `BLEConnectionError.timeout` if the GATT connection does not complete
+    /// within `connectTimeout` seconds.
+    func connect(connectTimeout: TimeInterval = 5, discoveryTimeout: TimeInterval = 10) async throws {
         OsmoLog.connection.info("Connecting to peripheral \(self.peripheral.name ?? "unnamed", privacy: .public) id=\(self.peripheral.identifier, privacy: .public)")
+
+        let timeoutTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(connectTimeout))
+            guard let self, self.connectContinuation != nil else { return }
+            OsmoLog.connection.error("BLE connect timed out after \(Int(connectTimeout))s for \(self.peripheral.identifier, privacy: .public)")
+            self.centralManager?.cancelPeripheralConnection(self.peripheral)
+            self.connectContinuation?.resume(throwing: BLEConnectionError.timeout)
+            self.connectContinuation = nil
+        }
+        defer { timeoutTask.cancel() }
+
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
             self.connectContinuation = cont
             centralManager?.connect(peripheral, options: nil)
         }
+
         OsmoLog.connection.info("GATT connected — discovering services for \(self.peripheral.identifier, privacy: .public)")
-        try await discoverServices()
+        try await discoverServices(timeout: discoveryTimeout)
     }
 
     func disconnect() {
         OsmoLog.connection.info("Disconnecting peripheral \(self.peripheral.identifier, privacy: .public)")
+        let err = BLEConnectionError.connectionFailed(nil)
+        connectContinuation?.resume(throwing: err)
+        connectContinuation = nil
+        discoveryContinuation?.resume(throwing: err)
+        discoveryContinuation = nil
         notificationContinuation?.finish()
         notificationContinuation = nil
         centralManager?.cancelPeripheralConnection(peripheral)
@@ -85,7 +104,16 @@ final class OsmoBLEConnection: NSObject {
 
     // MARK: - Private
 
-    private func discoverServices() async throws {
+    private func discoverServices(timeout: TimeInterval) async throws {
+        let timeoutTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(timeout))
+            guard let self, self.discoveryContinuation != nil else { return }
+            OsmoLog.connection.error("Service discovery timed out after \(Int(timeout))s for \(self.peripheral.identifier, privacy: .public)")
+            self.discoveryContinuation?.resume(throwing: BLEConnectionError.timeout)
+            self.discoveryContinuation = nil
+        }
+        defer { timeoutTask.cancel() }
+
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
             self.discoveryContinuation = cont
             peripheral.discoverServices([OsmoBLEIdentifiers.service])
@@ -110,8 +138,11 @@ extension OsmoBLEConnection {
             OsmoLog.connection.info("Peripheral \(self.peripheral.identifier, privacy: .public) disconnected cleanly")
         }
         let err = error ?? BLEConnectionError.connectionFailed(nil)
+        // Fail any in-flight async waits immediately so callers don't block for up to 10 s.
         connectContinuation?.resume(throwing: err)
         connectContinuation = nil
+        discoveryContinuation?.resume(throwing: err)
+        discoveryContinuation = nil
         notificationContinuation?.finish()
         notificationContinuation = nil
     }
@@ -163,14 +194,13 @@ extension OsmoBLEConnection: CBPeripheralDelegate {
                 break
             }
         }
-        if writeCharacteristic != nil && notifyCharacteristic != nil {
-            discoveryContinuation?.resume()
-            discoveryContinuation = nil
-        } else {
+        if writeCharacteristic == nil || notifyCharacteristic == nil {
             OsmoLog.connection.error("Characteristic discovery incomplete: write=\(self.writeCharacteristic != nil) notify=\(self.notifyCharacteristic != nil)")
             discoveryContinuation?.resume(throwing: BLEConnectionError.characteristicNotFound)
             discoveryContinuation = nil
         }
+        // If both chars found, wait for didUpdateNotificationStateFor to confirm CCCD write
+        // before resuming discoveryContinuation.
     }
 
     func peripheral(_ peripheral: CBPeripheral,
@@ -184,6 +214,13 @@ extension OsmoBLEConnection: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral,
                     didUpdateNotificationStateFor characteristic: CBCharacteristic,
                     error: Error?) {
-        // Notification subscription confirmed; nothing to do.
+        if let error {
+            OsmoLog.connection.error("Notification subscription failed for \(peripheral.identifier, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            discoveryContinuation?.resume(throwing: BLEConnectionError.characteristicNotFound)
+        } else {
+            OsmoLog.connection.info("Notification subscription confirmed for \(peripheral.identifier, privacy: .public)")
+            discoveryContinuation?.resume()
+        }
+        discoveryContinuation = nil
     }
 }
