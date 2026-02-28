@@ -1,4 +1,5 @@
 import CoreBluetooth
+import CoreLocation
 import Foundation
 import Observation
 import OSLog
@@ -33,6 +34,10 @@ public final class OsmoCamera: Identifiable {
     /// Number of consecutive failed connection attempts. Reset on successful connection
     /// or when the user explicitly retries. Used to enforce `OsmoCameraManager.maxRetries`.
     public internal(set) var retryCount: Int = 0
+    /// Product identifier returned by the camera (e.g. "OA5PRO").
+    public internal(set) var productName: String?
+    /// SDK/firmware version string returned by the camera.
+    public internal(set) var sdkVersion: String?
 
     // MARK: - BLE
 
@@ -56,6 +61,8 @@ public final class OsmoCamera: Identifiable {
     func clearStatus() {
         status = .unknown
         lastSeenDate = nil
+        productName = nil
+        sdkVersion = nil
     }
     /// Incrementing sequence number for outgoing frames.
     private var sequenceCounter: UInt16 = 0
@@ -272,5 +279,30 @@ public final class OsmoCamera: Identifiable {
         guard connectionState == .connected else { return }
         OsmoLog.camera.info("Switching mode to \(String(describing: mode), privacy: .public): camera=\(self.name, privacy: .public)")
         try await sendWithRetry { seq in ModeCommand.build(mode: mode, seq: seq) }
+    }
+
+    public func queryVersion() async {
+        guard connectionState == .connected else { return }
+        let seq = nextSeq()
+        let frame = VersionQueryCommand.build(seq: seq)
+        do {
+            let response = try await sendAndWait(frame: frame, seq: seq, timeout: 5.0)
+            if let info = VersionQueryCommand.parseResponse(response) {
+                productName = info.productID
+                sdkVersion = info.sdkVersion
+                OsmoLog.camera.info("Version query: product=\(info.productID, privacy: .public) sdk=\(info.sdkVersion, privacy: .public)")
+            }
+        } catch {
+            OsmoLog.camera.error("Version query failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// Send GPS data to this camera (fire-and-forget, no response expected).
+    /// Called periodically by `OsmoLocationManager` at 1 Hz.
+    public func sendGPSData(_ location: CLLocation) {
+        guard connectionState == .connected else { return }
+        let seq = nextSeq()
+        let frame = GPSPushCommand.build(location: location, seq: seq)
+        try? send(frame: frame)
     }
 }

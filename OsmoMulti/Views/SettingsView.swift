@@ -4,8 +4,10 @@ import SwiftUI
 struct SettingsView: View {
 
     @Environment(OsmoCameraManager.self) var manager
+    @Environment(OsmoLocationManager.self) var locationManager
     @Environment(\.dismiss) private var dismiss
 
+    @AppStorage("gps_push_enabled") private var gpsPushEnabled = false
     @State private var showClearConfirmation = false
 
     private let timeoutOptions: [(label: String, seconds: TimeInterval)] = [
@@ -57,6 +59,24 @@ struct SettingsView: View {
                     Text("Reconnection Retries")
                 } footer: {
                     Text("How many times the app will automatically retry a failed connection before giving up. Tap a failed camera to retry manually.")
+                }
+
+                Section {
+                    Toggle("Push GPS to Cameras", isOn: Binding(
+                        get: { gpsPushEnabled },
+                        set: { newValue in
+                            gpsPushEnabled = newValue
+                            if newValue {
+                                locationManager.start()
+                            } else {
+                                locationManager.stop()
+                            }
+                        }
+                    ))
+                } header: {
+                    Text("Location")
+                } footer: {
+                    Text("Feeds iPhone GPS coordinates to connected cameras for video geotagging at 1 Hz.")
                 }
 
                 Section {

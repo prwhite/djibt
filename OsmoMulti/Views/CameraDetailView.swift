@@ -62,6 +62,20 @@ struct CameraDetailView: View {
                 } else {
                     LabeledContent("Recording", value: camera.status.recordingStatus == .liveView ? "Live View" : "Idle")
                 }
+
+                LabeledContent("Resolution", value: camera.status.videoResolution?.displayName ?? "—")
+                LabeledContent("Frame Rate", value: camera.status.frameRate?.displayName ?? "—")
+                LabeledContent("Stabilization", value: camera.status.stabilizationMode?.displayName ?? "Off")
+                LabeledContent("Storage", value: formatStorage(camera.status.remainingStorageMB))
+                LabeledContent("Time Remaining", value: formatHMS(camera.status.remainingRecordTimeSec))
+
+                if camera.status.temperatureWarning > 0 {
+                    HStack {
+                        Image(systemName: "thermometer.sun.fill")
+                            .foregroundStyle(.orange)
+                        Text("Temperature Warning")
+                    }
+                }
             } else {
                 LabeledContent("Recording", value: "—")
             }
@@ -129,6 +143,12 @@ struct CameraDetailView: View {
 
     private var diagnosticsSection: some View {
         Section("Diagnostics") {
+            if let product = camera.productName {
+                LabeledContent("Product", value: product)
+            }
+            if let version = camera.sdkVersion {
+                LabeledContent("SDK Version", value: version)
+            }
             LabeledContent("Camera ID", value: camera.id.uuidString.prefix(8).lowercased() + "…")
 
             if let peripheral = camera.peripheral {
@@ -160,5 +180,19 @@ struct CameraDetailView: View {
         let m = seconds / 60
         let s = seconds % 60
         return String(format: "%d:%02d", m, s)
+    }
+
+    private func formatStorage(_ mb: UInt32) -> String {
+        if mb >= 1024 {
+            return String(format: "%.1f GB", Double(mb) / 1024.0)
+        }
+        return "\(mb) MB"
+    }
+
+    private func formatHMS(_ totalSeconds: UInt32) -> String {
+        let h = totalSeconds / 3600
+        let m = (totalSeconds % 3600) / 60
+        let s = totalSeconds % 60
+        return String(format: "%d:%02d:%02d", h, m, s)
     }
 }

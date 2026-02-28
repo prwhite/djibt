@@ -26,6 +26,7 @@
 		5E1B6CEB17BBF051CA0F5D62 /* OsmoCamera.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2801D329D80770AF5B55B9FE /* OsmoCamera.swift */; };
 		6881F981E6E4A493D32FAB12 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE44255BF0B5BFC256A3CE67 /* SettingsView.swift */; };
 		68A7E0BA84FA5A23A43D0492 /* ConnectionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6916C08A1CE408C53DBDED99 /* ConnectionState.swift */; };
+		8145316D33D7FD70E916561A /* VersionQueryCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DC1B54B3EBAEAD34B427C49 /* VersionQueryCommand.swift */; };
 		82C8FF2D45FF8943E4B56C5F /* CameraRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05935ED1F892FD40924DF4D2 /* CameraRowView.swift */; };
 		9FACCC12CE8DB4D45EB00575 /* CameraListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E9838660BDF128E730E1C78 /* CameraListViewModel.swift */; };
 		A24A222A21DFD4C5AABEF43F /* CameraListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA154D155C699D1747CC716A /* CameraListView.swift */; };
@@ -34,10 +35,12 @@
 		AFB1DE62757C2A143DF603B5 /* OsmoCameraManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28D7898C577133FE6DDDAB86 /* OsmoCameraManager.swift */; };
 		B170FCA659C4B5902088477C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2CB2376AF5AFBA23A8D7E5F6 /* Assets.xcassets */; };
 		BBFED5FDB3C21C96D3A0A9CD /* ConnectionCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97A0C3C5D3CC6AC613EBFCAA /* ConnectionCommand.swift */; };
+		CACC83F5E3367323F06DD518 /* GPSPushCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D82B5852DB15814F0429594 /* GPSPushCommand.swift */; };
 		D7458693C464FCC7949E4C69 /* CameraDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5154755099B80CB654708951 /* CameraDetailView.swift */; };
 		D9CC6824B4F1BC37F152ED4E /* FrameParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5CB2752607DA6319914F6A2 /* FrameParser.swift */; };
 		E77A8E007FD275212F1CE7DF /* ModeCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16BC89933A607C29647FF0EB /* ModeCommand.swift */; };
 		E84DAE80B0207A4188AC117E /* GlobalControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F459A47517A1E40A0207A7AC /* GlobalControlsView.swift */; };
+		EE45C36217677383E88D4E73 /* OsmoLocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDCA5C70829E8EA39D4F8928 /* OsmoLocationManager.swift */; };
 		F7F11D57C1C281440F02B74C /* OsmoCameraManager+Preview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B0A99BDBAF28DB315FE2AA8 /* OsmoCameraManager+Preview.swift */; };
 		F9628096EEA3E7FF751D227F /* FrameBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = D89BC62CAB62EB2AF2705EDC /* FrameBuilder.swift */; };
 		FF43A991CDBDB4C362519699 /* CameraMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = F488F37BC194C985DEC62F18 /* CameraMode.swift */; };
@@ -103,8 +106,10 @@
 		66F24A8E9D09D59C73F80E71 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		68D8C8ADE10B30ADA4DE66C3 /* FrameTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameTests.swift; sourceTree = "<group>"; };
 		6916C08A1CE408C53DBDED99 /* ConnectionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionState.swift; sourceTree = "<group>"; };
+		6DC1B54B3EBAEAD34B427C49 /* VersionQueryCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionQueryCommand.swift; sourceTree = "<group>"; };
 		73574EDDD56A08059E6848F2 /* RecordingCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingCommand.swift; sourceTree = "<group>"; };
 		7E9838660BDF128E730E1C78 /* CameraListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraListViewModel.swift; sourceTree = "<group>"; };
+		8D82B5852DB15814F0429594 /* GPSPushCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPSPushCommand.swift; sourceTree = "<group>"; };
 		97A0C3C5D3CC6AC613EBFCAA /* ConnectionCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionCommand.swift; sourceTree = "<group>"; };
 		AE44255BF0B5BFC256A3CE67 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		BA300F201CB3C612E0FF92C3 /* OsmoMultiApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OsmoMultiApp.swift; sourceTree = "<group>"; };
@@ -117,6 +122,7 @@
 		DB21A75914A5F46FA36BA8B3 /* AddCameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddCameraView.swift; sourceTree = "<group>"; };
 		E3EC743303679BC8DF0EFC38 /* CRCTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CRCTests.swift; sourceTree = "<group>"; };
 		E5CB2752607DA6319914F6A2 /* FrameParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameParser.swift; sourceTree = "<group>"; };
+		EDCA5C70829E8EA39D4F8928 /* OsmoLocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OsmoLocationManager.swift; sourceTree = "<group>"; };
 		F459A47517A1E40A0207A7AC /* GlobalControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalControlsView.swift; sourceTree = "<group>"; };
 		F488F37BC194C985DEC62F18 /* CameraMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraMode.swift; sourceTree = "<group>"; };
 		FE827854DB2FD597251E86C3 /* DJIOsmoKitTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = DJIOsmoKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -174,6 +180,14 @@
 				AE44255BF0B5BFC256A3CE67 /* SettingsView.swift */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		71E680107B687A82BBFA5266 /* Location */ = {
+			isa = PBXGroup;
+			children = (
+				EDCA5C70829E8EA39D4F8928 /* OsmoLocationManager.swift */,
+			);
+			path = Location;
 			sourceTree = "<group>";
 		};
 		74857E81B374CD1348E08F58 /* Models */ = {
@@ -259,6 +273,7 @@
 				C6D85868F51A7E9700410B94 /* Logging.swift */,
 				9E066F1C6449BBCE62E9A42D /* BLE */,
 				79FE9624C3B1D710765E25DC /* Camera */,
+				71E680107B687A82BBFA5266 /* Location */,
 				74857E81B374CD1348E08F58 /* Models */,
 				B55C06447BDB87FCB3637A9A /* Protocol */,
 			);
@@ -269,11 +284,13 @@
 			isa = PBXGroup;
 			children = (
 				97A0C3C5D3CC6AC613EBFCAA /* ConnectionCommand.swift */,
+				8D82B5852DB15814F0429594 /* GPSPushCommand.swift */,
 				4517D2ECD87BC34C38F77BF6 /* KeyReportCommand.swift */,
 				16BC89933A607C29647FF0EB /* ModeCommand.swift */,
 				598F6ACABE4154A2BDBF3382 /* PowerModeCommand.swift */,
 				73574EDDD56A08059E6848F2 /* RecordingCommand.swift */,
 				40400697BA320D8E1824DF73 /* StatusSubscribeCommand.swift */,
+				6DC1B54B3EBAEAD34B427C49 /* VersionQueryCommand.swift */,
 			);
 			path = Commands;
 			sourceTree = "<group>";
@@ -406,6 +423,7 @@
 				68A7E0BA84FA5A23A43D0492 /* ConnectionState.swift in Sources */,
 				F9628096EEA3E7FF751D227F /* FrameBuilder.swift in Sources */,
 				D9CC6824B4F1BC37F152ED4E /* FrameParser.swift in Sources */,
+				CACC83F5E3367323F06DD518 /* GPSPushCommand.swift in Sources */,
 				0F221FC7A529600A86D3B42C /* KeyReportCommand.swift in Sources */,
 				0B7AF48C07F6BDE05D611936 /* Logging.swift in Sources */,
 				E77A8E007FD275212F1CE7DF /* ModeCommand.swift in Sources */,
@@ -414,9 +432,11 @@
 				5E1B6CEB17BBF051CA0F5D62 /* OsmoCamera.swift in Sources */,
 				F7F11D57C1C281440F02B74C /* OsmoCameraManager+Preview.swift in Sources */,
 				AFB1DE62757C2A143DF603B5 /* OsmoCameraManager.swift in Sources */,
+				EE45C36217677383E88D4E73 /* OsmoLocationManager.swift in Sources */,
 				2EE102F3249EC8BD9D30EA53 /* PowerModeCommand.swift in Sources */,
 				1815B3ACD92C98F9B650B09D /* RecordingCommand.swift in Sources */,
 				A7BBE9C186384A3632127535 /* StatusSubscribeCommand.swift in Sources */,
+				8145316D33D7FD70E916561A /* VersionQueryCommand.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -23,4 +23,6 @@ enum OsmoLog {
     static let manager    = Logger(subsystem: "me.payton.OsmoMulti", category: "Manager")
     /// Frame parsing and building — FrameParser, FrameBuilder
     static let proto      = Logger(subsystem: "me.payton.OsmoMulti", category: "Protocol")
+    /// GPS location services — OsmoLocationManager
+    static let location   = Logger(subsystem: "me.payton.OsmoMulti", category: "Location")
 }

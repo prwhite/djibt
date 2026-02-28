@@ -43,7 +43,10 @@ targets:
     info:
       path: OsmoMulti/Info.plist
       properties:
-        NSBluetoothAlwaysUsageDescription: "OsmoMulti requires Bluetooth to connect to and control DJI Osmo cameras."
+        CFBundleName: "Cam Control for DJI Osmo"
+        CFBundleDisplayName: "Cam Control"
+        NSBluetoothAlwaysUsageDescription: "Cam Control requires Bluetooth to connect to and control DJI Osmo cameras."
+        NSLocationWhenInUseUsageDescription: "Cam Control uses your location to geotag video footage on connected DJI Osmo cameras."
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait

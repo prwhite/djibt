@@ -7,41 +7,44 @@ struct CameraRowView: View {
     let camera: OsmoCamera
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Status indicator dot
-            Circle()
-                .fill(statusColor)
-                .frame(width: 10, height: 10)
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 12) {
+                // Status indicator dot
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 10, height: 10)
 
-            VStack(alignment: .leading, spacing: 2) {
                 Text(camera.name)
                     .font(.body)
                     .lineLimit(1)
 
-                // TimelineView ticks every second so the "Xs ago" counter increments
-                // even when the camera has gone silent and lastSeenDate stops updating.
-                TimelineView(.periodic(from: .now, by: 1.0)) { _ in
-                    Text(subtitleText)
-                        .font(.caption)
-                        .lineLimit(1)
-                        .foregroundStyle(subtitleColor)
+                Spacer()
+
+                // Battery (show for connected and sleeping — last-known value is still valid)
+                if camera.connectionState == .connected || camera.connectionState == .sleeping {
+                    BatteryView(percentage: camera.status.batteryPercentage)
                 }
+
+                // Recording indicator — always occupies space so layout doesn't shift.
+                // Opacity hides it when not recording; isActive stops the pulse animation too.
+                Image(systemName: "record.circle.fill")
+                    .foregroundStyle(.red)
+                    .symbolEffect(.pulse, isActive: camera.status.recordingStatus.isRecording)
+                    .opacity(camera.status.recordingStatus.isRecording ? 1 : 0)
             }
-            .fixedSize(horizontal: false, vertical: true)
 
-            Spacer()
-
-            // Battery (show for connected and sleeping — last-known value is still valid)
-            if camera.connectionState == .connected || camera.connectionState == .sleeping {
-                BatteryView(percentage: camera.status.batteryPercentage)
+            // TimelineView ticks every second so the "Xs ago" counter increments
+            // even when the camera has gone silent and lastSeenDate stops updating.
+            TimelineView(.periodic(from: .now, by: 1.0)) { _ in
+                Text(subtitleText)
+                    .font(.caption)
+                    .lineLimit(1)
+                    .foregroundStyle(subtitleColor)
             }
 
-            // Recording indicator — always occupies space so layout doesn't shift.
-            // Opacity hides it when not recording; isActive stops the pulse animation too.
-            Image(systemName: "record.circle.fill")
-                .foregroundStyle(.red)
-                .symbolEffect(.pulse, isActive: camera.status.recordingStatus.isRecording)
-                .opacity(camera.status.recordingStatus.isRecording ? 1 : 0)
+            compactStatusText
+                .font(.caption2)
+                .lineLimit(1)
         }
         .padding(.vertical, 2)
     }
@@ -75,6 +78,35 @@ struct CameraRowView: View {
     private var subtitleColor: Color {
         if camera.connectionState == .failed { return .red }
         return isSubtitleStale ? .orange : .secondary
+    }
+
+    private var hasLiveStatus: Bool {
+        camera.connectionState == .connected || camera.connectionState == .sleeping
+    }
+
+    private static let separator = Text(" · ").foregroundColor(.secondary.opacity(0.4))
+
+    private var compactStatusText: Text {
+        guard hasLiveStatus else { return Text(" ") }
+
+        var segments: [Text] = []
+        if let res = camera.status.videoResolution?.displayName {
+            segments.append(Text(res).foregroundColor(.blue.opacity(0.7)))
+        }
+        if let fps = camera.status.frameRate?.displayName {
+            segments.append(Text(fps).foregroundColor(.red.opacity(0.6)))
+        }
+        if let eis = camera.status.stabilizationMode, eis != .off {
+            segments.append(Text(eis.displayName).foregroundColor(.cyan.opacity(0.7)))
+        }
+        let mb = camera.status.remainingStorageMB
+        if mb > 0 {
+            let label = mb >= 1024 ? String(format: "%.0f GB", Double(mb) / 1024.0) : "\(mb) MB"
+            segments.append(Text(label).foregroundColor(.yellow.opacity(0.7)))
+        }
+
+        guard let first = segments.first else { return Text(" ") }
+        return segments.dropFirst().reduce(first) { $0 + Self.separator + $1 }
     }
 
     private var subtitleText: String {

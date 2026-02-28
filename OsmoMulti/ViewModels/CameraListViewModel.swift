@@ -1,6 +1,7 @@
 import DJIOsmoKit
 import Foundation
 import Observation
+import UIKit
 
 /// View model for `CameraListView`.
 ///
@@ -18,6 +19,12 @@ final class CameraListViewModel {
 
     init(manager: OsmoCameraManager = .shared) {
         self.manager = manager
+    }
+
+    // MARK: - Screen Lock
+
+    var screenLockDisabled: Bool = false {
+        didSet { UIApplication.shared.isIdleTimerDisabled = screenLockDisabled }
     }
 
     // MARK: - Representative State

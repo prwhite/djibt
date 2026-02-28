@@ -23,7 +23,13 @@ public extension OsmoCameraManager {
             recordingSeconds: 142,
             batteryPercentage: 87,
             powerMode: .normal,
-            rawMode: CameraMode.video.rawValue
+            rawMode: CameraMode.video.rawValue,
+            videoResolution: .res4K_16_9,
+            frameRate: .fps30,
+            stabilizationMode: .rs,
+            remainingStorageMB: 28_672,
+            remainingRecordTimeSec: 5_420,
+            temperatureWarning: 0
         )
 
         // 2. Connected, photo mode, critically low battery
@@ -36,7 +42,13 @@ public extension OsmoCameraManager {
             recordingSeconds: 0,
             batteryPercentage: 14,
             powerMode: .normal,
-            rawMode: CameraMode.photo.rawValue
+            rawMode: CameraMode.photo.rawValue,
+            videoResolution: nil,
+            frameRate: nil,
+            stabilizationMode: nil,
+            remainingStorageMB: 512,
+            remainingRecordTimeSec: 0,
+            temperatureWarning: 0
         )
 
         // 3. Connected but stale — last frame 5 s ago (triggers orange subtitle)
@@ -49,7 +61,13 @@ public extension OsmoCameraManager {
             recordingSeconds: 0,
             batteryPercentage: 55,
             powerMode: .normal,
-            rawMode: CameraMode.video.rawValue
+            rawMode: CameraMode.video.rawValue,
+            videoResolution: .res1080p,
+            frameRate: .fps60,
+            stabilizationMode: .hs,
+            remainingStorageMB: 3_200,
+            remainingRecordTimeSec: 1_800,
+            temperatureWarning: 0
         )
 
         // 4. Reconnecting (yellow dot)
@@ -66,7 +84,13 @@ public extension OsmoCameraManager {
             recordingSeconds: 0,
             batteryPercentage: 62,
             powerMode: .sleep,
-            rawMode: CameraMode.video.rawValue
+            rawMode: CameraMode.video.rawValue,
+            videoResolution: .res4K_16_9,
+            frameRate: .fps24,
+            stabilizationMode: .off,
+            remainingStorageMB: 15_360,
+            remainingRecordTimeSec: 3_600,
+            temperatureWarning: 1
         )
 
         // 6. Disabled (shown in Inactive section)

@@ -1,4 +1,5 @@
 import CoreBluetooth
+import CoreLocation
 import Foundation
 import Observation
 import OSLog
@@ -204,6 +205,9 @@ public final class OsmoCameraManager: NSObject {
         let subFrame = StatusSubscribeCommand.build(seq: subSeq)
         _ = try await camera.sendAndWait(frame: subFrame, seq: subSeq)
         OsmoLog.manager.info("Handshake complete for \(camera.name, privacy: .public)")
+
+        // Best-effort: query firmware version (non-fatal)
+        Task { await camera.queryVersion() }
     }
 
     private func scheduleReconnect(camera: OsmoCamera) {
@@ -359,6 +363,16 @@ public final class OsmoCameraManager: NSObject {
                 camera.forceDisconnect()
                 scheduleReconnect(camera: camera)
             }
+        }
+    }
+
+    // MARK: - GPS Push
+
+    /// Send GPS location data to all connected cameras (fire-and-forget).
+    /// Called by `OsmoLocationManager` at 1 Hz.
+    public func pushGPS(_ location: CLLocation) {
+        for camera in enabledConnectedCameras {
+            camera.sendGPSData(location)
         }
     }
 

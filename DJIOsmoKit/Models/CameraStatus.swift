@@ -45,6 +45,76 @@ public struct CameraStatus: Equatable {
         case sleep  = 0x03
     }
 
+    public enum VideoResolution: UInt8, Equatable {
+        case res1080p      = 10
+        case res4K_16_9    = 16
+        case res2K7_16_9   = 45
+        case res1080p_9_16 = 66
+        case res2K7_9_16   = 67
+        case res2K7_4_3    = 95
+        case res4K_4_3     = 103
+        case res4K_9_16    = 109
+
+        public var displayName: String {
+            switch self {
+            case .res1080p:      return "1080P"
+            case .res4K_16_9:    return "4K 16:9"
+            case .res2K7_16_9:   return "2.7K 16:9"
+            case .res1080p_9_16: return "1080P 9:16"
+            case .res2K7_9_16:   return "2.7K 9:16"
+            case .res2K7_4_3:    return "2.7K 4:3"
+            case .res4K_4_3:     return "4K 4:3"
+            case .res4K_9_16:    return "4K 9:16"
+            }
+        }
+    }
+
+    public enum FrameRate: UInt8, Equatable {
+        case fps24  = 1
+        case fps25  = 2
+        case fps30  = 3
+        case fps48  = 4
+        case fps50  = 5
+        case fps60  = 6
+        case fps120 = 7
+        case fps240 = 8
+        case fps100 = 10
+        case fps200 = 19
+
+        public var displayName: String {
+            switch self {
+            case .fps24:  return "24 fps"
+            case .fps25:  return "25 fps"
+            case .fps30:  return "30 fps"
+            case .fps48:  return "48 fps"
+            case .fps50:  return "50 fps"
+            case .fps60:  return "60 fps"
+            case .fps100: return "100 fps"
+            case .fps120: return "120 fps"
+            case .fps200: return "200 fps"
+            case .fps240: return "240 fps"
+            }
+        }
+    }
+
+    public enum StabilizationMode: UInt8, Equatable {
+        case off    = 0
+        case rs     = 1
+        case hs     = 2
+        case rsPlus = 3
+        case hb     = 4
+
+        public var displayName: String {
+            switch self {
+            case .off:    return "Off"
+            case .rs:     return "RockSteady"
+            case .hs:     return "HorizonSteady"
+            case .rsPlus: return "RockSteady+"
+            case .hb:     return "HorizonBalancing"
+            }
+        }
+    }
+
     // MARK: - Properties
 
     public let mode: CameraMode?
@@ -57,6 +127,18 @@ public struct CameraStatus: Equatable {
     public let powerMode: PowerMode
     /// Raw mode byte; useful when `mode` is nil (unknown/future mode).
     public let rawMode: UInt8
+    /// Video resolution setting reported by the camera.
+    public let videoResolution: VideoResolution?
+    /// Frame rate setting reported by the camera.
+    public let frameRate: FrameRate?
+    /// Electronic image stabilization mode.
+    public let stabilizationMode: StabilizationMode?
+    /// Remaining storage capacity in megabytes.
+    public let remainingStorageMB: UInt32
+    /// Remaining recording time in seconds (estimated by camera).
+    public let remainingRecordTimeSec: UInt32
+    /// Temperature warning level. 0 = normal, >0 = overheating warning.
+    public let temperatureWarning: UInt8
 
     // MARK: - Sentinel
 
@@ -66,7 +148,13 @@ public struct CameraStatus: Equatable {
         recordingSeconds: 0,
         batteryPercentage: 0,
         powerMode: .normal,
-        rawMode: 0xFF
+        rawMode: 0xFF,
+        videoResolution: nil,
+        frameRate: nil,
+        stabilizationMode: nil,
+        remainingStorageMB: 0,
+        remainingRecordTimeSec: 0,
+        temperatureWarning: 0
     )
 
     // MARK: - Init
@@ -77,7 +165,13 @@ public struct CameraStatus: Equatable {
         recordingSeconds: Int,
         batteryPercentage: Int,
         powerMode: PowerMode,
-        rawMode: UInt8
+        rawMode: UInt8,
+        videoResolution: VideoResolution?,
+        frameRate: FrameRate?,
+        stabilizationMode: StabilizationMode?,
+        remainingStorageMB: UInt32,
+        remainingRecordTimeSec: UInt32,
+        temperatureWarning: UInt8
     ) {
         self.mode = mode
         self.recordingStatus = recordingStatus
@@ -85,6 +179,12 @@ public struct CameraStatus: Equatable {
         self.batteryPercentage = batteryPercentage
         self.powerMode = powerMode
         self.rawMode = rawMode
+        self.videoResolution = videoResolution
+        self.frameRate = frameRate
+        self.stabilizationMode = stabilizationMode
+        self.remainingStorageMB = remainingStorageMB
+        self.remainingRecordTimeSec = remainingRecordTimeSec
+        self.temperatureWarning = temperatureWarning
     }
 
     /// Parse from the raw DATA payload bytes (after CmdSet + CmdID have been stripped).
@@ -93,8 +193,20 @@ public struct CameraStatus: Equatable {
         let rawMode = bytes[0]
         let mode = CameraMode(rawValue: rawMode)
         let recordingStatus = RecordingStatus(rawValue: bytes[1]) ?? .screenOff
+        let videoResolution = VideoResolution(rawValue: bytes[2])
+        let frameRate = FrameRate(rawValue: bytes[3])
+        let stabilizationMode = StabilizationMode(rawValue: bytes[4])
         let recordingSeconds = Int(bytes[5]) | (Int(bytes[6]) << 8)
+        let remainingStorageMB = UInt32(bytes[15])
+            | (UInt32(bytes[16]) << 8)
+            | (UInt32(bytes[17]) << 16)
+            | (UInt32(bytes[18]) << 24)
+        let remainingRecordTimeSec = UInt32(bytes[23])
+            | (UInt32(bytes[24]) << 8)
+            | (UInt32(bytes[25]) << 16)
+            | (UInt32(bytes[26]) << 24)
         let powerMode = PowerMode(rawValue: bytes[28]) ?? .normal
+        let temperatureWarning = bytes[30]
         let batteryPercentage = Int(bytes[37])
         return CameraStatus(
             mode: mode,
@@ -102,7 +214,13 @@ public struct CameraStatus: Equatable {
             recordingSeconds: recordingSeconds,
             batteryPercentage: batteryPercentage,
             powerMode: powerMode,
-            rawMode: rawMode
+            rawMode: rawMode,
+            videoResolution: videoResolution,
+            frameRate: frameRate,
+            stabilizationMode: stabilizationMode,
+            remainingStorageMB: remainingStorageMB,
+            remainingRecordTimeSec: remainingRecordTimeSec,
+            temperatureWarning: temperatureWarning
         )
     }
 }

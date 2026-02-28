@@ -90,4 +90,22 @@ extension Data {
         append(UInt8((value >> 16) & 0xFF))
         append(UInt8((value >> 24) & 0xFF))
     }
+
+    /// Write a little-endian Int32 at a specific byte offset.
+    mutating func writeLE(_ value: Int32, at offset: Int) {
+        var le = value.littleEndian
+        Swift.withUnsafeBytes(of: &le) { replaceSubrange(offset..<offset + 4, with: $0) }
+    }
+
+    /// Write a little-endian UInt32 at a specific byte offset.
+    mutating func writeLE(_ value: UInt32, at offset: Int) {
+        var le = value.littleEndian
+        Swift.withUnsafeBytes(of: &le) { replaceSubrange(offset..<offset + 4, with: $0) }
+    }
+
+    /// Write a little-endian Float (IEEE 754) at a specific byte offset.
+    mutating func writeLE(_ value: Float, at offset: Int) {
+        var le = value.bitPattern.littleEndian
+        Swift.withUnsafeBytes(of: &le) { replaceSubrange(offset..<offset + 4, with: $0) }
+    }
 }

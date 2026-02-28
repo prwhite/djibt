@@ -44,6 +44,14 @@ struct CameraListView: View {
                     Image(systemName: "gearshape")
                 }
             }
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    viewModel.screenLockDisabled.toggle()
+                } label: {
+                    Image(systemName: viewModel.screenLockDisabled ? "lock.open.display" : "lock.display")
+                        .foregroundStyle(viewModel.screenLockDisabled ? .yellow : .secondary)
+                }
+            }
         }
         .sheet(isPresented: Binding(
             get: { viewModel.isAddingCamera },
