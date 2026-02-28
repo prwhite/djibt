@@ -1,9 +1,10 @@
 import Foundation
 
-/// Builds power mode (sleep/wake) frames (CmdSet 0x00, CmdID 0x1A).
+/// Builds power mode (sleep) frames (CmdSet 0x00, CmdID 0x1A).
 ///
 /// IMPORTANT: Do not send any other commands while the camera is in sleep mode.
-/// The camera will wake on any physical button press; use `wake()` to do so programmatically.
+/// Waking requires a BLE broadcast manufacturer-data advertisement (0xFF,"WKP",<MAC_reversed>)
+/// which iOS cannot send. The user must physically press any button on the camera to wake it.
 enum PowerModeCommand {
 
     static let cmdSet: UInt8 = 0x00
@@ -15,15 +16,7 @@ enum PowerModeCommand {
     }
 
     static func buildSleep(seq: UInt16) -> Data {
-        build(mode: .sleep, seq: seq)
-    }
-
-    static func buildWake(seq: UInt16) -> Data {
-        build(mode: .normal, seq: seq)
-    }
-
-    private static func build(mode: PowerMode, seq: UInt16) -> Data {
-        let payload = Data([mode.rawValue])
+        let payload = Data([PowerMode.sleep.rawValue])
         return FrameBuilder.build(OutgoingFrame(
             cmdType: 0x02,
             seq: seq,

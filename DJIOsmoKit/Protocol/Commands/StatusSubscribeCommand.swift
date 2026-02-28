@@ -16,7 +16,10 @@ enum StatusSubscribeCommand {
 
     static func build(seq: UInt16, pushMode: UInt8 = defaultPushMode,
                       frequency: UInt8 = defaultFrequency) -> Data {
-        let payload = Data([pushMode, frequency])
+        // Payload: push_mode (1B) + push_freq (1B) + reserved (4B) = 6 bytes
+        var payload = Data(count: 6)
+        payload[0] = pushMode
+        payload[1] = frequency
         return FrameBuilder.build(OutgoingFrame(
             cmdType: 0x02,
             seq: seq,

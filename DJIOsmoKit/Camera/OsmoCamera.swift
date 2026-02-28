@@ -83,15 +83,14 @@ public final class OsmoCamera: Identifiable {
 
     // MARK: - Send / Receive
 
-    /// Send a pre-built frame and wait for a response (up to 5 seconds).
-    func sendAndWait(frame: Data, seq: UInt16) async throws -> IncomingFrame {
+    /// Send a pre-built frame and wait for a response.
+    /// - Parameter timeout: Per-attempt timeout in seconds (default 5).
+    func sendAndWait(frame: Data, seq: UInt16, timeout: TimeInterval = 5) async throws -> IncomingFrame {
         guard let conn = bleConnection else { throw BLEConnectionError.notConnected }
         try conn.write(frame)
 
-        // Start a timeout task that will resume the continuation with an error after 5 s.
-        // `defer` cancels it if the response arrives first.
         let timeoutTask = Task { [weak self] in
-            try await Task.sleep(for: .seconds(5))
+            try await Task.sleep(for: .seconds(timeout))
             await MainActor.run { [weak self] in
                 guard let self else { return }
                 if let cont = self.pendingResponses.removeValue(forKey: seq) {
@@ -102,11 +101,37 @@ public final class OsmoCamera: Identifiable {
         }
         defer { timeoutTask.cancel() }
 
-        // withCheckedThrowingContinuation runs its body synchronously on the calling
-        // (@MainActor) context, so mutating pendingResponses here is safe.
         return try await withCheckedThrowingContinuation { cont in
             pendingResponses[seq] = cont
         }
+    }
+
+    /// Build, send, and retry a command up to `maxAttempts` times with a short per-attempt timeout.
+    /// Each retry uses a fresh sequence number and re-builds the frame.
+    /// - Parameter build: Closure that takes a sequence number and returns the frame bytes.
+    /// - Parameter timeout: Per-attempt timeout in seconds.
+    /// - Parameter maxAttempts: Total number of send attempts.
+    @discardableResult
+    func sendWithRetry(
+        timeout: TimeInterval = 1.5,
+        maxAttempts: Int = 3,
+        build: (UInt16) -> Data
+    ) async throws -> IncomingFrame {
+        var lastError: Error = BLEConnectionError.timeout
+        for attempt in 1...maxAttempts {
+            let seq = nextSeq()
+            let frame = build(seq)
+            do {
+                return try await sendAndWait(frame: frame, seq: seq, timeout: timeout)
+            } catch {
+                lastError = error
+                if case BLEConnectionError.notConnected = error { throw error }
+                if attempt < maxAttempts {
+                    OsmoLog.camera.info("Retry \(attempt)/\(maxAttempts) for camera=\(self.name, privacy: .public)")
+                }
+            }
+        }
+        throw lastError
     }
 
     /// Send a fire-and-forget frame (no response expected).
@@ -225,44 +250,27 @@ public final class OsmoCamera: Identifiable {
         connectionState = .sleeping
     }
 
-    public func sendWake() async throws {
-        guard connectionState == .sleeping else { return }
-        let seq = nextSeq()
-        OsmoLog.camera.info("Sending wake: camera=\(self.name, privacy: .public) seq=\(seq)")
-        let frame = PowerModeCommand.buildWake(seq: seq)
-        _ = try await sendAndWait(frame: frame, seq: seq)
-        connectionState = .connected
-    }
-
     public func sendShutter() async throws {
         guard connectionState == .connected else { return }
-        let seq = nextSeq()
-        OsmoLog.camera.info("Sending shutter: camera=\(self.name, privacy: .public) seq=\(seq)")
-        let frame = KeyReportCommand.shutter(seq: seq)
-        _ = try await sendAndWait(frame: frame, seq: seq)
+        OsmoLog.camera.info("Sending shutter: camera=\(self.name, privacy: .public)")
+        try await sendWithRetry { seq in KeyReportCommand.shutter(seq: seq) }
     }
 
     public func sendRecordStart() async throws {
         guard connectionState == .connected else { return }
-        let seq = nextSeq()
-        OsmoLog.camera.info("Sending record start: camera=\(self.name, privacy: .public) seq=\(seq)")
-        let frame = RecordingCommand.buildStart(seq: seq)
-        _ = try await sendAndWait(frame: frame, seq: seq)
+        OsmoLog.camera.info("Sending record start: camera=\(self.name, privacy: .public)")
+        try await sendWithRetry { seq in RecordingCommand.buildStart(seq: seq) }
     }
 
     public func sendRecordStop() async throws {
         guard connectionState == .connected else { return }
-        let seq = nextSeq()
-        OsmoLog.camera.info("Sending record stop: camera=\(self.name, privacy: .public) seq=\(seq)")
-        let frame = RecordingCommand.buildStop(seq: seq)
-        _ = try await sendAndWait(frame: frame, seq: seq)
+        OsmoLog.camera.info("Sending record stop: camera=\(self.name, privacy: .public)")
+        try await sendWithRetry { seq in RecordingCommand.buildStop(seq: seq) }
     }
 
     public func switchMode(_ mode: CameraMode) async throws {
         guard connectionState == .connected else { return }
-        let seq = nextSeq()
-        OsmoLog.camera.info("Switching mode to \(String(describing: mode), privacy: .public): camera=\(self.name, privacy: .public) seq=\(seq)")
-        let frame = ModeCommand.build(mode: mode, seq: seq)
-        _ = try await sendAndWait(frame: frame, seq: seq)
+        OsmoLog.camera.info("Switching mode to \(String(describing: mode), privacy: .public): camera=\(self.name, privacy: .public)")
+        try await sendWithRetry { seq in ModeCommand.build(mode: mode, seq: seq) }
     }
 }

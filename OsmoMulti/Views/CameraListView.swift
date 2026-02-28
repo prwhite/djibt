@@ -23,11 +23,10 @@ struct CameraListView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            GlobalControlsView(viewModel: viewModel)
-            Divider()
-            cameraList
-        }
+        cameraList
+            .safeAreaInset(edge: .top) {
+                GlobalControlsView(viewModel: viewModel)
+            }
         .navigationTitle("Cameras")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

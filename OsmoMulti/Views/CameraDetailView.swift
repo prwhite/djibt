@@ -6,7 +6,6 @@ struct CameraDetailView: View {
 
     let camera: OsmoCamera
     let viewModel: CameraListViewModel
-
     var body: some View {
         List {
             if camera.connectionState == .failed {
@@ -77,30 +76,52 @@ struct CameraDetailView: View {
 
     private var controlsSection: some View {
         Section("Controls") {
+            // Mode picker
+            Picker("Mode", selection: Binding(
+                get: { camera.status.mode ?? .video },
+                set: { newMode in Task { try? await camera.switchMode(newMode) } }
+            )) {
+                ForEach(CameraMode.switchable, id: \.rawValue) { mode in
+                    Label(mode.displayName, systemImage: mode.systemImage).tag(mode)
+                }
+            }
+            .disabled(!camera.connectionState.isUsable)
+
+            // Shutter
             Button {
                 Task { try? await camera.sendShutter() }
             } label: {
-                Label("Shutter / Record", systemImage: "record.circle")
-            }
-            .disabled(!camera.connectionState.isUsable)
-
-            Button {
-                Task { try? await camera.sendRecordStop() }
-            } label: {
-                Label("Stop Recording", systemImage: "stop.circle")
-            }
-            .disabled(!camera.connectionState.isUsable)
-
-            Button {
-                if camera.connectionState == .sleeping {
-                    viewModel.wakeCamera(camera)
+                if camera.status.mode?.isPhotoMode == true {
+                    Label("Capture Photo", systemImage: "camera.circle.fill")
+                } else if camera.status.recordingStatus.isRecording {
+                    Label("Stop Recording", systemImage: "stop.circle.fill")
                 } else {
-                    Task { try? await camera.sendSleep() }
+                    Label("Start Recording", systemImage: "record.circle")
                 }
-            } label: {
-                Label(camera.connectionState == .sleeping ? "Wake Camera" : "Sleep Camera",
-                      systemImage: camera.connectionState == .sleeping ? "sun.max" : "moon.zzz")
             }
+            .disabled(!camera.connectionState.isUsable)
+
+            // Explicit stop (video modes)
+            if camera.status.mode?.supportsRecording ?? true {
+                Button {
+                    Task { try? await camera.sendRecordStop() }
+                } label: {
+                    Label("Force Stop", systemImage: "stop.circle")
+                }
+                .disabled(!camera.connectionState.isUsable || !camera.status.recordingStatus.isRecording)
+            }
+
+            // Sleep
+            Button {
+                Task { try? await camera.sendSleep() }
+            } label: {
+                Label("Sleep Camera", systemImage: "moon.zzz")
+            }
+            .disabled(!camera.connectionState.isUsable)
+
+            Text("Wake camera by pressing any button on the device.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 

@@ -243,9 +243,11 @@ public final class OsmoCameraManager: NSObject {
 
     // MARK: - Bulk Commands
 
-    public func recordAll() async {
+    /// Send shutter press to all connected cameras. In video modes this toggles
+    /// recording; in photo mode it captures a still.
+    public func shutterAll() async {
         let targets = enabledConnectedCameras
-        OsmoLog.manager.info("recordAll: dispatching shutter to \(targets.count) camera(s)")
+        OsmoLog.manager.info("shutterAll: dispatching shutter to \(targets.count) camera(s)")
         await withTaskGroup(of: Void.self) { group in
             for camera in targets {
                 group.addTask { try? await camera.sendShutter() }
@@ -253,6 +255,7 @@ public final class OsmoCameraManager: NSObject {
         }
     }
 
+    /// Explicitly stop recording on all connected cameras (does not toggle).
     public func stopAll() async {
         let targets = enabledConnectedCameras
         OsmoLog.manager.info("stopAll: dispatching record stop to \(targets.count) camera(s)")
@@ -263,12 +266,13 @@ public final class OsmoCameraManager: NSObject {
         }
     }
 
-    public func photoAll() async {
+    /// Switch all connected cameras to the given mode.
+    public func switchModeAll(_ mode: CameraMode) async {
         let targets = enabledConnectedCameras
-        OsmoLog.manager.info("photoAll: dispatching shutter to \(targets.count) camera(s)")
+        OsmoLog.manager.info("switchModeAll: switching \(targets.count) camera(s) to \(mode.displayName, privacy: .public)")
         await withTaskGroup(of: Void.self) { group in
             for camera in targets {
-                group.addTask { try? await camera.sendShutter() }
+                group.addTask { try? await camera.switchMode(mode) }
             }
         }
     }
@@ -283,9 +287,14 @@ public final class OsmoCameraManager: NSObject {
         }
     }
 
+    /// Begin reconnection attempts for all sleeping cameras.
+    /// DJI cameras cannot be woken over BLE from iOS — the protocol uses a broadcast
+    /// manufacturer-data advertisement that iOS does not allow apps to send.
+    /// The user must press any button on the camera to wake it; calling this starts
+    /// the reconnect loop so it connects as soon as the camera appears.
     public func wakeAll() async {
         let targets = cameras.filter { $0.isEnabled && $0.connectionState == .sleeping }
-        OsmoLog.manager.info("wakeAll: waking \(targets.count) sleeping camera(s)")
+        OsmoLog.manager.info("wakeAll: starting reconnect for \(targets.count) sleeping camera(s)")
         await withTaskGroup(of: Void.self) { group in
             for camera in targets {
                 group.addTask { [self] in await self.wakeCamera(camera) }
@@ -295,22 +304,29 @@ public final class OsmoCameraManager: NSObject {
 
     public func wakeCamera(_ camera: OsmoCamera) async {
         guard camera.connectionState == .sleeping else { return }
-        if camera.bleConnection != nil {
-            // BLE still up — send wake command directly
-            do {
-                try await camera.sendWake()
-            } catch {
-                OsmoLog.manager.error("Wake command failed for \(camera.name, privacy: .public): \(error.localizedDescription, privacy: .public) — reconnecting")
-                camera.connectionState = .disconnected
-                camera.retryCount = 0
-                await connect(camera: camera)
-            }
-        } else {
-            // BLE dropped during sleep — reconnect (handshake wakes camera)
-            OsmoLog.manager.info("Reconnecting sleeping camera \(camera.name, privacy: .public) for wake")
-            camera.connectionState = .disconnected
+        // Can't send GATT commands to a sleeping camera — BLE wake requires a broadcast
+        // manufacturer-data packet (0xFF,"WKP",<MAC_reversed>) which iOS does not support.
+        // Instead, tear down and start the reconnect loop. The camera will be picked up
+        // as soon as the user physically presses a button on it.
+        OsmoLog.manager.info("Starting reconnect for sleeping camera \(camera.name, privacy: .public) — user must press button on camera")
+        camera.forceDisconnect()
+        camera.retryCount = 0
+        await connect(camera: camera)
+    }
+
+    /// Force-disconnect and reconnect all enabled cameras that aren't currently connected.
+    /// Intended as a recovery action for catastrophic connection problems.
+    public func reconnectAll() async {
+        let targets = cameras.filter { $0.isEnabled && $0.connectionState != .connected }
+        OsmoLog.manager.info("reconnectAll: force-reconnecting \(targets.count) camera(s)")
+        for camera in targets {
+            camera.forceDisconnect()
             camera.retryCount = 0
-            await connect(camera: camera)
+        }
+        await withTaskGroup(of: Void.self) { group in
+            for camera in targets {
+                group.addTask { [self] in await self.connect(camera: camera) }
+            }
         }
     }
 
@@ -348,7 +364,7 @@ public final class OsmoCameraManager: NSObject {
 
     // MARK: - Helpers
 
-    var enabledConnectedCameras: [OsmoCamera] {
+    public var enabledConnectedCameras: [OsmoCamera] {
         cameras.filter { $0.isEnabled && $0.connectionState == .connected }
     }
 
@@ -436,8 +452,16 @@ extension OsmoCameraManager: @preconcurrency CBCentralManagerDelegate {
 
     public func centralManager(_ central: CBCentralManager,
                                 didConnect peripheral: CBPeripheral) {
-        cameras.first(where: { $0.peripheral?.identifier == peripheral.identifier })?
-            .bleConnection?.handleConnected()
+        guard let camera = cameras.first(where: { $0.peripheral?.identifier == peripheral.identifier }) else { return }
+        if let conn = camera.bleConnection {
+            conn.handleConnected()
+        } else {
+            // Passive reconnect (e.g., sleeping camera woke up) — no bleConnection
+            // yet, so start the full connection flow. connect(camera:) will see
+            // peripheral.state == .connected and skip the GATT connect step.
+            OsmoLog.manager.info("Passive reconnect fired for \(camera.name, privacy: .public) — starting connection")
+            Task { await connect(camera: camera) }
+        }
     }
 
     public func centralManager(_ central: CBCentralManager,
@@ -455,9 +479,13 @@ extension OsmoCameraManager: @preconcurrency CBCentralManagerDelegate {
         camera.bleConnection = nil
 
         if camera.connectionState == .sleeping {
-            // Camera dropped BLE while sleeping — expected behavior.
-            // Stay in sleeping state; user must tap Wake to reconnect.
-            OsmoLog.manager.info("Sleeping camera \(camera.name, privacy: .public) BLE disconnected — staying asleep")
+            // Camera dropped BLE while sleeping — expected. Queue a passive CB
+            // connection that fires didConnect when the user physically wakes the
+            // camera. No timeout, no retry counter — CoreBluetooth handles it.
+            camera.connectionState = .reconnecting
+            camera.clearStatus()
+            centralManager.connect(peripheral, options: nil)
+            OsmoLog.manager.info("Sleeping camera \(camera.name, privacy: .public) BLE disconnected — passive reconnect queued")
             return
         }
 

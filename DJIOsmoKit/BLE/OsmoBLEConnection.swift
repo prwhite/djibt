@@ -65,19 +65,25 @@ final class OsmoBLEConnection: NSObject {
     func connect(connectTimeout: TimeInterval = 5, discoveryTimeout: TimeInterval = 10) async throws {
         OsmoLog.connection.info("Connecting to peripheral \(self.peripheral.name ?? "unnamed", privacy: .public) id=\(self.peripheral.identifier, privacy: .public)")
 
-        let timeoutTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(connectTimeout))
-            guard let self, self.connectContinuation != nil else { return }
-            OsmoLog.connection.error("BLE connect timed out after \(Int(connectTimeout))s for \(self.peripheral.identifier, privacy: .public)")
-            self.centralManager?.cancelPeripheralConnection(self.peripheral)
-            self.connectContinuation?.resume(throwing: BLEConnectionError.timeout)
-            self.connectContinuation = nil
-        }
-        defer { timeoutTask.cancel() }
+        if peripheral.state == .connected {
+            // Already connected (e.g., passive reconnect after sleep woke the camera).
+            // Skip GATT connect step, go straight to service discovery.
+            OsmoLog.connection.info("Peripheral already connected — skipping GATT connect")
+        } else {
+            let timeoutTask = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(connectTimeout))
+                guard let self, self.connectContinuation != nil else { return }
+                OsmoLog.connection.error("BLE connect timed out after \(Int(connectTimeout))s for \(self.peripheral.identifier, privacy: .public)")
+                self.centralManager?.cancelPeripheralConnection(self.peripheral)
+                self.connectContinuation?.resume(throwing: BLEConnectionError.timeout)
+                self.connectContinuation = nil
+            }
+            defer { timeoutTask.cancel() }
 
-        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
-            self.connectContinuation = cont
-            centralManager?.connect(peripheral, options: nil)
+            try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
+                self.connectContinuation = cont
+                centralManager?.connect(peripheral, options: nil)
+            }
         }
 
         OsmoLog.connection.info("GATT connected — discovering services for \(self.peripheral.identifier, privacy: .public)")
@@ -198,9 +204,15 @@ extension OsmoBLEConnection: CBPeripheralDelegate {
             OsmoLog.connection.error("Characteristic discovery incomplete: write=\(self.writeCharacteristic != nil) notify=\(self.notifyCharacteristic != nil)")
             discoveryContinuation?.resume(throwing: BLEConnectionError.characteristicNotFound)
             discoveryContinuation = nil
+        } else if notifyCharacteristic!.isNotifying {
+            // Notifications already enabled (reconnection to same peripheral where CCCD
+            // was still set). setNotifyValue(true) won't fire didUpdateNotificationStateFor
+            // when nothing changes, so resolve immediately.
+            OsmoLog.connection.info("Notifications already enabled — resolving discovery immediately")
+            discoveryContinuation?.resume()
+            discoveryContinuation = nil
         }
-        // If both chars found, wait for didUpdateNotificationStateFor to confirm CCCD write
-        // before resuming discoveryContinuation.
+        // Otherwise wait for didUpdateNotificationStateFor to confirm the CCCD write.
     }
 
     func peripheral(_ peripheral: CBPeripheral,

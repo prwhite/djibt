@@ -33,4 +33,25 @@ public enum CameraMode: UInt8, CaseIterable, Equatable {
         default: return false
         }
     }
+
+    /// Whether this is a photo (still) mode.
+    public var isPhotoMode: Bool { self == .photo }
+
+    /// Modes the user can switch to from the controller UI.
+    public static let switchable: [CameraMode] = [.video, .photo, .slowMotion, .timelapse, .hyperlapse]
+
+    /// SF Symbol name for mode picker display.
+    public var systemImage: String {
+        switch self {
+        case .video:         return "video"
+        case .photo:         return "camera"
+        case .slowMotion:    return "slowmo"
+        case .timelapse:     return "timelapse"
+        case .hyperlapse:    return "figure.walk"
+        case .livestream:    return "antenna.radiowaves.left.and.right"
+        case .uvc:           return "cable.connector"
+        case .lowLight:      return "moon.stars"
+        case .subjectFollow: return "person.fill.viewfinder"
+        }
+    }
 }

@@ -20,30 +20,38 @@ final class CameraListViewModel {
         self.manager = manager
     }
 
+    // MARK: - Representative State
+
+    /// The mode reported by the first connected camera, used to drive the control bar UI.
+    var currentMode: CameraMode? {
+        manager.enabledConnectedCameras.first?.status.mode
+    }
+
+    /// True if any connected camera is currently recording.
+    var isAnyRecording: Bool {
+        manager.enabledConnectedCameras.contains { $0.status.recordingStatus.isRecording }
+    }
+
     // MARK: - Global Actions
 
-    func recordAll() {
-        Task { await manager.recordAll() }
+    func shutterAll() {
+        Task { await manager.shutterAll() }
     }
 
     func stopAll() {
         Task { await manager.stopAll() }
     }
 
-    func photoAll() {
-        Task { await manager.photoAll() }
+    func switchModeAll(_ mode: CameraMode) {
+        Task { await manager.switchModeAll(mode) }
     }
 
     func sleepAll() {
         Task { await manager.sleepAll() }
     }
 
-    func wakeAll() {
-        Task { await manager.wakeAll() }
-    }
-
-    func wakeCamera(_ camera: OsmoCamera) {
-        Task { await manager.wakeCamera(camera) }
+    func reconnectAll() {
+        Task { await manager.reconnectAll() }
     }
 
     // MARK: - Camera Actions
