@@ -81,9 +81,16 @@ public final class OsmoLocationManager: NSObject {
     // MARK: - Push
 
     private func pushGPSToAllCameras() {
-        guard let location = lastLocation,
-              abs(location.timestamp.timeIntervalSinceNow) < 5.0,
-              let manager = cameraManager else { return }
+        guard let manager = cameraManager else {
+            OsmoLog.location.debug("GPS push skipped: no camera manager")
+            return
+        }
+        guard let location = lastLocation else {
+            OsmoLog.location.debug("GPS push skipped: no location yet")
+            return
+        }
+        let targets = manager.enabledConnectedCameras.count
+        OsmoLog.location.debug("GPS push → \(targets) camera(s) @ \(String(format: "%.6f", location.coordinate.latitude)),\(String(format: "%.6f", location.coordinate.longitude))")
         manager.pushGPS(location)
     }
 }
@@ -97,6 +104,7 @@ extension OsmoLocationManager: CLLocationManagerDelegate {
         didUpdateLocations locations: [CLLocation]
     ) {
         guard let location = locations.last else { return }
+        OsmoLog.location.debug("CL update: \(String(format: "%.6f", location.coordinate.latitude)),\(String(format: "%.6f", location.coordinate.longitude)) ±\(String(format: "%.0f", location.horizontalAccuracy))m")
         Task { @MainActor in
             self.lastLocation = location
         }

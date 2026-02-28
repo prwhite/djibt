@@ -57,12 +57,6 @@ struct CameraDetailView: View {
             LabeledContent("Battery", value: hasLiveStatus ? "\(camera.status.batteryPercentage)%" : "—")
 
             if hasLiveStatus {
-                if camera.status.recordingStatus.isRecording {
-                    LabeledContent("Recording", value: formatDuration(camera.status.recordingSeconds))
-                } else {
-                    LabeledContent("Recording", value: camera.status.recordingStatus == .liveView ? "Live View" : "Idle")
-                }
-
                 LabeledContent("Resolution", value: camera.status.videoResolution?.displayName ?? "—")
                 LabeledContent("Frame Rate", value: camera.status.frameRate?.displayName ?? "—")
                 LabeledContent("Stabilization", value: camera.status.stabilizationMode?.displayName ?? "Off")
@@ -76,8 +70,6 @@ struct CameraDetailView: View {
                         Text("Temperature Warning")
                     }
                 }
-            } else {
-                LabeledContent("Recording", value: "—")
             }
 
             if let lastSeen = camera.lastSeenDate {
