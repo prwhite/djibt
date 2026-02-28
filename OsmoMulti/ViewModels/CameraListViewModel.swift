@@ -19,6 +19,9 @@ final class CameraListViewModel {
 
     init(manager: OsmoCameraManager = .shared) {
         self.manager = manager
+        // Ensure idle timer matches the initial (disabled) state on fresh launch.
+        // didSet does not fire during initialization, so set it explicitly.
+        UIApplication.shared.isIdleTimerDisabled = false
     }
 
     // MARK: - Screen Lock

@@ -68,6 +68,9 @@ public final class OsmoCamera: Identifiable {
     private var sequenceCounter: UInt16 = 0
     /// Pending response continuations keyed by sequence number.
     private var pendingResponses: [UInt16: CheckedContinuation<IncomingFrame, Error>] = [:]
+    /// True when one or more commands are awaiting a response.
+    /// The staleness watchdog uses this to avoid killing connections during command processing.
+    public var hasCommandsInFlight: Bool { !pendingResponses.isEmpty }
     /// Pending command-frame waiters keyed by "cmdSet_cmdID".
     private var pendingCommandWaiters: [String: CheckedContinuation<IncomingFrame, Error>] = [:]
     /// Background task driving the notification receive loop.
@@ -278,7 +281,7 @@ public final class OsmoCamera: Identifiable {
     public func switchMode(_ mode: CameraMode) async throws {
         guard connectionState == .connected else { return }
         OsmoLog.camera.info("Switching mode to \(String(describing: mode), privacy: .public): camera=\(self.name, privacy: .public)")
-        try await sendWithRetry { seq in ModeCommand.build(mode: mode, seq: seq) }
+        try await sendWithRetry(timeout: 5, maxAttempts: 2) { seq in ModeCommand.build(mode: mode, seq: seq) }
     }
 
     public func queryVersion() async {

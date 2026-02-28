@@ -27,6 +27,8 @@ public extension OsmoCameraManager {
             videoResolution: .res4K_16_9,
             frameRate: .fps30,
             stabilizationMode: .rs,
+            photoRatio: nil,
+            remainingPhotoCount: 0,
             remainingStorageMB: 28_672,
             remainingRecordTimeSec: 5_420,
             temperatureWarning: 0
@@ -46,6 +48,8 @@ public extension OsmoCameraManager {
             videoResolution: nil,
             frameRate: nil,
             stabilizationMode: nil,
+            photoRatio: .ratio4_3,
+            remainingPhotoCount: 245,
             remainingStorageMB: 512,
             remainingRecordTimeSec: 0,
             temperatureWarning: 0
@@ -65,6 +69,8 @@ public extension OsmoCameraManager {
             videoResolution: .res1080p,
             frameRate: .fps60,
             stabilizationMode: .hs,
+            photoRatio: nil,
+            remainingPhotoCount: 0,
             remainingStorageMB: 3_200,
             remainingRecordTimeSec: 1_800,
             temperatureWarning: 0
@@ -88,6 +94,8 @@ public extension OsmoCameraManager {
             videoResolution: .res4K_16_9,
             frameRate: .fps24,
             stabilizationMode: .off,
+            photoRatio: nil,
+            remainingPhotoCount: 0,
             remainingStorageMB: 15_360,
             remainingRecordTimeSec: 3_600,
             temperatureWarning: 1

@@ -19,7 +19,6 @@ struct GlobalControlsView: View {
 
     private var mode: CameraMode? { viewModel.currentMode }
     private var isRecording: Bool { viewModel.isAnyRecording }
-    private var isVideoMode: Bool { mode?.supportsRecording ?? true }
 
     var body: some View {
         GlassEffectContainer {
@@ -72,23 +71,24 @@ struct GlobalControlsView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
         }
+        // Force Menu label refresh — Menu can cache stale content across
+        // @Observable updates in some SwiftUI versions.
+        .id(mode)
     }
 
     // MARK: - Shutter Button
 
     @ViewBuilder
     private var shutterButton: some View {
-        if isVideoMode {
-            if isRecording {
-                ControlButton(systemImage: "stop.fill", label: "Stop",
-                              tint: .red) { viewModel.shutterAll() }
-            } else {
-                ControlButton(systemImage: "record.circle", label: "Record",
-                              tint: .red) { viewModel.shutterAll() }
-            }
-        } else {
+        if let mode, !mode.supportsRecording {
             ControlButton(systemImage: "camera.circle.fill", label: "Capture",
                           tint: .primary) { viewModel.shutterAll() }
+        } else if isRecording {
+            ControlButton(systemImage: "stop.fill", label: "Stop",
+                          tint: .red) { viewModel.shutterAll() }
+        } else {
+            ControlButton(systemImage: "record.circle", label: "Record",
+                          tint: .red) { viewModel.shutterAll() }
         }
     }
 }

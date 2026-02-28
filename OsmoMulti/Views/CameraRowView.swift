@@ -89,15 +89,26 @@ struct CameraRowView: View {
     private var compactStatusText: Text {
         guard hasLiveStatus else { return Text(" ") }
 
+        let isVideoMode = camera.status.mode?.supportsRecording ?? true
+
         var segments: [Text] = []
-        if let res = camera.status.videoResolution?.displayName {
-            segments.append(Text(res).foregroundColor(.blue.opacity(0.7)))
-        }
-        if let fps = camera.status.frameRate?.displayName {
-            segments.append(Text(fps).foregroundColor(.red.opacity(0.6)))
-        }
-        if let eis = camera.status.stabilizationMode, eis != .off {
-            segments.append(Text(eis.displayName).foregroundColor(.cyan.opacity(0.7)))
+        if isVideoMode {
+            if let res = camera.status.videoResolution?.displayName {
+                segments.append(Text(res).foregroundColor(.blue.opacity(0.7)))
+            }
+            if let fps = camera.status.frameRate?.displayName {
+                segments.append(Text(fps).foregroundColor(.red.opacity(0.6)))
+            }
+            if let eis = camera.status.stabilizationMode, eis != .off {
+                segments.append(Text(eis.displayName).foregroundColor(.cyan.opacity(0.7)))
+            }
+        } else {
+            if let ratio = camera.status.photoRatio?.displayName {
+                segments.append(Text(ratio).foregroundColor(.blue.opacity(0.7)))
+            }
+            if camera.status.remainingPhotoCount > 0 {
+                segments.append(Text("\(camera.status.remainingPhotoCount) photos").foregroundColor(.green.opacity(0.7)))
+            }
         }
         let mb = camera.status.remainingStorageMB
         if mb > 0 {

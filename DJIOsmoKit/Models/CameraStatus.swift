@@ -97,6 +97,18 @@ public struct CameraStatus: Equatable {
         }
     }
 
+    public enum PhotoRatio: UInt8, Equatable {
+        case ratio4_3  = 0
+        case ratio16_9 = 1
+
+        public var displayName: String {
+            switch self {
+            case .ratio4_3:  return "4:3"
+            case .ratio16_9: return "16:9"
+            }
+        }
+    }
+
     public enum StabilizationMode: UInt8, Equatable {
         case off    = 0
         case rs     = 1
@@ -133,6 +145,10 @@ public struct CameraStatus: Equatable {
     public let frameRate: FrameRate?
     /// Electronic image stabilization mode.
     public let stabilizationMode: StabilizationMode?
+    /// Photo aspect ratio setting reported by the camera.
+    public let photoRatio: PhotoRatio?
+    /// Remaining photos the camera estimates it can store.
+    public let remainingPhotoCount: UInt32
     /// Remaining storage capacity in megabytes.
     public let remainingStorageMB: UInt32
     /// Remaining recording time in seconds (estimated by camera).
@@ -152,6 +168,8 @@ public struct CameraStatus: Equatable {
         videoResolution: nil,
         frameRate: nil,
         stabilizationMode: nil,
+        photoRatio: nil,
+        remainingPhotoCount: 0,
         remainingStorageMB: 0,
         remainingRecordTimeSec: 0,
         temperatureWarning: 0
@@ -169,6 +187,8 @@ public struct CameraStatus: Equatable {
         videoResolution: VideoResolution?,
         frameRate: FrameRate?,
         stabilizationMode: StabilizationMode?,
+        photoRatio: PhotoRatio?,
+        remainingPhotoCount: UInt32,
         remainingStorageMB: UInt32,
         remainingRecordTimeSec: UInt32,
         temperatureWarning: UInt8
@@ -182,6 +202,8 @@ public struct CameraStatus: Equatable {
         self.videoResolution = videoResolution
         self.frameRate = frameRate
         self.stabilizationMode = stabilizationMode
+        self.photoRatio = photoRatio
+        self.remainingPhotoCount = remainingPhotoCount
         self.remainingStorageMB = remainingStorageMB
         self.remainingRecordTimeSec = remainingRecordTimeSec
         self.temperatureWarning = temperatureWarning
@@ -197,6 +219,11 @@ public struct CameraStatus: Equatable {
         let frameRate = FrameRate(rawValue: bytes[3])
         let stabilizationMode = StabilizationMode(rawValue: bytes[4])
         let recordingSeconds = Int(bytes[5]) | (Int(bytes[6]) << 8)
+        let photoRatio = PhotoRatio(rawValue: bytes[8])
+        let remainingPhotoCount = UInt32(bytes[19])
+            | (UInt32(bytes[20]) << 8)
+            | (UInt32(bytes[21]) << 16)
+            | (UInt32(bytes[22]) << 24)
         let remainingStorageMB = UInt32(bytes[15])
             | (UInt32(bytes[16]) << 8)
             | (UInt32(bytes[17]) << 16)
@@ -218,6 +245,8 @@ public struct CameraStatus: Equatable {
             videoResolution: videoResolution,
             frameRate: frameRate,
             stabilizationMode: stabilizationMode,
+            photoRatio: photoRatio,
+            remainingPhotoCount: remainingPhotoCount,
             remainingStorageMB: remainingStorageMB,
             remainingRecordTimeSec: remainingRecordTimeSec,
             temperatureWarning: temperatureWarning

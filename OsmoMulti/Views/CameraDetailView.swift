@@ -57,11 +57,20 @@ struct CameraDetailView: View {
             LabeledContent("Battery", value: hasLiveStatus ? "\(camera.status.batteryPercentage)%" : "—")
 
             if hasLiveStatus {
-                LabeledContent("Resolution", value: camera.status.videoResolution?.displayName ?? "—")
-                LabeledContent("Frame Rate", value: camera.status.frameRate?.displayName ?? "—")
-                LabeledContent("Stabilization", value: camera.status.stabilizationMode?.displayName ?? "Off")
+                if camera.status.mode?.supportsRecording ?? true {
+                    LabeledContent("Resolution", value: camera.status.videoResolution?.displayName ?? "—")
+                    LabeledContent("Frame Rate", value: camera.status.frameRate?.displayName ?? "—")
+                    LabeledContent("Stabilization", value: camera.status.stabilizationMode?.displayName ?? "Off")
+                } else {
+                    LabeledContent("Aspect Ratio", value: camera.status.photoRatio?.displayName ?? "—")
+                    if camera.status.remainingPhotoCount > 0 {
+                        LabeledContent("Photos Remaining", value: "\(camera.status.remainingPhotoCount)")
+                    }
+                }
                 LabeledContent("Storage", value: formatStorage(camera.status.remainingStorageMB))
-                LabeledContent("Time Remaining", value: formatHMS(camera.status.remainingRecordTimeSec))
+                if camera.status.mode?.supportsRecording ?? true {
+                    LabeledContent("Time Remaining", value: formatHMS(camera.status.remainingRecordTimeSec))
+                }
 
                 if camera.status.temperatureWarning > 0 {
                     HStack {

@@ -37,8 +37,8 @@ public final class OsmoCameraManager: NSObject {
         didSet { UserDefaults.standard.set(stalenessTimeout, forKey: PersistenceKey.stalenessTimeout) }
     }
 
-    /// Maximum number of automatic reconnection attempts before a camera is marked `.failed`.
-    /// Set to `0` for unlimited retries.
+    /// Number of active reconnection attempts before falling back to passive CoreBluetooth
+    /// reconnect. Set to `0` for unlimited active retries.
     public var maxRetries: Int {
         didSet { UserDefaults.standard.set(maxRetries, forKey: PersistenceKey.maxRetries) }
     }
@@ -211,13 +211,17 @@ public final class OsmoCameraManager: NSObject {
     }
 
     private func scheduleReconnect(camera: OsmoCamera) {
-        guard camera.isEnabled, cameras.contains(where: { $0.id == camera.id }) else { return }
+        guard camera.isEnabled, cameras.contains(where: { $0.id == camera.id }),
+              let peripheral = camera.peripheral else { return }
         camera.retryCount += 1
         if maxRetries > 0 && camera.retryCount > maxRetries {
-            OsmoLog.manager.error(
-                "Camera \(camera.name, privacy: .public) exceeded \(self.maxRetries) retries — marking as failed"
+            // Active retries exhausted — fall back to passive CoreBluetooth reconnect.
+            // CB will fire didConnect whenever the peripheral reappears (no timeout).
+            OsmoLog.manager.info(
+                "Camera \(camera.name, privacy: .public) exceeded \(self.maxRetries) active retries — falling back to passive reconnect"
             )
-            camera.connectionState = .failed
+            camera.connectionState = .reconnecting
+            centralManager.connect(peripheral, options: nil)
             return
         }
         let delay: TimeInterval = camera.retryCount == 1 ? 1 : 5
@@ -355,6 +359,9 @@ public final class OsmoCameraManager: NSObject {
         let now = Date()
         for camera in cameras where camera.connectionState == .connected {
             guard let lastSeen = camera.lastSeenDate else { continue }
+            // Don't kill a connection while commands are awaiting responses —
+            // the camera may pause status pushes during mode switches, etc.
+            if camera.hasCommandsInFlight { continue }
             let elapsed = now.timeIntervalSince(lastSeen)
             if elapsed > stalenessTimeout {
                 OsmoLog.manager.error(
@@ -470,9 +477,10 @@ extension OsmoCameraManager: @preconcurrency CBCentralManagerDelegate {
         if let conn = camera.bleConnection {
             conn.handleConnected()
         } else {
-            // Passive reconnect (e.g., sleeping camera woke up) — no bleConnection
-            // yet, so start the full connection flow. connect(camera:) will see
-            // peripheral.state == .connected and skip the GATT connect step.
+            // Passive reconnect (e.g., sleeping camera woke up, or retry fallback) —
+            // no bleConnection yet, so start the full connection flow. connect(camera:)
+            // will see peripheral.state == .connected and skip the GATT connect step.
+            camera.retryCount = 0
             OsmoLog.manager.info("Passive reconnect fired for \(camera.name, privacy: .public) — starting connection")
             Task { await connect(camera: camera) }
         }
@@ -501,6 +509,12 @@ extension OsmoCameraManager: @preconcurrency CBCentralManagerDelegate {
             centralManager.connect(peripheral, options: nil)
             OsmoLog.manager.info("Sleeping camera \(camera.name, privacy: .public) BLE disconnected — passive reconnect queued")
             return
+        }
+
+        // If the camera was stably connected (had live status), treat this as a
+        // fresh disconnect rather than a continued retry failure.
+        if camera.connectionState == .connected && camera.lastSeenDate != nil {
+            camera.retryCount = 0
         }
 
         camera.connectionState = .disconnected
