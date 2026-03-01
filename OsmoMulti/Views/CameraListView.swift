@@ -12,7 +12,7 @@ import SwiftUI
 #endif
 
 /// Main screen: list of all paired cameras grouped by enabled/disabled status,
-/// with global controls at the top.
+/// with global controls anchored to the bottom for thumb reachability.
 struct CameraListView: View {
 
     @State private var viewModel: CameraListViewModel
@@ -24,9 +24,6 @@ struct CameraListView: View {
 
     var body: some View {
         cameraList
-            .safeAreaInset(edge: .top) {
-                GlobalControlsView(viewModel: viewModel)
-            }
         .navigationTitle("Cameras")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -52,7 +49,11 @@ struct CameraListView: View {
                         .foregroundStyle(viewModel.screenLockDisabled ? .yellow : .secondary)
                 }
             }
+            ToolbarItemGroup(placement: .bottomBar) {
+                GlobalControlsView(viewModel: viewModel)
+            }
         }
+        .toolbarBackground(.visible, for: .bottomBar)
         .sheet(isPresented: Binding(
             get: { viewModel.isAddingCamera },
             set: { if !$0 { viewModel.dismissAddCamera() } }

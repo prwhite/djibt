@@ -55,7 +55,7 @@ public final class OsmoCameraManager: NSObject {
 
     private override init() {
         let saved = UserDefaults.standard.object(forKey: PersistenceKey.stalenessTimeout) as? TimeInterval
-        stalenessTimeout = saved ?? 3.0
+        stalenessTimeout = saved ?? 5.0
         let savedRetries = UserDefaults.standard.object(forKey: PersistenceKey.maxRetries) as? Int
         maxRetries = savedRetries ?? 5
         super.init()
@@ -109,6 +109,12 @@ public final class OsmoCameraManager: NSObject {
         persistCameras()
         OsmoLog.manager.info("Camera added: \(camera.name, privacy: .public) id=\(discovered.peripheral.identifier, privacy: .public)")
         Task { await connect(camera: camera) }
+    }
+
+    /// Toggle a camera's enabled state and persist the change.
+    public func toggleEnabled(_ camera: OsmoCamera) {
+        camera.isEnabled.toggle()
+        persistCameras()
     }
 
     /// Remove a camera and forget the pairing.
@@ -254,8 +260,8 @@ public final class OsmoCameraManager: NSObject {
 
     // MARK: - Bulk Commands
 
-    /// Send shutter press to all connected cameras. In video modes this toggles
-    /// recording; in photo mode it captures a still.
+    /// Send shutter press to all connected cameras. Used for photo capture
+    /// where there's no toggle state issue.
     public func shutterAll() async {
         let targets = enabledConnectedCameras
         OsmoLog.manager.info("shutterAll: dispatching shutter to \(targets.count) camera(s)")
@@ -266,10 +272,23 @@ public final class OsmoCameraManager: NSObject {
         }
     }
 
-    /// Explicitly stop recording on all connected cameras (does not toggle).
+    /// Start recording on all connected cameras that aren't already recording.
+    /// Uses explicit RecordingCommand (not the toggle shutter) to avoid
+    /// inverting cameras that are already in the desired state.
+    public func startAll() async {
+        let targets = enabledConnectedCameras.filter { !$0.status.recordingStatus.isRecording }
+        OsmoLog.manager.info("startAll: dispatching record start to \(targets.count) non-recording camera(s)")
+        await withTaskGroup(of: Void.self) { group in
+            for camera in targets {
+                group.addTask { try? await camera.sendRecordStart() }
+            }
+        }
+    }
+
+    /// Stop recording on all connected cameras that are currently recording.
     public func stopAll() async {
-        let targets = enabledConnectedCameras
-        OsmoLog.manager.info("stopAll: dispatching record stop to \(targets.count) camera(s)")
+        let targets = enabledConnectedCameras.filter { $0.status.recordingStatus.isRecording }
+        OsmoLog.manager.info("stopAll: dispatching record stop to \(targets.count) recording camera(s)")
         await withTaskGroup(of: Void.self) { group in
             for camera in targets {
                 group.addTask { try? await camera.sendRecordStop() }

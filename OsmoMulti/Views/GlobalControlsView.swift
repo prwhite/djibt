@@ -17,6 +17,11 @@ struct GlobalControlsView: View {
 
     let viewModel: CameraListViewModel
 
+    /// Shared height for all control bar items so glass effects render uniformly.
+    private static let controlHeight: CGFloat = 56
+    /// Fixed width for the compact side buttons (mode picker, sleep).
+    private static let sideButtonWidth: CGFloat = 64
+
     private var intent: ModeIntent? { viewModel.currentIntent }
     private var isRecording: Bool { viewModel.isAnyRecording }
 
@@ -24,13 +29,16 @@ struct GlobalControlsView: View {
         GlassEffectContainer {
             HStack(spacing: 12) {
                 modePicker
+                    .frame(width: Self.sideButtonWidth, height: Self.controlHeight)
                     .glassEffect(.regular.interactive())
 
                 shutterButton
+                    .frame(height: Self.controlHeight)
                     .glassEffect(.regular.interactive())
 
                 ControlButton(systemImage: "moon.zzz", label: "Sleep",
                               tint: .secondary) { viewModel.sleepAll() }
+                    .frame(width: Self.sideButtonWidth, height: Self.controlHeight)
                     .contextMenu {
                         Button {
                             viewModel.reconnectAll()
@@ -40,8 +48,7 @@ struct GlobalControlsView: View {
                     }
                     .glassEffect(.regular)
             }
-            .padding(.horizontal)
-            .padding(.vertical, 10)
+            .padding(.horizontal, 4)
         }
     }
 
@@ -68,8 +75,6 @@ struct GlobalControlsView: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
         }
         // Force Menu label refresh — Menu can cache stale content across
         // @Observable updates in some SwiftUI versions.
@@ -81,15 +86,41 @@ struct GlobalControlsView: View {
     @ViewBuilder
     private var shutterButton: some View {
         if intent == .photo {
-            ControlButton(systemImage: "camera.circle.fill", label: "Capture",
+            ShutterButton(systemImage: "camera.circle.fill", label: "Capture",
                           tint: .primary) { viewModel.shutterAll() }
         } else if isRecording {
-            ControlButton(systemImage: "stop.fill", label: "Stop",
-                          tint: .red) { viewModel.shutterAll() }
+            ShutterButton(systemImage: "stop.fill", label: "Stop",
+                          tint: .red) { viewModel.stopAll() }
         } else {
-            ControlButton(systemImage: "record.circle", label: "Record",
-                          tint: .red) { viewModel.shutterAll() }
+            ShutterButton(systemImage: "record.circle", label: "Record",
+                          tint: .red) { viewModel.startAll() }
         }
+    }
+}
+
+// MARK: - ShutterButton
+
+/// Wide, prominent button for the primary shutter/record action.
+private struct ShutterButton: View {
+    let systemImage: String
+    let label: String
+    let tint: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: systemImage)
+                    .font(.title2)
+                    .foregroundStyle(tint)
+                Text(label)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(tint)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -111,8 +142,8 @@ private struct ControlButton: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

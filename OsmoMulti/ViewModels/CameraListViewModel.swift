@@ -49,6 +49,10 @@ final class CameraListViewModel {
         Task { await manager.shutterAll() }
     }
 
+    func startAll() {
+        Task { await manager.startAll() }
+    }
+
     func stopAll() {
         Task { await manager.stopAll() }
     }
@@ -68,7 +72,7 @@ final class CameraListViewModel {
     // MARK: - Camera Actions
 
     func toggleEnabled(_ camera: OsmoCamera) {
-        camera.isEnabled.toggle()
+        manager.toggleEnabled(camera)
         if camera.isEnabled {
             // Treat re-enabling as an explicit user retry — reset the retry counter so a
             // previously-failed camera gets a fresh set of attempts.
