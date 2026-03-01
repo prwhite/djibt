@@ -42,6 +42,9 @@ final class OsmoBLEConnection: NSObject {
     private var connectContinuation: CheckedContinuation<Void, Error>?
     private var discoveryContinuation: CheckedContinuation<Void, Error>?
 
+    /// Called on the main queue when `readRSSI()` completes.
+    var onRSSIUpdate: ((Int) -> Void)?
+
     /// Stream of raw DJI frame bytes received from the camera.
     /// Callers should pass these to `FrameParser.parse(_:)`.
     var notifications: AsyncStream<Data> {
@@ -63,7 +66,7 @@ final class OsmoBLEConnection: NSObject {
     /// Throws `BLEConnectionError.timeout` if the GATT connection does not complete
     /// within `connectTimeout` seconds.
     func connect(connectTimeout: TimeInterval = 5, discoveryTimeout: TimeInterval = 10) async throws {
-        OsmoLog.connection.info("Connecting to peripheral \(self.peripheral.name ?? "unnamed", privacy: .public) id=\(self.peripheral.identifier, privacy: .public)")
+        OsmoLog.connection.info("Connecting to peripheral \(self.peripheral.name ?? "unnamed", privacy: .public) id=\(self.peripheral.identifier, privacy: .public) state=\(String(describing: self.peripheral.state.rawValue), privacy: .public)")
 
         if peripheral.state == .connected {
             // Already connected (e.g., passive reconnect after sleep woke the camera).
@@ -106,6 +109,11 @@ final class OsmoBLEConnection: NSObject {
     func write(_ data: Data) throws {
         guard let char = writeCharacteristic else { throw BLEConnectionError.notConnected }
         peripheral.writeValue(data, for: char, type: .withoutResponse)
+    }
+
+    /// Trigger an RSSI read. Result arrives via `onRSSIUpdate` callback.
+    func readRSSI() {
+        peripheral.readRSSI()
     }
 
     // MARK: - Private
@@ -221,6 +229,11 @@ extension OsmoBLEConnection: CBPeripheralDelegate {
         guard error == nil, let data = characteristic.value else { return }
         OsmoLog.connection.debug("Notification received: \(data.count) bytes from \(peripheral.identifier, privacy: .public)")
         notificationContinuation?.yield(data)
+    }
+
+    func peripheral(_ peripheral: CBPeripheral, didReadRSSI RSSI: NSNumber, error: Error?) {
+        guard error == nil else { return }
+        onRSSIUpdate?(RSSI.intValue)
     }
 
     func peripheral(_ peripheral: CBPeripheral,

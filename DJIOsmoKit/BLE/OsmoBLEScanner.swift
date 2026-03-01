@@ -97,11 +97,34 @@ extension OsmoBLEScanner: CBCentralManagerDelegate {
         }
         let name = advertisementData[CBAdvertisementDataLocalNameKey] as? String
         OsmoLog.scan.info("Discovered DJI camera: \(name ?? "unnamed", privacy: .public) id=\(peripheral.identifier, privacy: .public) RSSI=\(rssiValue) dBm")
+
+        // Dump full advertisement data for protocol analysis
+        Self.logAdvertisement(advertisementData, peripheral: peripheral)
+
         let discovered = DiscoveredCamera(
             peripheral: peripheral,
             rssi: rssiValue,
             advertisedName: name
         )
         discoveryContinuation?.yield(discovered)
+    }
+
+    /// Log all advertisement keys for protocol debugging / reverse engineering.
+    private static func logAdvertisement(_ ad: [String: Any], peripheral: CBPeripheral) {
+        if let mfr = ad[CBAdvertisementDataManufacturerDataKey] as? Data {
+            OsmoLog.scan.info("  mfr data (\(mfr.count)B): \(mfr.map { String(format: "%02X", $0) }.joined(separator: " "), privacy: .public)")
+        }
+        if let serviceUUIDs = ad[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID] {
+            OsmoLog.scan.info("  service UUIDs: \(serviceUUIDs.map(\.uuidString).joined(separator: ", "), privacy: .public)")
+        }
+        if let overflow = ad[CBAdvertisementDataOverflowServiceUUIDsKey] as? [CBUUID] {
+            OsmoLog.scan.info("  overflow UUIDs: \(overflow.map(\.uuidString).joined(separator: ", "), privacy: .public)")
+        }
+        if let connectable = ad[CBAdvertisementDataIsConnectable] as? NSNumber {
+            OsmoLog.scan.info("  connectable: \(connectable.boolValue, privacy: .public)")
+        }
+        if let txPower = ad[CBAdvertisementDataTxPowerLevelKey] as? NSNumber {
+            OsmoLog.scan.info("  tx power: \(txPower.intValue) dBm")
+        }
     }
 }

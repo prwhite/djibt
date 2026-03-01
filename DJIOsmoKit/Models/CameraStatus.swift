@@ -54,6 +54,7 @@ public struct CameraStatus: Equatable {
         case res2K7_4_3    = 95
         case res4K_4_3     = 103
         case res4K_9_16    = 109
+        case res360        = 111   // Osmo 360 equirectangular capture
 
         public var displayName: String {
             switch self {
@@ -65,6 +66,7 @@ public struct CameraStatus: Equatable {
             case .res2K7_4_3:    return "2.7K 4:3"
             case .res4K_4_3:     return "4K 4:3"
             case .res4K_9_16:    return "4K 9:16"
+            case .res360:        return "360°"
             }
         }
     }
@@ -100,11 +102,13 @@ public struct CameraStatus: Equatable {
     public enum PhotoRatio: UInt8, Equatable {
         case ratio4_3  = 0
         case ratio16_9 = 1
+        case ratio2_1  = 4   // Equirectangular (360°)
 
         public var displayName: String {
             switch self {
             case .ratio4_3:  return "4:3"
             case .ratio16_9: return "16:9"
+            case .ratio2_1:  return "2:1"
             }
         }
     }

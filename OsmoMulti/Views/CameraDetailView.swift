@@ -53,6 +53,15 @@ struct CameraDetailView: View {
     private var statusSection: some View {
         Section("Status") {
             LabeledContent("Connection", value: camera.connectionState.displayLabel)
+            if let rssi = camera.rssi {
+                LabeledContent("Signal") {
+                    HStack(spacing: 6) {
+                        SignalStrengthView(rssi: rssi)
+                        Text("\(rssi) dBm")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
             LabeledContent("Mode", value: hasLiveStatus ? (camera.status.mode?.displayName ?? "Unknown") : "—")
             LabeledContent("Battery", value: hasLiveStatus ? "\(camera.status.batteryPercentage)%" : "—")
 
@@ -81,8 +90,12 @@ struct CameraDetailView: View {
                 }
             }
 
-            if let lastSeen = camera.lastSeenDate {
-                LabeledContent("Last Seen", value: lastSeen.formatted(.relative(presentation: .named)))
+            // TimelineView isolates lastSeenDate observation from the parent body,
+            // preventing 1 Hz re-renders of the entire detail view.
+            TimelineView(.periodic(from: .now, by: 1.0)) { _ in
+                if let lastSeen = camera.lastSeenDate {
+                    LabeledContent("Last Seen", value: lastSeen.formatted(.relative(presentation: .named)))
+                }
             }
         }
     }
@@ -91,12 +104,12 @@ struct CameraDetailView: View {
 
     private var controlsSection: some View {
         Section("Controls") {
-            // Mode picker
+            // Mode picker — shows native modes for this camera type
             Picker("Mode", selection: Binding(
-                get: { camera.status.mode ?? .video },
+                get: { camera.status.mode ?? (camera.isPanoCamera ? .panoVideo : .video) },
                 set: { newMode in Task { try? await camera.switchMode(newMode) } }
             )) {
-                ForEach(CameraMode.switchable, id: \.rawValue) { mode in
+                ForEach(CameraMode.switchableModes(isPano: camera.isPanoCamera, currentMode: camera.status.mode), id: \.rawValue) { mode in
                     Label(mode.displayName, systemImage: mode.systemImage).tag(mode)
                 }
             }

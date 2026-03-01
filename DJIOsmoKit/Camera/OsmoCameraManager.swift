@@ -104,6 +104,7 @@ public final class OsmoCameraManager: NSObject {
         )
         camera.peripheral = discovered.peripheral
         camera.knownPeripheralID = discovered.peripheral.identifier
+        camera.onPanoCameraDetected = { [weak self] in self?.persistCameras() }
         cameras.append(camera)
         persistCameras()
         OsmoLog.manager.info("Camera added: \(camera.name, privacy: .public) id=\(discovered.peripheral.identifier, privacy: .public)")
@@ -140,6 +141,7 @@ public final class OsmoCameraManager: NSObject {
             OsmoLog.manager.info("Connecting: \(camera.name, privacy: .public) → connected")
             camera.retryCount = 0
             camera.connectionState = .connected
+            camera.startRSSIPolling()
         } catch {
             OsmoLog.manager.error("Connection failed for \(camera.name, privacy: .public): \(error.localizedDescription, privacy: .public)")
             // Only clear bleConnection if it's still OUR connection object.
@@ -206,8 +208,9 @@ public final class OsmoCameraManager: NSObject {
         _ = try await camera.sendAndWait(frame: subFrame, seq: subSeq)
         OsmoLog.manager.info("Handshake complete for \(camera.name, privacy: .public)")
 
-        // Best-effort: query firmware version (non-fatal)
-        Task { await camera.queryVersion() }
+        // Query firmware version — sets isPanoCamera for 360 cameras.
+        // Non-fatal: if it fails, the mode-based fallback in handleIncomingFrame still works.
+        await camera.queryVersion()
     }
 
     private func scheduleReconnect(camera: OsmoCamera) {
@@ -274,13 +277,15 @@ public final class OsmoCameraManager: NSObject {
         }
     }
 
-    /// Switch all connected cameras to the given mode.
-    public func switchModeAll(_ mode: CameraMode) async {
+    /// Switch all connected cameras to the given mode intent.
+    /// Each camera resolves the intent to its native mode (e.g. 360 cameras get `.panoVideo`).
+    public func switchModeAll(_ intent: ModeIntent) async {
         let targets = enabledConnectedCameras
-        OsmoLog.manager.info("switchModeAll: switching \(targets.count) camera(s) to \(mode.displayName, privacy: .public)")
+        OsmoLog.manager.info("switchModeAll: switching \(targets.count) camera(s) to intent=\(intent.displayName, privacy: .public)")
         await withTaskGroup(of: Void.self) { group in
             for camera in targets {
-                group.addTask { try? await camera.switchMode(mode) }
+                let nativeMode = CameraMode.nativeMode(for: intent, isPano: camera.isPanoCamera, currentMode: camera.status.mode)
+                group.addTask { try? await camera.switchMode(nativeMode) }
             }
         }
     }
@@ -404,12 +409,14 @@ public final class OsmoCameraManager: NSObject {
         let name: String
         let isEnabled: Bool
         let peripheralID: UUID?
+        let isPanoCamera: Bool?
     }
 
     private func persistCameras() {
         let data = cameras.map {
             PersistedCamera(id: $0.id, name: $0.name, isEnabled: $0.isEnabled,
-                            peripheralID: $0.peripheral?.identifier)
+                            peripheralID: $0.peripheral?.identifier,
+                            isPanoCamera: $0.isPanoCamera)
         }
         if let encoded = try? JSONEncoder().encode(data) {
             UserDefaults.standard.set(encoded, forKey: PersistenceKey.cameras)
@@ -422,6 +429,8 @@ public final class OsmoCameraManager: NSObject {
         cameras = decoded.map { p in
             let cam = OsmoCamera(id: p.id, name: p.name, isEnabled: p.isEnabled)
             cam.knownPeripheralID = p.peripheralID
+            cam.isPanoCamera = p.isPanoCamera ?? false
+            cam.onPanoCameraDetected = { [weak self] in self?.persistCameras() }
             return cam
         }
     }
@@ -497,6 +506,7 @@ extension OsmoCameraManager: @preconcurrency CBCentralManagerDelegate {
         }
         camera.bleConnection?.handleDisconnected(error: error)
         camera.stopNotificationLoop()
+        camera.stopRSSIPolling()
         camera.failPendingCommands()
         camera.bleConnection = nil
 

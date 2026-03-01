@@ -38,6 +38,17 @@ public final class OsmoCamera: Identifiable {
     public internal(set) var productName: String?
     /// SDK/firmware version string returned by the camera.
     public internal(set) var sdkVersion: String?
+    /// Sticky flag: set `true` by version query (SDK contains "AC203" = Osmo 360),
+    /// or as a fallback when a 360-exclusive mode byte is first seen in a status push.
+    public internal(set) var isPanoCamera: Bool = false {
+        didSet {
+            if isPanoCamera != oldValue { onPanoCameraDetected?() }
+        }
+    }
+    /// Called when `isPanoCamera` transitions to `true`. Used by the manager to re-persist.
+    internal var onPanoCameraDetected: (() -> Void)?
+    /// BLE signal strength in dBm. Updated every 2 seconds while connected.
+    public internal(set) var rssi: Int?
 
     // MARK: - BLE
 
@@ -63,7 +74,11 @@ public final class OsmoCamera: Identifiable {
         lastSeenDate = nil
         productName = nil
         sdkVersion = nil
+        rssi = nil
+        loggedModePayloads.removeAll()
     }
+    /// Raw mode bytes we've already logged a hex dump for — avoids flooding the log at 1 Hz.
+    private var loggedModePayloads: Set<UInt8> = []
     /// Incrementing sequence number for outgoing frames.
     private var sequenceCounter: UInt16 = 0
     /// Pending response continuations keyed by sequence number.
@@ -75,6 +90,8 @@ public final class OsmoCamera: Identifiable {
     private var pendingCommandWaiters: [String: CheckedContinuation<IncomingFrame, Error>] = [:]
     /// Background task driving the notification receive loop.
     private var notificationTask: Task<Void, Never>?
+    /// Background task polling RSSI every 2 seconds.
+    private var rssiTask: Task<Void, Never>?
 
     // MARK: - Init
 
@@ -194,8 +211,22 @@ public final class OsmoCamera: Identifiable {
         if frame.cmdSet == 0x1D && frame.cmdID == 0x02 {
             // Camera status push
             if let parsed = CameraStatus.parse(from: Array(frame.payload)) {
-                OsmoLog.camera.debug("Status update: mode=\(String(describing: parsed.mode), privacy: .public) recording=\(String(describing: parsed.recordingStatus), privacy: .public) battery=\(parsed.batteryPercentage)% power=\(parsed.powerMode == .sleep ? "sleep" : "normal", privacy: .public)")
-                status = parsed
+                let modeStr = parsed.mode?.displayName ?? "raw=0x\(String(parsed.rawMode, radix: 16, uppercase: true))"
+                let resStr = parsed.videoResolution?.displayName ?? "raw=\(Array(frame.payload)[2])"
+                let fpsStr = parsed.frameRate?.displayName ?? "raw=\(Array(frame.payload)[3])"
+                let eisStr = parsed.stabilizationMode?.displayName ?? "raw=\(Array(frame.payload)[4])"
+                OsmoLog.camera.debug("Status: \(modeStr, privacy: .public) \(resStr, privacy: .public) \(fpsStr, privacy: .public) EIS=\(eisStr, privacy: .public) bat=\(parsed.batteryPercentage)% rec=\(String(describing: parsed.recordingStatus), privacy: .public)")
+                // Log full hex dump once per raw mode value — avoids 1 Hz log spam
+                if loggedModePayloads.insert(parsed.rawMode).inserted {
+                    let label = parsed.mode?.displayName ?? "unknown"
+                    let hex = Array(frame.payload).map { String(format: "%02X", $0) }.joined(separator: " ")
+                    OsmoLog.camera.info("Mode 0x\(String(parsed.rawMode, radix: 16, uppercase: true), privacy: .public) (\(label, privacy: .public)) on \(self.name, privacy: .public) — raw payload (\(frame.payload.count)B): \(hex, privacy: .public)")
+                }
+                if parsed != status { status = parsed }
+                if !isPanoCamera, let mode = parsed.mode, mode.is360Exclusive {
+                    isPanoCamera = true
+                    OsmoLog.camera.info("Camera \(self.name, privacy: .public) detected as 360°/panoramic")
+                }
                 if parsed.powerMode == .sleep && connectionState != .sleeping {
                     OsmoLog.camera.info("Camera \(self.name, privacy: .public) transitioning to sleeping")
                     connectionState = .sleeping
@@ -229,6 +260,29 @@ public final class OsmoCamera: Identifiable {
     func stopNotificationLoop() {
         notificationTask?.cancel()
         notificationTask = nil
+    }
+
+    /// Start polling BLE RSSI every 2 seconds. Called after connection is established.
+    func startRSSIPolling() {
+        rssiTask?.cancel()
+        guard let conn = bleConnection else { return }
+        conn.onRSSIUpdate = { [weak self] value in
+            guard let self else { return }
+            if self.rssi != value { self.rssi = value }
+        }
+        rssiTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self, self.bleConnection != nil else { break }
+                self.bleConnection?.readRSSI()
+                try? await Task.sleep(for: .seconds(2))
+            }
+        }
+    }
+
+    func stopRSSIPolling() {
+        rssiTask?.cancel()
+        rssiTask = nil
+        bleConnection?.onRSSIUpdate = nil
     }
 
     /// Fail all pending `sendAndWait` and `waitForCommand` calls immediately with a connection error.
@@ -294,6 +348,11 @@ public final class OsmoCamera: Identifiable {
                 productName = info.productID
                 sdkVersion = info.sdkVersion
                 OsmoLog.camera.info("Version query: product=\(info.productID, privacy: .public) sdk=\(info.sdkVersion, privacy: .public)")
+                // AC203 firmware identifier = Osmo 360
+                if !isPanoCamera && info.sdkVersion.contains("AC203") {
+                    isPanoCamera = true
+                    OsmoLog.camera.info("Camera \(self.name, privacy: .public) identified as 360° via version query")
+                }
             }
         } catch {
             OsmoLog.camera.error("Version query failed: \(error.localizedDescription, privacy: .public)")

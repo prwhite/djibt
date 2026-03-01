@@ -20,8 +20,11 @@ struct CameraRowView: View {
 
                 Spacer()
 
-                // Battery (show for connected and sleeping — last-known value is still valid)
+                // Signal + battery (show for connected and sleeping)
                 if camera.connectionState == .connected || camera.connectionState == .sleeping {
+                    if let rssi = camera.rssi {
+                        SignalStrengthView(rssi: rssi)
+                    }
                     BatteryView(percentage: camera.status.batteryPercentage)
                 }
 

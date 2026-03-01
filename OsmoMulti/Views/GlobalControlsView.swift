@@ -17,7 +17,7 @@ struct GlobalControlsView: View {
 
     let viewModel: CameraListViewModel
 
-    private var mode: CameraMode? { viewModel.currentMode }
+    private var intent: ModeIntent? { viewModel.currentIntent }
     private var isRecording: Bool { viewModel.isAnyRecording }
 
     var body: some View {
@@ -49,22 +49,22 @@ struct GlobalControlsView: View {
 
     private var modePicker: some View {
         Menu {
-            ForEach(CameraMode.switchable, id: \.rawValue) { m in
+            ForEach(ModeIntent.allCases, id: \.self) { m in
                 Button {
                     viewModel.switchModeAll(m)
                 } label: {
                     Label(m.displayName, systemImage: m.systemImage)
-                    if m == mode {
+                    if m == intent {
                         Image(systemName: "checkmark")
                     }
                 }
             }
         } label: {
             VStack(spacing: 3) {
-                Image(systemName: mode?.systemImage ?? "video")
+                Image(systemName: intent?.systemImage ?? "video")
                     .font(.title3)
                     .foregroundStyle(.primary)
-                Text(mode?.displayName ?? "Mode")
+                Text(intent?.displayName ?? "Mode")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -73,14 +73,14 @@ struct GlobalControlsView: View {
         }
         // Force Menu label refresh — Menu can cache stale content across
         // @Observable updates in some SwiftUI versions.
-        .id(mode)
+        .id(intent)
     }
 
     // MARK: - Shutter Button
 
     @ViewBuilder
     private var shutterButton: some View {
-        if let mode, !mode.supportsRecording {
+        if intent == .photo {
             ControlButton(systemImage: "camera.circle.fill", label: "Capture",
                           tint: .primary) { viewModel.shutterAll() }
         } else if isRecording {

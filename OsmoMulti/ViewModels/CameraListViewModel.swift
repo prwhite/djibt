@@ -32,9 +32,10 @@ final class CameraListViewModel {
 
     // MARK: - Representative State
 
-    /// The mode reported by the first connected camera, used to drive the control bar UI.
-    var currentMode: CameraMode? {
-        manager.enabledConnectedCameras.first?.status.mode
+    /// The mode intent reported by the first connected camera, used to drive the global control bar.
+    /// Maps each camera's native mode (e.g. `.panoVideo`) to its high-level intent (`.video`).
+    var currentIntent: ModeIntent? {
+        manager.enabledConnectedCameras.first?.status.mode?.intent
     }
 
     /// True if any connected camera is currently recording.
@@ -52,8 +53,8 @@ final class CameraListViewModel {
         Task { await manager.stopAll() }
     }
 
-    func switchModeAll(_ mode: CameraMode) {
-        Task { await manager.switchModeAll(mode) }
+    func switchModeAll(_ intent: ModeIntent) {
+        Task { await manager.switchModeAll(intent) }
     }
 
     func sleepAll() {
