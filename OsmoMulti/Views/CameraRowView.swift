@@ -22,8 +22,8 @@ struct CameraRowView: View {
 
                 // Signal + battery (show for connected and sleeping)
                 if camera.connectionState == .connected || camera.connectionState == .sleeping {
-                    if let rssi = camera.rssi {
-                        SignalStrengthView(rssi: rssi)
+                    if !camera.rssiHistory.isEmpty {
+                        SignalStrengthView(history: camera.rssiHistory)
                     }
                     BatteryView(percentage: camera.status.batteryPercentage)
                 }
@@ -45,9 +45,7 @@ struct CameraRowView: View {
                     .foregroundStyle(subtitleColor)
             }
 
-            compactStatusText
-                .font(.caption2)
-                .lineLimit(1)
+            compactStatusBar
         }
         .padding(.vertical, 2)
     }
@@ -87,40 +85,50 @@ struct CameraRowView: View {
         camera.connectionState == .connected || camera.connectionState == .sleeping
     }
 
-    private static let separator = Text(" · ").foregroundColor(.secondary.opacity(0.4))
-
-    private var compactStatusText: Text {
-        guard hasLiveStatus else { return Text(" ") }
-
+    private var statusSegments: [String] {
+        guard hasLiveStatus else { return [] }
+        var segments: [String] = []
         let isVideoMode = camera.status.mode?.supportsRecording ?? true
-
-        var segments: [Text] = []
         if isVideoMode {
-            if let res = camera.status.videoResolution?.displayName {
-                segments.append(Text(res).foregroundColor(.blue.opacity(0.7)))
-            }
-            if let fps = camera.status.frameRate?.displayName {
-                segments.append(Text(fps).foregroundColor(.red.opacity(0.6)))
-            }
-            if let eis = camera.status.stabilizationMode, eis != .off {
-                segments.append(Text(eis.displayName).foregroundColor(.cyan.opacity(0.7)))
-            }
+            if let res = camera.status.videoResolution?.displayName { segments.append(res) }
+            if let fps = camera.status.frameRate?.displayName { segments.append(fps) }
+            if let eis = camera.status.stabilizationMode, eis != .off { segments.append(eis.displayName) }
         } else {
-            if let ratio = camera.status.photoRatio?.displayName {
-                segments.append(Text(ratio).foregroundColor(.blue.opacity(0.7)))
-            }
-            if camera.status.remainingPhotoCount > 0 {
-                segments.append(Text("\(camera.status.remainingPhotoCount) photos").foregroundColor(.green.opacity(0.7)))
-            }
+            if let ratio = camera.status.photoRatio?.displayName { segments.append(ratio) }
+            if camera.status.remainingPhotoCount > 0 { segments.append("\(camera.status.remainingPhotoCount) photos") }
         }
         let mb = camera.status.remainingStorageMB
         if mb > 0 {
-            let label = mb >= 1024 ? String(format: "%.0f GB", Double(mb) / 1024.0) : "\(mb) MB"
-            segments.append(Text(label).foregroundColor(.yellow.opacity(0.7)))
+            segments.append(mb >= 1024 ? String(format: "%.0f GB", Double(mb) / 1024.0) : "\(mb) MB")
         }
+        return segments
+    }
 
-        guard let first = segments.first else { return Text(" ") }
-        return segments.dropFirst().reduce(first) { $0 + Self.separator + $1 }
+    @ViewBuilder
+    private var compactStatusBar: some View {
+        let segments = statusSegments
+        if segments.isEmpty {
+            Text(" ").font(.caption2)
+        } else {
+            HStack(spacing: 4) {
+                ForEach(Array(segments.enumerated()), id: \.offset) { index, label in
+                    if index.isMultiple(of: 2) {
+                        // Plain: system foreground on background
+                        Text(label)
+                            .font(.caption2)
+                            .foregroundStyle(.primary)
+                    } else {
+                        // Inverted: system background on foreground pill
+                        Text(label)
+                            .font(.caption2)
+                            .foregroundStyle(.background)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(.primary, in: .rect(cornerRadius: 3))
+                    }
+                }
+            }
+        }
     }
 
     private var subtitleText: String {

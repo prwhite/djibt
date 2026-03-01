@@ -56,7 +56,7 @@ struct CameraDetailView: View {
             if let rssi = camera.rssi {
                 LabeledContent("Signal") {
                     HStack(spacing: 6) {
-                        SignalStrengthView(rssi: rssi)
+                        SignalStrengthView(history: camera.rssiHistory)
                         Text("\(rssi) dBm")
                             .foregroundStyle(.secondary)
                     }

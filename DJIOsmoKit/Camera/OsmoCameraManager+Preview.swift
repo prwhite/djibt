@@ -18,6 +18,7 @@ public extension OsmoCameraManager {
         cam1.connectionState = .connected
         cam1.lastSeenDate = Date()
         cam1.rssi = -48
+        cam1.rssiHistory = [-52, -50, -48, -49, -47, -48, -50, -48, -47, -48]
         cam1.status = CameraStatus(
             mode: .video,
             recordingStatus: .recording,
@@ -40,6 +41,7 @@ public extension OsmoCameraManager {
         cam2.connectionState = .connected
         cam2.lastSeenDate = Date()
         cam2.rssi = -62
+        cam2.rssiHistory = [-58, -60, -63, -65, -62, -64, -61, -63, -62, -62]
         cam2.status = CameraStatus(
             mode: .photo,
             recordingStatus: .liveView,
@@ -62,6 +64,7 @@ public extension OsmoCameraManager {
         cam3.connectionState = .connected
         cam3.lastSeenDate = Date(timeIntervalSinceNow: -5)
         cam3.rssi = -75
+        cam3.rssiHistory = [-72, -74, -78, -76, -80, -77, -75, -73, -76, -75]
         cam3.status = CameraStatus(
             mode: .video,
             recordingStatus: .liveView,
@@ -109,6 +112,7 @@ public extension OsmoCameraManager {
         cam6.connectionState = .connected
         cam6.lastSeenDate = Date()
         cam6.rssi = -88
+        cam6.rssiHistory = [-85, -87, -90, -92, -88, -91, -89, -87, -90, -88]
         cam6.isPanoCamera = true
         cam6.productName = "DJI-ACTION4"
         cam6.sdkVersion = "SDK-v1.1 DEBUG AC203-03.04.80.15"

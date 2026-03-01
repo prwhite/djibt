@@ -1,37 +1,43 @@
 import SwiftUI
 
-/// Four-bar signal strength indicator, styled like the iOS cellular signal icon.
+/// Tiny RSSI bar-graph sparkline (up to 16 samples).
 ///
-/// Maps BLE RSSI (dBm) to 0–4 filled bars. Active bars are tinted by signal quality;
-/// inactive bars are dimmed.
+/// Each sample draws a vertical bar from the bottom up to its value.
+/// Bars are individually colored: green (>= -67), orange (>= -80), red (< -80).
 struct SignalStrengthView: View {
 
-    let rssi: Int
+    let history: [Int]
 
-    private var bars: Int {
-        if rssi >= -55 { return 4 }
-        if rssi >= -67 { return 3 }
-        if rssi >= -80 { return 2 }
-        if rssi >= -90 { return 1 }
-        return 0
-    }
-
-    private var barColor: Color {
-        switch bars {
-        case 4, 3: return .green
-        case 2:    return .orange
-        default:   return .red
-        }
+    private static func barColor(for rssi: Int) -> Color {
+        if rssi >= -67 { return .green }
+        if rssi >= -80 { return .orange }
+        return .red
     }
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: 1.5) {
-            ForEach(0..<4, id: \.self) { index in
-                RoundedRectangle(cornerRadius: 1)
-                    .fill(index < bars ? barColor : Color.secondary.opacity(0.2))
-                    .frame(width: 3, height: CGFloat(4 + index * 3))
+        Canvas { context, size in
+            guard !history.isEmpty else { return }
+
+            let floor: CGFloat = -95
+            let ceiling: CGFloat = -40
+            let range = ceiling - floor
+            let barWidth: CGFloat = 1.5
+            let gap: CGFloat = 0.5
+            let step = barWidth + gap
+
+            for (i, rssi) in history.enumerated() {
+                let clamped = min(max(CGFloat(rssi), floor), ceiling)
+                let barHeight = max(1, size.height * (clamped - floor) / range)
+                let x = CGFloat(i) * step
+                let rect = CGRect(
+                    x: x,
+                    y: size.height - barHeight,
+                    width: barWidth,
+                    height: barHeight
+                )
+                context.fill(Path(rect), with: .color(Self.barColor(for: rssi)))
             }
         }
-        .frame(height: 13)
+        .frame(width: CGFloat(max(history.count, 1)) * 2.0 - 0.5, height: 13)
     }
 }

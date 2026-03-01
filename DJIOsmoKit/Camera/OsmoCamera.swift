@@ -49,6 +49,8 @@ public final class OsmoCamera: Identifiable {
     internal var onPanoCameraDetected: (() -> Void)?
     /// BLE signal strength in dBm. Updated every 2 seconds while connected.
     public internal(set) var rssi: Int?
+    /// Recent RSSI samples for sparkline display (max 16, newest last).
+    public internal(set) var rssiHistory: [Int] = []
 
     // MARK: - BLE
 
@@ -75,6 +77,7 @@ public final class OsmoCamera: Identifiable {
         productName = nil
         sdkVersion = nil
         rssi = nil
+        rssiHistory.removeAll()
         loggedModePayloads.removeAll()
     }
     /// Raw mode bytes we've already logged a hex dump for — avoids flooding the log at 1 Hz.
@@ -269,6 +272,8 @@ public final class OsmoCamera: Identifiable {
         conn.onRSSIUpdate = { [weak self] value in
             guard let self else { return }
             if self.rssi != value { self.rssi = value }
+            self.rssiHistory.append(value)
+            if self.rssiHistory.count > 16 { self.rssiHistory.removeFirst() }
         }
         rssiTask = Task { [weak self] in
             while !Task.isCancelled {
