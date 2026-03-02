@@ -85,6 +85,19 @@ struct SettingsView: View {
                     } label: {
                         Label("Clear All Cameras", systemImage: "trash")
                     }
+                    .confirmationDialog(
+                        "Clear all cameras?",
+                        isPresented: $showClearConfirmation,
+                        titleVisibility: .visible
+                    ) {
+                        Button("Clear All", role: .destructive) {
+                            manager.clearAllCameras()
+                            dismiss()
+                        }
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text("This will remove all \(manager.cameras.count) paired camera(s). This cannot be undone.")
+                    }
                 } footer: {
                     Text("Removes all paired cameras from the app. You will need to pair them again.")
                 }
@@ -95,19 +108,6 @@ struct SettingsView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
-            }
-            .confirmationDialog(
-                "Clear all cameras?",
-                isPresented: $showClearConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button("Clear All", role: .destructive) {
-                    manager.clearAllCameras()
-                    dismiss()
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This will remove all \(manager.cameras.count) paired camera(s). This cannot be undone.")
             }
         }
     }

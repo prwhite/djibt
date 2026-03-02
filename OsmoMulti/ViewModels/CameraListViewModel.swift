@@ -108,6 +108,8 @@ final class CameraListViewModel {
 
     func pairCamera(_ discovered: DiscoveredCamera) {
         manager.addCamera(discovered)
-        dismissAddCamera()
+        // Dismiss the sheet WITHOUT stopping the scan — addCamera's connection
+        // needs the BLE stack stable. Scanning stops after connection completes.
+        isAddingCamera = false
     }
 }

@@ -108,7 +108,34 @@ public final class OsmoCameraManager: NSObject {
         cameras.append(camera)
         persistCameras()
         OsmoLog.manager.info("Camera added: \(camera.name, privacy: .public) id=\(discovered.peripheral.identifier, privacy: .public)")
-        Task { await connect(camera: camera) }
+        // First-time connection — use a long discovery timeout to allow for BLE pairing.
+        // The initial GATT connect attempt often fails due to a CoreBluetooth XPC reset
+        // that occurs ~200ms after adding a new camera. The recovery strategy:
+        //   1. First attempt with scan still running (fails fast at 5s GATT timeout)
+        //   2. Stop scan, retrieve fresh peripheral ref, retry (mimics app-restart path)
+        Task {
+            await connect(camera: camera, discoveryTimeout: 60, suppressRetry: true)
+            // If we're already connected, we're done.
+            guard camera.connectionState != .connected else {
+                if isScanning { stopScanning() }
+                return
+            }
+            // First attempt likely failed due to XPC reset — recover by stopping
+            // the scan and retrieving a fresh peripheral reference, which is what
+            // happens on app restart (and always works).
+            OsmoLog.manager.info("First connect failed for \(camera.name, privacy: .public) — recovering BLE stack")
+            if isScanning { stopScanning() }
+            try? await Task.sleep(for: .seconds(1))
+            // Retrieve a fresh peripheral from CoreBluetooth's cache.
+            if let freshPeripheral = centralManager.retrievePeripherals(
+                withIdentifiers: [discovered.peripheral.identifier]
+            ).first {
+                camera.peripheral = freshPeripheral
+                OsmoLog.manager.info("Retrieved fresh peripheral for \(camera.name, privacy: .public)")
+            }
+            camera.retryCount = 0
+            await connect(camera: camera, discoveryTimeout: 60)
+        }
     }
 
     /// Toggle a camera's enabled state and persist the change.
@@ -127,17 +154,23 @@ public final class OsmoCameraManager: NSObject {
 
     // MARK: - Connection
 
-    public func connect(camera: OsmoCamera) async {
+    /// - Parameter discoveryTimeout: Timeout for service/characteristic discovery in seconds.
+    ///   Use a longer value for first-time connections where iOS BLE pairing may occur.
+    /// - Parameter suppressRetry: When `true`, the normal `scheduleReconnect` is skipped on failure.
+    ///   Used by `addCamera()` which handles its own recovery strategy.
+    public func connect(camera: OsmoCamera, discoveryTimeout: TimeInterval = 10, suppressRetry: Bool = false) async {
         guard let peripheral = camera.peripheral, camera.isEnabled,
               cameras.contains(where: { $0.id == camera.id }) else { return }
-        OsmoLog.manager.info("Connecting: \(camera.name, privacy: .public) → connecting")
-        camera.connectionState = .connecting
+        OsmoLog.manager.info("Connecting: \(camera.name, privacy: .public) → connecting (discoveryTimeout=\(Int(discoveryTimeout))s)")
+        if camera.connectionState != .connecting {
+            camera.connectionState = .connecting
+        }
 
         let conn = OsmoBLEConnection(peripheral: peripheral, centralManager: centralManager)
         camera.bleConnection = conn
 
         do {
-            try await conn.connect()
+            try await conn.connect(connectTimeout: 5, discoveryTimeout: discoveryTimeout)
             OsmoLog.manager.info("Connecting: \(camera.name, privacy: .public) → handshaking")
             camera.connectionState = .handshaking
             // Start the notification loop BEFORE sending the handshake so the camera's
@@ -158,7 +191,9 @@ public final class OsmoCameraManager: NSObject {
             // didDisconnectPeripheral may have already scheduled a reconnect (and set state
             // to .reconnecting). Only schedule here for failures where BLE didn't disconnect
             // (e.g. service-discovery timeout, characteristic errors, didFailToConnect).
-            if camera.connectionState != .reconnecting {
+            if suppressRetry {
+                // Keep current state (e.g. .connecting) — caller handles recovery.
+            } else if camera.connectionState != .reconnecting {
                 camera.connectionState = .disconnected
                 scheduleReconnect(camera: camera)
             }
@@ -469,6 +504,18 @@ extension OsmoCameraManager: @preconcurrency CBCentralManagerDelegate {
     public func centralManagerDidUpdateState(_ central: CBCentralManager) {
         // Already on main queue (CBCentralManager init with queue: .main)
         if central.state == .poweredOn {
+            // Reset cameras stuck in connecting/handshaking — an XPC connection reset
+            // kills pending centralManager.connect() calls silently, leaving cameras
+            // in a limbo state that never resolves.
+            let stuck = cameras.filter { $0.isEnabled && ($0.connectionState == .connecting || $0.connectionState == .handshaking) }
+            for camera in stuck {
+                OsmoLog.manager.info("Recovering stuck camera \(camera.name, privacy: .public) (was \(camera.connectionState.displayLabel, privacy: .public))")
+                camera.bleConnection?.disconnect()
+                camera.bleConnection = nil
+                camera.failPendingCommands()
+                camera.connectionState = .disconnected
+            }
+
             let eligible = cameras.filter { $0.isEnabled && $0.connectionState == .disconnected }.count
             OsmoLog.manager.info("Bluetooth powered on — reconnecting \(eligible) eligible camera(s)")
             restoreKnownPeripherals()
