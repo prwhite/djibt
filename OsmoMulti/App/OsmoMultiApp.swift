@@ -6,6 +6,7 @@ struct OsmoMultiApp: App {
 
     private let manager: OsmoCameraManager
     private let locationManager: OsmoLocationManager
+    private let watchBridge: WatchBridge
 
     init() {
 #if DEBUG
@@ -20,6 +21,7 @@ struct OsmoMultiApp: App {
         manager = OsmoCameraManager.shared
 #endif
         locationManager = OsmoLocationManager(cameraManager: manager)
+        watchBridge = WatchBridge(cameraManager: manager)
 
         // Auto-start GPS push if it was enabled in a previous session
         if UserDefaults.standard.bool(forKey: "gps_push_enabled") {

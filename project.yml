@@ -3,6 +3,7 @@ options:
   bundleIdPrefix: me.payton
   deploymentTarget:
     iOS: "26.0"
+    watchOS: "26.0"
   createIntermediateGroups: true
 
 settings:
@@ -55,6 +56,18 @@ targets:
     dependencies:
       - target: DJIOsmoKit
         embed: true
+      - target: OsmoWatch
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: me.payton.OsmoMulti
+
+  OsmoWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - path: OsmoWatch
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: me.payton.OsmoMulti.watchkitapp
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_WKCompanionAppBundleIdentifier: me.payton.OsmoMulti

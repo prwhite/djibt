@@ -10,18 +10,20 @@ Implements the [DJI Osmo Bluetooth protocol](https://github.com/dji-sdk/Osmo-GPS
 - **Global controls** — start/stop recording, capture photos, switch modes, and sleep all cameras simultaneously
 - **Live status** — real-time battery, resolution, frame rate, stabilization mode, storage remaining, and recording state for every connected camera
 - **GPS geotagging** — pushes iPhone GPS coordinates to cameras at 1 Hz for accurate video location metadata
+- **Apple Watch companion** — status, mode switching, and shutter control from your wrist via WatchConnectivity
 - **Connection resilience** — automatic reconnection with configurable watchdog timeout and retry limits
 - **Camera diagnostics** — per-camera detail view with connection state, firmware version, product ID, and force-reconnect
 
 ## Requirements
 
-- iOS 26.0+
+- iOS 26.0+ / watchOS 26.0+
 - Physical iOS device (BLE does not work in the Simulator)
+- Apple Watch (optional, for companion app)
 - One or more DJI Osmo Action cameras (tested Action 4)
 
 ## Architecture
 
-The project is split into two layers:
+The project is split into three layers:
 
 ```
 DJIOsmoKit/          Framework — all BLE + protocol logic
@@ -31,15 +33,23 @@ DJIOsmoKit/          Framework — all BLE + protocol logic
   ├── Models/        CameraMode, CameraStatus, ConnectionState
   └── Protocol/      CRC, frame builder/parser, command implementations
 
-OsmoMulti/           SwiftUI app — views and view models only
+OsmoMulti/           iOS app — SwiftUI views, view models, WatchConnectivity bridge
   ├── App/           Entry point + environment wiring
   ├── Views/         CameraListView, CameraDetailView, GlobalControlsView, etc.
-  └── ViewModels/    CameraListViewModel
+  ├── ViewModels/    CameraListViewModel
+  └── Watch/         WatchBridge — relays commands and state between watch and cameras
+
+OsmoWatch/           watchOS companion app
+  ├── App/           Entry point
+  ├── Views/         WatchControlView — status, mode picker, shutter button
+  └── ViewModels/    WatchViewModel — WCSession delegate
 ```
 
 **DJIOsmoKit** is an embedded framework in the same Xcode project. It exposes `OsmoCameraManager` as the main entry point — an `@Observable @MainActor` singleton that manages all camera connections, BLE scanning, and command dispatch.
 
-**OsmoMulti** is a pure SwiftUI client that observes the framework's state and presents the UI.
+**OsmoMulti** is a SwiftUI client that observes the framework's state and presents the UI. It also hosts `WatchBridge`, which bridges camera state and commands to the watch app via WatchConnectivity.
+
+**OsmoWatch** is a minimal watchOS companion that shows camera status (connected count, battery), a mode picker, and a shutter button. It cannot use CoreBluetooth directly — watchOS BLE is foreground-only and disconnects on wrist-down. Instead, commands go to the iPhone via `sendMessage`, and state arrives via `updateApplicationContext`.
 
 ## Building
 
@@ -49,16 +59,20 @@ The Xcode project is generated from `project.yml` using [xcodegen](https://githu
 # Generate the Xcode project
 xcodegen generate
 
-# Build the app
+# Build the iOS app
 xcodebuild -project OsmoMulti.xcodeproj -target OsmoMulti \
   -sdk iphoneos build
+
+# Build the watchOS app
+xcodebuild -project OsmoMulti.xcodeproj -target OsmoWatch \
+  -sdk watchos build
 
 # Run unit tests
 xcodebuild -project OsmoMulti.xcodeproj -target DJIOsmoKitTests \
   -sdk iphoneos build
 ```
 
-Or open `OsmoMulti.xcodeproj` in Xcode and build/run on a connected device.
+Or open `OsmoMulti.xcodeproj` in Xcode and build/run on a connected device. Deploy the watch app via the OsmoWatch scheme.
 
 ## DJI Osmo BLE Protocol
 
@@ -99,16 +113,20 @@ This app implements the DJI R SDK Bluetooth protocol as documented in the [Osmo 
 Attach a device via USB and stream logs:
 
 ```bash
-# All app logs
+# All iPhone app logs
 log stream --predicate 'subsystem == "me.payton.OsmoMulti"' --level debug
 
 # Filter by category
 log stream --predicate 'subsystem == "me.payton.OsmoMulti" AND category == "BLE.Conn"' --level debug
 log stream --predicate 'subsystem == "me.payton.OsmoMulti" AND category == "Camera"' --level debug
 log stream --predicate 'subsystem == "me.payton.OsmoMulti" AND category == "Location"' --level debug
+
+# Watch app logs
+log stream --predicate 'subsystem == "me.payton.OsmoMulti.watchkitapp"' --level debug
 ```
 
-Log categories: `BLE.Scan`, `BLE.Conn`, `Camera`, `Manager`, `Protocol`, `Location`
+Log categories (iPhone): `BLE.Scan`, `BLE.Conn`, `Camera`, `Manager`, `Protocol`, `Location`, `WatchBridge`
+Log categories (Watch): `WatchVM`
 
 A preview mode is available for UI development without real cameras:
 

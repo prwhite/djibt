@@ -77,7 +77,18 @@
       "Bash(sips -g pixelWidth -g pixelHeight -g all /Users/payton/me/dev/djibt/OsmoMulti/Assets.xcassets/AppIcon.appiconset/AppIcon.png)",
       "Bash(sips -g pixelWidth -g pixelHeight /Users/payton/me/dev/djibt/content/icon-00a.png)",
       "Bash(python3 -c \"from PIL import Image; print\\(''pillow available''\\)\")",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(xcodegen --spec project.yml generate)",
+      "Bash(xcodegen)",
+      "Bash(git stash)",
+      "Bash(git stash pop)",
+      "Bash(/tmp/test_project.yml:*)",
+      "Bash(xcodegen -s /tmp/test_project.yml -p /tmp)",
+      "Bash(xcodebuild -project OsmoMulti.xcodeproj -target OsmoWatch -sdk watchos26.2 CODE_SIGN_IDENTITY=\"\" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build)",
+      "Bash(xcodegen help)",
+      "Bash(xcodebuild -project OsmoMulti.xcodeproj -target OsmoMulti -sdk iphoneos26.2 CODE_SIGN_IDENTITY=\"\" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build -skipDependencies)",
+      "Bash(xcodebuild -project OsmoMulti.xcodeproj -target OsmoMulti -sdk iphoneos26.2 CODE_SIGN_IDENTITY=\"\" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build ONLY_BUILD_ACTIVE_ARCH=YES -destination \"generic/platform=iOS\")",
+      "Bash(ls -t ~/Desktop/*.png)"
     ]
   }
 }

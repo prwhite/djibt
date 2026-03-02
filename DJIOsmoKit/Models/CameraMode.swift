@@ -170,7 +170,7 @@ public enum CameraMode: UInt8, CaseIterable, Equatable {
 ///
 /// Maps 1:1 to the user-facing mode picker. Each camera resolves the intent
 /// to its native `CameraMode` (e.g. `.video` on Action cameras, `.panoVideo` on 360).
-public enum ModeIntent: CaseIterable, Equatable {
+public enum ModeIntent: String, CaseIterable, Equatable {
     case video
     case photo
     case slowMotion

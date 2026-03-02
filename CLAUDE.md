@@ -53,8 +53,13 @@ Spawn agents when a task is clearly scoped to one layer and won't require coordi
 - Cross-layer changes → do yourself or use integrator
 
 All agents work against the same `OsmoMulti.xcodeproj`. Build with:
-```
+```bash
+# iOS targets (DJIOsmoKit, OsmoMulti)
 xcodebuild -project OsmoMulti.xcodeproj -target <Target> -sdk iphoneos26.2 \
+  CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+
+# watchOS target
+xcodebuild -project OsmoMulti.xcodeproj -target OsmoWatch -sdk watchos26.2 \
   CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
 ```
 
@@ -70,9 +75,12 @@ Then say "screenshot is on the Desktop" and Claude will read the newest `.png` f
 
 ### Logs (device attached via USB or same Wi-Fi)
 ```bash
+# iPhone app
 log stream --predicate 'subsystem == "me.payton.OsmoMulti"' --level debug
 # Filter by category:
 log stream --predicate 'subsystem == "me.payton.OsmoMulti" AND category == "BLE.Conn"' --level debug
+# Watch app
+log stream --predicate 'subsystem == "me.payton.OsmoMulti.watchkitapp"' --level debug
 ```
 
 

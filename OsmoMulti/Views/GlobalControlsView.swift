@@ -49,6 +49,7 @@ struct GlobalControlsView: View {
                     .glassEffect(.regular)
             }
             .padding(.horizontal, 4)
+            .frame(maxWidth: .infinity)
         }
     }
 
