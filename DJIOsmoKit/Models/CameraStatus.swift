@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 /// Decoded payload from the camera status push notification (CmdSet 0x1D, CmdID 0x02).
 ///
@@ -122,7 +123,7 @@ public struct CameraStatus: Equatable {
 
         public var displayName: String {
             switch self {
-            case .off:    return "Off"
+            case .off:    return "EIS Off"
             case .rs:     return "RockSteady"
             case .hs:     return "HorizonSteady"
             case .rsPlus: return "RockSteady+"
@@ -149,6 +150,8 @@ public struct CameraStatus: Equatable {
     public let frameRate: FrameRate?
     /// Electronic image stabilization mode.
     public let stabilizationMode: StabilizationMode?
+    /// Raw EIS byte; useful when `stabilizationMode` is nil (unknown/future mode).
+    public let rawStabilization: UInt8
     /// Photo aspect ratio setting reported by the camera.
     public let photoRatio: PhotoRatio?
     /// Remaining photos the camera estimates it can store.
@@ -159,6 +162,9 @@ public struct CameraStatus: Equatable {
     public let remainingRecordTimeSec: UInt32
     /// Temperature warning level. 0 = normal, >0 = overheating warning.
     public let temperatureWarning: UInt8
+
+    /// Raw enum bytes we've already logged as unmapped — prevents per-second log spam.
+    nonisolated(unsafe) private static var loggedUnknownBytes: Set<UInt8> = []
 
     // MARK: - Sentinel
 
@@ -172,6 +178,7 @@ public struct CameraStatus: Equatable {
         videoResolution: nil,
         frameRate: nil,
         stabilizationMode: nil,
+        rawStabilization: 0xFF,
         photoRatio: nil,
         remainingPhotoCount: 0,
         remainingStorageMB: 0,
@@ -191,6 +198,7 @@ public struct CameraStatus: Equatable {
         videoResolution: VideoResolution?,
         frameRate: FrameRate?,
         stabilizationMode: StabilizationMode?,
+        rawStabilization: UInt8,
         photoRatio: PhotoRatio?,
         remainingPhotoCount: UInt32,
         remainingStorageMB: UInt32,
@@ -206,6 +214,7 @@ public struct CameraStatus: Equatable {
         self.videoResolution = videoResolution
         self.frameRate = frameRate
         self.stabilizationMode = stabilizationMode
+        self.rawStabilization = rawStabilization
         self.photoRatio = photoRatio
         self.remainingPhotoCount = remainingPhotoCount
         self.remainingStorageMB = remainingStorageMB
@@ -221,7 +230,8 @@ public struct CameraStatus: Equatable {
         let recordingStatus = RecordingStatus(rawValue: bytes[1]) ?? .screenOff
         let videoResolution = VideoResolution(rawValue: bytes[2])
         let frameRate = FrameRate(rawValue: bytes[3])
-        let stabilizationMode = StabilizationMode(rawValue: bytes[4])
+        let rawStabilization = bytes[4]
+        let stabilizationMode = StabilizationMode(rawValue: rawStabilization)
         let recordingSeconds = Int(bytes[5]) | (Int(bytes[6]) << 8)
         let photoRatio = PhotoRatio(rawValue: bytes[8])
         let remainingPhotoCount = UInt32(bytes[19])
@@ -238,7 +248,11 @@ public struct CameraStatus: Equatable {
             | (UInt32(bytes[26]) << 24)
         let powerMode = PowerMode(rawValue: bytes[28]) ?? .normal
         let temperatureWarning = bytes[30]
-        let batteryPercentage = Int(bytes[37])
+        let batteryPercentage = min(100, max(0, Int(bytes[37])))
+        if stabilizationMode == nil && rawStabilization != 0 && !loggedUnknownBytes.contains(rawStabilization) {
+            loggedUnknownBytes.insert(rawStabilization)
+            OsmoLog.camera.info("Unmapped stabilization byte: 0x\(String(rawStabilization, radix: 16), privacy: .public) (mode=0x\(String(rawMode, radix: 16), privacy: .public))")
+        }
         return CameraStatus(
             mode: mode,
             recordingStatus: recordingStatus,
@@ -249,6 +263,7 @@ public struct CameraStatus: Equatable {
             videoResolution: videoResolution,
             frameRate: frameRate,
             stabilizationMode: stabilizationMode,
+            rawStabilization: rawStabilization,
             photoRatio: photoRatio,
             remainingPhotoCount: remainingPhotoCount,
             remainingStorageMB: remainingStorageMB,

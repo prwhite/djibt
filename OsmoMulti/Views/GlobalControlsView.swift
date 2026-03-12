@@ -33,7 +33,7 @@ struct GlobalControlsView: View {
                     .glassEffect(.regular.interactive())
 
                 shutterButton
-                    .frame(height: Self.controlHeight)
+                    .frame(maxWidth: .infinity, minHeight: Self.controlHeight, maxHeight: Self.controlHeight)
                     .glassEffect(.regular.interactive())
 
                 ControlButton(systemImage: "moon.zzz", label: "Sleep",
@@ -48,7 +48,7 @@ struct GlobalControlsView: View {
                     }
                     .glassEffect(.regular)
             }
-            .padding(.horizontal, 4)
+            .padding(4)
             .frame(maxWidth: .infinity)
         }
     }

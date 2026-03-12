@@ -30,6 +30,8 @@ struct WatchControlView: View {
         }
         .onChange(of: viewModel.currentMode) { _, newMode in
             if let newMode, newMode != selectedMode {
+                let validModes = modes.map(\.value)
+                guard validModes.contains(newMode) else { return }
                 isSyncingMode = true
                 selectedMode = newMode
                 isSyncingMode = false

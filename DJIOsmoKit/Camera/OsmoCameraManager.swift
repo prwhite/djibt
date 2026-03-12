@@ -141,13 +141,19 @@ public final class OsmoCameraManager: NSObject {
     /// Toggle a camera's enabled state and persist the change.
     public func toggleEnabled(_ camera: OsmoCamera) {
         camera.isEnabled.toggle()
+        OsmoLog.manager.info("Camera \(camera.name, privacy: .public) \(camera.isEnabled ? "enabled" : "disabled")")
         persistCameras()
     }
 
     /// Remove a camera and forget the pairing.
     public func removeCamera(_ camera: OsmoCamera) {
-        OsmoLog.manager.info("Camera removed: \(camera.name, privacy: .public)")
+        let pendingCount = camera.pendingResponseCount + camera.pendingCommandWaiterCount
+        OsmoLog.manager.info("Removing: \(camera.name, privacy: .public) (gen=\(camera.connectionGeneration), pending=\(pendingCount))")
+        camera.stopNotificationLoop()
+        camera.stopRSSIPolling()
+        camera.failPendingCommands()
         camera.bleConnection?.disconnect()
+        camera.bleConnection = nil
         cameras.removeAll { $0.id == camera.id }
         persistCameras()
     }
@@ -161,7 +167,8 @@ public final class OsmoCameraManager: NSObject {
     public func connect(camera: OsmoCamera, discoveryTimeout: TimeInterval = 10, suppressRetry: Bool = false) async {
         guard let peripheral = camera.peripheral, camera.isEnabled,
               cameras.contains(where: { $0.id == camera.id }) else { return }
-        OsmoLog.manager.info("Connecting: \(camera.name, privacy: .public) → connecting (discoveryTimeout=\(Int(discoveryTimeout))s)")
+        let gen = camera.advanceConnectionGeneration()
+        OsmoLog.manager.info("Connecting: \(camera.name, privacy: .public) → connecting (discoveryTimeout=\(Int(discoveryTimeout))s, gen=\(gen))")
         if camera.connectionState != .connecting {
             camera.connectionState = .connecting
         }
@@ -182,6 +189,10 @@ public final class OsmoCameraManager: NSObject {
             camera.connectionState = .connected
             camera.startRSSIPolling()
         } catch {
+            guard camera.connectionGeneration == gen else {
+                OsmoLog.manager.info("Stale connect failure for \(camera.name, privacy: .public) gen=\(gen) (current=\(camera.connectionGeneration)) — ignoring")
+                return
+            }
             OsmoLog.manager.error("Connection failed for \(camera.name, privacy: .public): \(error.localizedDescription, privacy: .public)")
             // Only clear bleConnection if it's still OUR connection object.
             // A concurrent retry may have already replaced it.
@@ -234,6 +245,10 @@ public final class OsmoCameraManager: NSObject {
         }
         OsmoLog.manager.info("Handshake step 4: camera verify_mode=\(parsed.verifyMode) verify_data=\(parsed.verifyData) for \(camera.name, privacy: .public)")
 
+        // NOTE: The DJI BLE protocol provides no cryptographic authentication.
+        // Any device advertising the DJI manufacturer signature can complete
+        // this handshake. Trust is based on the user explicitly adding cameras
+        // via the Add Camera flow, which binds to the peripheral's UUID.
         guard parsed.verifyMode == 2 && parsed.verifyData == 0 else {
             OsmoLog.manager.error("Handshake step 4: camera rejected (verify_mode=\(parsed.verifyMode) verify_data=\(parsed.verifyData)) for \(camera.name, privacy: .public)")
             throw BLEConnectionError.connectionFailed(nil)
@@ -279,6 +294,11 @@ public final class OsmoCameraManager: NSObject {
 
     /// Resets the retry counter and re-attempts connection. Use for explicit user-initiated retries.
     public func retryCamera(_ camera: OsmoCamera) async {
+        guard camera.connectionState != .connecting,
+              camera.connectionState != .handshaking else {
+            OsmoLog.manager.info("retryCamera: \(camera.name, privacy: .public) already connecting — skipping")
+            return
+        }
         camera.retryCount = 0
         await connect(camera: camera)
     }
@@ -287,7 +307,11 @@ public final class OsmoCameraManager: NSObject {
     public func clearAllCameras() {
         OsmoLog.manager.info("Clearing all \(self.cameras.count) paired camera(s)")
         for camera in cameras {
+            camera.stopNotificationLoop()
+            camera.stopRSSIPolling()
+            camera.failPendingCommands()
             camera.bleConnection?.disconnect()
+            camera.bleConnection = nil
         }
         cameras.removeAll()
         UserDefaults.standard.removeObject(forKey: PersistenceKey.cameras)
@@ -297,60 +321,92 @@ public final class OsmoCameraManager: NSObject {
 
     /// Send shutter press to all connected cameras. Used for photo capture
     /// where there's no toggle state issue.
-    public func shutterAll() async {
+    /// Returns the number of cameras that failed.
+    @discardableResult
+    public func shutterAll() async -> Int {
         let targets = enabledConnectedCameras
         OsmoLog.manager.info("shutterAll: dispatching shutter to \(targets.count) camera(s)")
-        await withTaskGroup(of: Void.self) { group in
-            for camera in targets {
-                group.addTask { try? await camera.sendShutter() }
-            }
-        }
+        return await bulkCommand(targets: targets) { try await $0.sendShutter() }
     }
 
     /// Start recording on all connected cameras that aren't already recording.
     /// Uses explicit RecordingCommand (not the toggle shutter) to avoid
     /// inverting cameras that are already in the desired state.
-    public func startAll() async {
+    /// Returns the number of cameras that failed.
+    @discardableResult
+    public func startAll() async -> Int {
         let targets = enabledConnectedCameras.filter { !$0.status.recordingStatus.isRecording }
         OsmoLog.manager.info("startAll: dispatching record start to \(targets.count) non-recording camera(s)")
-        await withTaskGroup(of: Void.self) { group in
-            for camera in targets {
-                group.addTask { try? await camera.sendRecordStart() }
-            }
-        }
+        return await bulkCommand(targets: targets) { try await $0.sendRecordStart() }
     }
 
     /// Stop recording on all connected cameras that are currently recording.
-    public func stopAll() async {
+    /// Returns the number of cameras that failed.
+    @discardableResult
+    public func stopAll() async -> Int {
         let targets = enabledConnectedCameras.filter { $0.status.recordingStatus.isRecording }
         OsmoLog.manager.info("stopAll: dispatching record stop to \(targets.count) recording camera(s)")
-        await withTaskGroup(of: Void.self) { group in
-            for camera in targets {
-                group.addTask { try? await camera.sendRecordStop() }
-            }
-        }
+        return await bulkCommand(targets: targets) { try await $0.sendRecordStop() }
     }
 
     /// Switch all connected cameras to the given mode intent.
     /// Each camera resolves the intent to its native mode (e.g. 360 cameras get `.panoVideo`).
-    public func switchModeAll(_ intent: ModeIntent) async {
+    /// Returns the number of cameras that failed.
+    @discardableResult
+    public func switchModeAll(_ intent: ModeIntent) async -> Int {
         let targets = enabledConnectedCameras
         OsmoLog.manager.info("switchModeAll: switching \(targets.count) camera(s) to intent=\(intent.displayName, privacy: .public)")
-        await withTaskGroup(of: Void.self) { group in
-            for camera in targets {
-                let nativeMode = CameraMode.nativeMode(for: intent, isPano: camera.isPanoCamera, currentMode: camera.status.mode)
-                group.addTask { try? await camera.switchMode(nativeMode) }
+        // Resolve native modes on the main actor before dispatching to the task group.
+        let cameraModes: [(OsmoCamera, CameraMode)] = targets.map { camera in
+            let nativeMode = CameraMode.nativeMode(for: intent, isPano: camera.isPanoCamera, currentMode: camera.status.mode)
+            return (camera, nativeMode)
+        }
+        return await withTaskGroup(of: Bool.self) { group in
+            for (camera, nativeMode) in cameraModes {
+                group.addTask {
+                    do {
+                        try await camera.switchMode(nativeMode)
+                        return true
+                    } catch {
+                        return false
+                    }
+                }
             }
+            var failCount = 0
+            for await success in group {
+                if !success { failCount += 1 }
+            }
+            return failCount
         }
     }
 
-    public func sleepAll() async {
+    /// Returns the number of cameras that failed.
+    @discardableResult
+    public func sleepAll() async -> Int {
         let targets = enabledConnectedCameras
         OsmoLog.manager.info("sleepAll: dispatching sleep to \(targets.count) camera(s)")
-        await withTaskGroup(of: Void.self) { group in
+        return await bulkCommand(targets: targets) { try await $0.sendSleep() }
+    }
+
+    /// Execute a throwing command on each target camera in parallel.
+    /// Returns the number of cameras that failed (0 = all succeeded).
+    private func bulkCommand(targets: [OsmoCamera], action: @Sendable @escaping (OsmoCamera) async throws -> Void) async -> Int {
+        await withTaskGroup(of: Bool.self) { group in
             for camera in targets {
-                group.addTask { try? await camera.sendSleep() }
+                group.addTask {
+                    do {
+                        try await action(camera)
+                        return true
+                    } catch {
+                        return false
+                    }
+                }
             }
+            var failCount = 0
+            for await success in group {
+                if !success { failCount += 1 }
+            }
+            return failCount
         }
     }
 
@@ -430,6 +486,25 @@ public final class OsmoCameraManager: NSObject {
                 scheduleReconnect(camera: camera)
             }
         }
+
+        // Kick passive reconnects that have been stuck too long. Sleeping cameras
+        // are excluded — they legitimately wait for the user to press a button.
+        for camera in cameras where camera.connectionState == .reconnecting
+                                     && camera.previousConnectionState != .sleeping
+                                     && camera.isEnabled {
+            guard let peripheral = camera.peripheral else { continue }
+            guard let lastSeen = camera.reconnectingSince else { continue }
+            let elapsed = now.timeIntervalSince(lastSeen)
+            if elapsed > 30 {
+                OsmoLog.manager.info(
+                    "Camera \(camera.name, privacy: .public) stuck in passive reconnect (\(Int(elapsed))s) — restarting active retries"
+                )
+                centralManager.cancelPeripheralConnection(peripheral)
+                camera.retryCount = 0
+                camera.connectionState = .disconnected
+                Task { await connect(camera: camera) }
+            }
+        }
     }
 
     // MARK: - GPS Push
@@ -472,8 +547,11 @@ public final class OsmoCameraManager: NSObject {
                             peripheralID: $0.peripheral?.identifier,
                             isPanoCamera: $0.isPanoCamera)
         }
-        if let encoded = try? JSONEncoder().encode(data) {
+        do {
+            let encoded = try JSONEncoder().encode(data)
             UserDefaults.standard.set(encoded, forKey: PersistenceKey.cameras)
+        } catch {
+            OsmoLog.manager.error("Failed to persist cameras: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -568,6 +646,10 @@ extension OsmoCameraManager: @preconcurrency CBCentralManagerDelegate {
               camera.bleConnection != nil else {
             // No active connection on record — stale OS callback, ignore.
             OsmoLog.manager.debug("Ignoring stale disconnect for \(peripheral.identifier, privacy: .public)")
+            return
+        }
+        guard camera.bleConnection?.peripheral === peripheral else {
+            OsmoLog.manager.debug("Ignoring stale disconnect for \(camera.name, privacy: .public) — peripheral mismatch (gen=\(camera.connectionGeneration))")
             return
         }
         camera.bleConnection?.handleDisconnected(error: error)

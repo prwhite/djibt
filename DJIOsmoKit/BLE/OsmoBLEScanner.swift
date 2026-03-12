@@ -92,11 +92,11 @@ extension OsmoBLEScanner: CBCentralManagerDelegate {
         guard OsmoBLEScanner.isDJICamera(advertisementData) else { return }
         let rssiValue = RSSI.intValue
         guard rssiValue >= -80 else {
-            OsmoLog.scan.debug("Rejected peripheral \(peripheral.identifier, privacy: .public) — RSSI \(rssiValue) dBm below threshold")
+            OsmoLog.scan.debug("Rejected peripheral \(peripheral.identifier, privacy: .private) — RSSI \(rssiValue) dBm below threshold")
             return
         }
         let name = advertisementData[CBAdvertisementDataLocalNameKey] as? String
-        OsmoLog.scan.info("Discovered DJI camera: \(name ?? "unnamed", privacy: .public) id=\(peripheral.identifier, privacy: .public) RSSI=\(rssiValue) dBm")
+        OsmoLog.scan.info("Discovered DJI camera: \(name ?? "unnamed", privacy: .public) id=\(peripheral.identifier, privacy: .private) RSSI=\(rssiValue) dBm")
 
         // Dump full advertisement data for protocol analysis
         Self.logAdvertisement(advertisementData, peripheral: peripheral)
@@ -112,13 +112,13 @@ extension OsmoBLEScanner: CBCentralManagerDelegate {
     /// Log all advertisement keys for protocol debugging / reverse engineering.
     private static func logAdvertisement(_ ad: [String: Any], peripheral: CBPeripheral) {
         if let mfr = ad[CBAdvertisementDataManufacturerDataKey] as? Data {
-            OsmoLog.scan.info("  mfr data (\(mfr.count)B): \(mfr.map { String(format: "%02X", $0) }.joined(separator: " "), privacy: .public)")
+            OsmoLog.scan.info("  mfr data (\(mfr.count)B): \(mfr.map { String(format: "%02X", $0) }.joined(separator: " "), privacy: .private)")
         }
         if let serviceUUIDs = ad[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID] {
-            OsmoLog.scan.info("  service UUIDs: \(serviceUUIDs.map(\.uuidString).joined(separator: ", "), privacy: .public)")
+            OsmoLog.scan.info("  service UUIDs: \(serviceUUIDs.map(\.uuidString).joined(separator: ", "), privacy: .private)")
         }
         if let overflow = ad[CBAdvertisementDataOverflowServiceUUIDsKey] as? [CBUUID] {
-            OsmoLog.scan.info("  overflow UUIDs: \(overflow.map(\.uuidString).joined(separator: ", "), privacy: .public)")
+            OsmoLog.scan.info("  overflow UUIDs: \(overflow.map(\.uuidString).joined(separator: ", "), privacy: .private)")
         }
         if let connectable = ad[CBAdvertisementDataIsConnectable] as? NSNumber {
             OsmoLog.scan.info("  connectable: \(connectable.boolValue, privacy: .public)")

@@ -53,14 +53,19 @@ final class WatchBridge: NSObject {
 
         let connectedCameras = manager.enabledConnectedCameras
         let enabledCount = manager.enabledCameras.count
-        let context: [String: Any] = [
+        var context: [String: Any] = [
             "connectedCount": connectedCameras.count,
             "enabledCount": enabledCount,
-            "currentMode": connectedCameras.first?.status.mode?.intent?.rawValue as Any,
             "isRecording": connectedCameras.contains { $0.status.recordingStatus.isRecording },
-            "batteryPercent": connectedCameras.map(\.status.batteryPercentage).min() as Any,
             "timestamp": Date().timeIntervalSince1970
         ]
+        // Only include optional values when non-nil — WCSession rejects NSNull/nil.
+        if let mode = connectedCameras.first?.status.mode?.intent?.rawValue {
+            context["currentMode"] = mode
+        }
+        if let battery = connectedCameras.map(\.status.batteryPercentage).min() {
+            context["batteryPercent"] = battery
+        }
 
         // Only push if something meaningful changed (skip timestamp comparison)
         let changed = lastPushedContext.isEmpty

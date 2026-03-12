@@ -90,7 +90,7 @@ public final class OsmoLocationManager: NSObject {
             return
         }
         let targets = manager.enabledConnectedCameras.count
-        OsmoLog.location.debug("GPS push → \(targets) camera(s) @ \(String(format: "%.6f", location.coordinate.latitude)),\(String(format: "%.6f", location.coordinate.longitude))")
+        OsmoLog.location.debug("GPS push → \(targets) camera(s) @ \(String(format: "%.6f", location.coordinate.latitude), privacy: .private),\(String(format: "%.6f", location.coordinate.longitude), privacy: .private)")
         manager.pushGPS(location)
     }
 }
@@ -104,7 +104,7 @@ extension OsmoLocationManager: CLLocationManagerDelegate {
         didUpdateLocations locations: [CLLocation]
     ) {
         guard let location = locations.last else { return }
-        OsmoLog.location.debug("CL update: \(String(format: "%.6f", location.coordinate.latitude)),\(String(format: "%.6f", location.coordinate.longitude)) ±\(String(format: "%.0f", location.horizontalAccuracy))m")
+        OsmoLog.location.debug("CL update: \(String(format: "%.6f", location.coordinate.latitude), privacy: .private),\(String(format: "%.6f", location.coordinate.longitude), privacy: .private) ±\(String(format: "%.0f", location.horizontalAccuracy))m")
         Task { @MainActor in
             self.lastLocation = location
         }

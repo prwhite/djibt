@@ -41,6 +41,9 @@ struct CameraDetailView: View {
                         .foregroundStyle(.blue)
                 }
             }
+            .disabled(camera.connectionState == .connecting
+                   || camera.connectionState == .handshaking
+                   || camera.connectionState == .reconnecting)
         }
     }
 
@@ -69,7 +72,8 @@ struct CameraDetailView: View {
                 if camera.status.mode?.supportsRecording ?? true {
                     LabeledContent("Resolution", value: camera.status.videoResolution?.displayName ?? "—")
                     LabeledContent("Frame Rate", value: camera.status.frameRate?.displayName ?? "—")
-                    LabeledContent("Stabilization", value: camera.status.stabilizationMode?.displayName ?? "Off")
+                    LabeledContent("Stabilization", value: camera.status.stabilizationMode?.displayName
+                        ?? (camera.status.rawStabilization != 0 ? "Unknown (0x\(String(camera.status.rawStabilization, radix: 16)))" : "Off"))
                 } else {
                     LabeledContent("Aspect Ratio", value: camera.status.photoRatio?.displayName ?? "—")
                     if camera.status.remainingPhotoCount > 0 {
@@ -107,7 +111,15 @@ struct CameraDetailView: View {
             // Mode picker — shows native modes for this camera type
             Picker("Mode", selection: Binding(
                 get: { camera.status.mode ?? (camera.isPanoCamera ? .panoVideo : .video) },
-                set: { newMode in Task { try? await camera.switchMode(newMode) } }
+                set: { newMode in
+                    Task {
+                        do {
+                            try await camera.switchMode(newMode)
+                        } catch {
+                            viewModel.showToast("Mode switch failed")
+                        }
+                    }
+                }
             )) {
                 ForEach(CameraMode.switchableModes(isPano: camera.isPanoCamera, currentMode: camera.status.mode), id: \.rawValue) { mode in
                     Label(mode.displayName, systemImage: mode.systemImage).tag(mode)
@@ -117,7 +129,13 @@ struct CameraDetailView: View {
 
             // Shutter
             Button {
-                Task { try? await camera.sendShutter() }
+                Task {
+                    do {
+                        try await camera.sendShutter()
+                    } catch {
+                        viewModel.showToast("Shutter failed")
+                    }
+                }
             } label: {
                 if camera.status.mode?.isPhotoMode == true {
                     Label("Capture Photo", systemImage: "camera.circle.fill")
@@ -132,7 +150,13 @@ struct CameraDetailView: View {
             // Explicit stop (video modes)
             if camera.status.mode?.supportsRecording ?? true {
                 Button {
-                    Task { try? await camera.sendRecordStop() }
+                    Task {
+                        do {
+                            try await camera.sendRecordStop()
+                        } catch {
+                            viewModel.showToast("Stop recording failed")
+                        }
+                    }
                 } label: {
                     Label("Force Stop", systemImage: "stop.circle")
                 }
@@ -141,7 +165,13 @@ struct CameraDetailView: View {
 
             // Sleep
             Button {
-                Task { try? await camera.sendSleep() }
+                Task {
+                    do {
+                        try await camera.sendSleep()
+                    } catch {
+                        viewModel.showToast("Sleep failed")
+                    }
+                }
             } label: {
                 Label("Sleep Camera", systemImage: "moon.zzz")
             }
@@ -174,6 +204,9 @@ struct CameraDetailView: View {
             } label: {
                 Label("Force Reconnect", systemImage: "arrow.clockwise")
             }
+            .disabled(camera.connectionState == .connecting
+                   || camera.connectionState == .handshaking
+                   || camera.connectionState == .reconnecting)
 
             Toggle("Enabled", isOn: Binding(
                 get: { camera.isEnabled },

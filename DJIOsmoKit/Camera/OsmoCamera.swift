@@ -24,7 +24,17 @@ public final class OsmoCamera: Identifiable {
     /// Display name (from BLE advertisement or user-assigned).
     public internal(set) var name: String
     /// Current BLE + protocol connection state.
-    public internal(set) var connectionState: ConnectionState = .disconnected
+    public internal(set) var connectionState: ConnectionState = .disconnected {
+        didSet {
+            previousConnectionState = oldValue
+            reconnectingSince = (connectionState == .reconnecting) ? Date() : nil
+        }
+    }
+    /// The state before the most recent transition. Used to distinguish sleeping
+    /// cameras (which legitimately wait in passive reconnect) from stuck retries.
+    public internal(set) var previousConnectionState: ConnectionState = .disconnected
+    /// When the camera entered `.reconnecting` state. `nil` when in any other state.
+    public internal(set) var reconnectingSince: Date?
     /// Most recently received camera status. `.unknown` until first notification arrives.
     public internal(set) var status: CameraStatus = .unknown
     /// When the last valid status notification was received from this camera.
@@ -47,6 +57,15 @@ public final class OsmoCamera: Identifiable {
     }
     /// Called when `isPanoCamera` transitions to `true`. Used by the manager to re-persist.
     internal var onPanoCameraDetected: (() -> Void)?
+    /// Monotonically increasing counter, incremented each time a new connection attempt begins.
+    /// Used to detect stale disconnect/failure callbacks after remove→re-add.
+    internal private(set) var connectionGeneration: Int = 0
+
+    func advanceConnectionGeneration() -> Int {
+        connectionGeneration += 1
+        return connectionGeneration
+    }
+
     /// BLE signal strength in dBm. Updated every 2 seconds while connected.
     public internal(set) var rssi: Int?
     /// Recent RSSI samples for sparkline display (max 16, newest last).
@@ -84,13 +103,22 @@ public final class OsmoCamera: Identifiable {
     private var loggedModePayloads: Set<UInt8> = []
     /// Incrementing sequence number for outgoing frames.
     private var sequenceCounter: UInt16 = 0
+
+    /// A pending continuation paired with a creation timestamp for stale-entry reaping.
+    private struct PendingEntry {
+        let continuation: CheckedContinuation<IncomingFrame, Error>
+        let createdAt: ContinuousClock.Instant
+    }
+
     /// Pending response continuations keyed by sequence number.
-    private var pendingResponses: [UInt16: CheckedContinuation<IncomingFrame, Error>] = [:]
+    private var pendingResponses: [UInt16: PendingEntry] = [:]
     /// True when one or more commands are awaiting a response.
     /// The staleness watchdog uses this to avoid killing connections during command processing.
     public var hasCommandsInFlight: Bool { !pendingResponses.isEmpty }
+    var pendingResponseCount: Int { pendingResponses.count }
+    var pendingCommandWaiterCount: Int { pendingCommandWaiters.count }
     /// Pending command-frame waiters keyed by "cmdSet_cmdID".
-    private var pendingCommandWaiters: [String: CheckedContinuation<IncomingFrame, Error>] = [:]
+    private var pendingCommandWaiters: [String: PendingEntry] = [:]
     /// Background task driving the notification receive loop.
     private var notificationTask: Task<Void, Never>?
     /// Background task polling RSSI every 2 seconds.
@@ -111,28 +139,60 @@ public final class OsmoCamera: Identifiable {
         return sequenceCounter
     }
 
+    // MARK: - Stale Continuation Reaping
+
+    /// Maximum number of entries before a forced reap.
+    private static let pendingCapacity = 32
+    /// Entries older than this are considered stale and reaped.
+    private static let reapCutoff: Duration = .seconds(30)
+
+    /// Resume and remove any pending continuations older than 30 seconds.
+    /// Called at the start of `sendAndWait()` and `waitForCommand()` to piggyback
+    /// cleanup on normal usage without needing a separate timer.
+    private func reapStalePendingEntries() {
+        let cutoff = ContinuousClock.now - Self.reapCutoff
+        for (seq, entry) in pendingResponses where entry.createdAt < cutoff {
+            OsmoLog.camera.warning("Reaping stale pending response for SEQ \(seq)")
+            entry.continuation.resume(throwing: BLEConnectionError.timeout)
+            pendingResponses.removeValue(forKey: seq)
+        }
+        for (key, entry) in pendingCommandWaiters where entry.createdAt < cutoff {
+            OsmoLog.camera.warning("Reaping stale pending command waiter for \(key, privacy: .public)")
+            entry.continuation.resume(throwing: BLEConnectionError.timeout)
+            pendingCommandWaiters.removeValue(forKey: key)
+        }
+    }
+
     // MARK: - Send / Receive
 
     /// Send a pre-built frame and wait for a response.
     /// - Parameter timeout: Per-attempt timeout in seconds (default 5).
     func sendAndWait(frame: Data, seq: UInt16, timeout: TimeInterval = 5) async throws -> IncomingFrame {
         guard let conn = bleConnection else { throw BLEConnectionError.notConnected }
+
+        // Reap stale entries on every call; also force-reap if at capacity.
+        reapStalePendingEntries()
+        if pendingResponses.count >= Self.pendingCapacity {
+            OsmoLog.camera.warning("pendingResponses at capacity (\(self.pendingResponses.count)) — reaping stale entries")
+            reapStalePendingEntries()
+        }
+
         try conn.write(frame)
 
         let timeoutTask = Task { [weak self] in
             try await Task.sleep(for: .seconds(timeout))
             await MainActor.run { [weak self] in
                 guard let self else { return }
-                if let cont = self.pendingResponses.removeValue(forKey: seq) {
+                if let entry = self.pendingResponses.removeValue(forKey: seq) {
                     OsmoLog.camera.error("Response timeout: seq=\(seq) camera=\(self.name, privacy: .public)")
-                    cont.resume(throwing: BLEConnectionError.timeout)
+                    entry.continuation.resume(throwing: BLEConnectionError.timeout)
                 }
             }
         }
         defer { timeoutTask.cancel() }
 
         return try await withCheckedThrowingContinuation { cont in
-            pendingResponses[seq] = cont
+            pendingResponses[seq] = PendingEntry(continuation: cont, createdAt: .now)
         }
     }
 
@@ -172,21 +232,24 @@ public final class OsmoCamera: Identifiable {
     /// Wait for an unsolicited command frame (not a response) with specific cmdSet/cmdID.
     /// Used for step 3 of the connection handshake where the camera sends its own command.
     func waitForCommand(cmdSet: UInt8, cmdID: UInt8, timeout: TimeInterval = 30) async throws -> IncomingFrame {
+        // Reap stale entries opportunistically.
+        reapStalePendingEntries()
+
         let key = "\(cmdSet)_\(cmdID)"
         let timeoutTask = Task { [weak self] in
             try await Task.sleep(for: .seconds(timeout))
             await MainActor.run { [weak self] in
                 guard let self else { return }
-                if let cont = self.pendingCommandWaiters.removeValue(forKey: key) {
+                if let entry = self.pendingCommandWaiters.removeValue(forKey: key) {
                     OsmoLog.camera.error("Command wait timeout: cmdSet=0x\(String(cmdSet, radix: 16)) cmdID=0x\(String(cmdID, radix: 16)) camera=\(self.name, privacy: .public)")
-                    cont.resume(throwing: BLEConnectionError.timeout)
+                    entry.continuation.resume(throwing: BLEConnectionError.timeout)
                 }
             }
         }
         defer { timeoutTask.cancel() }
 
         return try await withCheckedThrowingContinuation { cont in
-            pendingCommandWaiters[key] = cont
+            pendingCommandWaiters[key] = PendingEntry(continuation: cont, createdAt: .now)
         }
     }
 
@@ -194,18 +257,18 @@ public final class OsmoCamera: Identifiable {
     func handleIncomingFrame(_ frame: IncomingFrame) {
         lastSeenDate = Date()
 
-        if frame.isResponse, let cont = pendingResponses.removeValue(forKey: frame.seq) {
+        if frame.isResponse, let entry = pendingResponses.removeValue(forKey: frame.seq) {
             OsmoLog.camera.debug("Response received: seq=\(frame.seq) cmdSet=0x\(String(frame.cmdSet, radix: 16)) cmdID=0x\(String(frame.cmdID, radix: 16))")
-            cont.resume(returning: frame)
+            entry.continuation.resume(returning: frame)
             return
         }
 
         // Route non-response command frames to waiters (e.g. handshake step 3)
         if !frame.isResponse {
             let key = "\(frame.cmdSet)_\(frame.cmdID)"
-            if let cont = pendingCommandWaiters.removeValue(forKey: key) {
+            if let entry = pendingCommandWaiters.removeValue(forKey: key) {
                 OsmoLog.camera.debug("Command frame received: seq=\(frame.seq) cmdSet=0x\(String(frame.cmdSet, radix: 16)) cmdID=0x\(String(frame.cmdID, radix: 16))")
-                cont.resume(returning: frame)
+                entry.continuation.resume(returning: frame)
                 return
             }
         }
@@ -223,7 +286,7 @@ public final class OsmoCamera: Identifiable {
                 if loggedModePayloads.insert(parsed.rawMode).inserted {
                     let label = parsed.mode?.displayName ?? "unknown"
                     let hex = Array(frame.payload).map { String(format: "%02X", $0) }.joined(separator: " ")
-                    OsmoLog.camera.info("Mode 0x\(String(parsed.rawMode, radix: 16, uppercase: true), privacy: .public) (\(label, privacy: .public)) on \(self.name, privacy: .public) — raw payload (\(frame.payload.count)B): \(hex, privacy: .public)")
+                    OsmoLog.camera.info("Mode 0x\(String(parsed.rawMode, radix: 16, uppercase: true), privacy: .public) (\(label, privacy: .public)) on \(self.name, privacy: .public) — raw payload (\(frame.payload.count)B): \(hex, privacy: .private)")
                 }
                 if parsed != status { status = parsed }
                 if !isPanoCamera, let mode = parsed.mode, mode.is360Exclusive {
@@ -257,6 +320,9 @@ public final class OsmoCamera: Identifiable {
                     OsmoLog.camera.error("Frame parse error: \(error.localizedDescription, privacy: .public)")
                 }
             }
+            if let self {
+                OsmoLog.camera.info("Notification loop exited for \(self.name, privacy: .public)")
+            }
         }
     }
 
@@ -269,8 +335,10 @@ public final class OsmoCamera: Identifiable {
     func startRSSIPolling() {
         rssiTask?.cancel()
         guard let conn = bleConnection else { return }
+        var gotUpdate = false
         conn.onRSSIUpdate = { [weak self] value in
             guard let self else { return }
+            gotUpdate = true
             if self.rssi != value { self.rssi = value }
             self.rssiHistory.append(value)
             if self.rssiHistory.count > 16 { self.rssiHistory.removeFirst() }
@@ -278,8 +346,18 @@ public final class OsmoCamera: Identifiable {
         rssiTask = Task { [weak self] in
             while !Task.isCancelled {
                 guard let self, self.bleConnection != nil else { break }
+                gotUpdate = false
                 self.bleConnection?.readRSSI()
                 try? await Task.sleep(for: .seconds(2))
+                // If the peripheral didn't respond, record a floor value so the
+                // sparkline shows the dropout instead of silently skipping.
+                if !gotUpdate, !Task.isCancelled, self.bleConnection != nil {
+                    self.rssiHistory.append(-100)
+                    if self.rssiHistory.count > 16 { self.rssiHistory.removeFirst() }
+                }
+            }
+            if let self {
+                OsmoLog.camera.info("RSSI polling exited for \(self.name, privacy: .public)")
             }
         }
     }
@@ -298,13 +376,13 @@ public final class OsmoCamera: Identifiable {
         OsmoLog.camera.info("Failing \(totalPending) pending operation(s) for \(self.name, privacy: .public) due to disconnect")
         let responses = pendingResponses
         pendingResponses.removeAll()
-        for (_, cont) in responses {
-            cont.resume(throwing: BLEConnectionError.connectionFailed(nil))
+        for (_, entry) in responses {
+            entry.continuation.resume(throwing: BLEConnectionError.connectionFailed(nil))
         }
         let waiters = pendingCommandWaiters
         pendingCommandWaiters.removeAll()
-        for (_, cont) in waiters {
-            cont.resume(throwing: BLEConnectionError.connectionFailed(nil))
+        for (_, entry) in waiters {
+            entry.continuation.resume(throwing: BLEConnectionError.connectionFailed(nil))
         }
     }
 

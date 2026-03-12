@@ -24,6 +24,24 @@ final class CameraListViewModel {
         UIApplication.shared.isIdleTimerDisabled = false
     }
 
+    // MARK: - Toast
+
+    /// Message shown in the bottom toast overlay. Set to `nil` to dismiss.
+    var toastMessage: String?
+    private var toastDismissTask: Task<Void, Never>?
+
+    /// Show a toast message for 3 seconds. Replaces any currently visible toast
+    /// (so rapid failures don't stack up).
+    func showToast(_ message: String) {
+        toastDismissTask?.cancel()
+        toastMessage = message
+        toastDismissTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(3))
+            guard !Task.isCancelled else { return }
+            self.toastMessage = nil
+        }
+    }
+
     // MARK: - Screen Lock
 
     var screenLockDisabled: Bool = false {
@@ -46,23 +64,38 @@ final class CameraListViewModel {
     // MARK: - Global Actions
 
     func shutterAll() {
-        Task { await manager.shutterAll() }
+        Task {
+            let failed = await manager.shutterAll()
+            if failed > 0 { showToast("Shutter failed on \(failed) camera(s)") }
+        }
     }
 
     func startAll() {
-        Task { await manager.startAll() }
+        Task {
+            let failed = await manager.startAll()
+            if failed > 0 { showToast("Record start failed on \(failed) camera(s)") }
+        }
     }
 
     func stopAll() {
-        Task { await manager.stopAll() }
+        Task {
+            let failed = await manager.stopAll()
+            if failed > 0 { showToast("Record stop failed on \(failed) camera(s)") }
+        }
     }
 
     func switchModeAll(_ intent: ModeIntent) {
-        Task { await manager.switchModeAll(intent) }
+        Task {
+            let failed = await manager.switchModeAll(intent)
+            if failed > 0 { showToast("Mode switch failed on \(failed) camera(s)") }
+        }
     }
 
     func sleepAll() {
-        Task { await manager.sleepAll() }
+        Task {
+            let failed = await manager.sleepAll()
+            if failed > 0 { showToast("Sleep failed on \(failed) camera(s)") }
+        }
     }
 
     func reconnectAll() {

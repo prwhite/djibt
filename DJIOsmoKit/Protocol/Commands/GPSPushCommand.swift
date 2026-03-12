@@ -24,6 +24,9 @@ enum GPSPushCommand {
 
         // -- Timestamp in DJI format (UTC+8) --
         var cal = Calendar(identifier: .gregorian)
+        // DJI protocol requires timestamps in UTC+8 (China Standard Time).
+        // This matches the reference implementation in dji-sdk/Osmo-GPS-Controller-Demo.
+        // The camera interprets all GPS timestamps as CST regardless of the user's locale.
         cal.timeZone = TimeZone(secondsFromGMT: 8 * 3600)!
         let comps = cal.dateComponents(
             [.year, .month, .day, .hour, .minute, .second],
@@ -42,9 +45,9 @@ enum GPSPushCommand {
         payload.writeLE(hms, at: 4)
 
         // -- Position (scaled integers) --
-        payload.writeLE(Int32(location.coordinate.longitude * 1e7), at: 8)
-        payload.writeLE(Int32(location.coordinate.latitude * 1e7), at: 12)
-        payload.writeLE(Int32(location.altitude * 1000), at: 16)  // millimetres
+        payload.writeLE(Int32(clamping: Int64(location.coordinate.longitude * 1e7)), at: 8)
+        payload.writeLE(Int32(clamping: Int64(location.coordinate.latitude * 1e7)), at: 12)
+        payload.writeLE(Int32(clamping: Int64(location.altitude * 1000)), at: 16)  // millimetres
 
         // -- Speed decomposition using course --
         let speedMS = max(location.speed, 0)  // m/s; negative means invalid

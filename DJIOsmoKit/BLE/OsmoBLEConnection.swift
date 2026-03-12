@@ -33,6 +33,7 @@ enum BLEConnectionError: Error {
 final class OsmoBLEConnection: NSObject {
 
     let peripheral: CBPeripheral
+    private let peripheralID: UUID
     private weak var centralManager: CBCentralManager?
 
     private var writeCharacteristic: CBCharacteristic?
@@ -55,9 +56,15 @@ final class OsmoBLEConnection: NSObject {
 
     init(peripheral: CBPeripheral, centralManager: CBCentralManager) {
         self.peripheral = peripheral
+        self.peripheralID = peripheral.identifier
         self.centralManager = centralManager
         super.init()
         peripheral.delegate = self
+        OsmoLog.connection.debug("OsmoBLEConnection init for \(peripheral.identifier, privacy: .private)")
+    }
+
+    deinit {
+        OsmoLog.connection.debug("OsmoBLEConnection deinit for \(self.peripheralID, privacy: .private)")
     }
 
     // MARK: - Lifecycle

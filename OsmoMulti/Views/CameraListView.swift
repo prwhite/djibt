@@ -44,6 +44,9 @@ struct CameraListView: View {
             ToolbarItem(placement: .topBarLeading) {
                 Button {
                     viewModel.screenLockDisabled.toggle()
+                    viewModel.showToast(viewModel.screenLockDisabled
+                        ? "Screen sleep disabled"
+                        : "Screen sleep enabled")
                 } label: {
                     Image(systemName: viewModel.screenLockDisabled ? "lock.open.display" : "lock.display")
                         .foregroundStyle(viewModel.screenLockDisabled ? .yellow : .secondary)
@@ -54,6 +57,19 @@ struct CameraListView: View {
             }
         }
         .toolbarBackground(.visible, for: .bottomBar)
+        .overlay(alignment: .bottom) {
+            if let toast = viewModel.toastMessage {
+                Text(toast)
+                    .font(.subheadline)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .padding(.bottom, 80)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .animation(.easeInOut, value: viewModel.toastMessage)
+            }
+        }
+        .animation(.easeInOut, value: viewModel.toastMessage)
         .sheet(isPresented: Binding(
             get: { viewModel.isAddingCamera },
             set: { if !$0 { viewModel.dismissAddCamera() } }

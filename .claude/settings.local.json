@@ -88,7 +88,16 @@
       "Bash(xcodegen help)",
       "Bash(xcodebuild -project OsmoMulti.xcodeproj -target OsmoMulti -sdk iphoneos26.2 CODE_SIGN_IDENTITY=\"\" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build -skipDependencies)",
       "Bash(xcodebuild -project OsmoMulti.xcodeproj -target OsmoMulti -sdk iphoneos26.2 CODE_SIGN_IDENTITY=\"\" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build ONLY_BUILD_ACTIVE_ARCH=YES -destination \"generic/platform=iOS\")",
-      "Bash(ls -t ~/Desktop/*.png)"
+      "Bash(ls -t ~/Desktop/*.png)",
+      "Bash(ls -la /Users/payton/me/dev/djibt/*.xcodeproj/)",
+      "Bash(find /Users/payton/me/dev/djibt -name \"project.yml\" -exec cat {} ;)",
+      "Bash(grep -n \"makePreview\" /Users/payton/me/dev/djibt/DJIOsmoKit/Camera/*.swift)",
+      "Bash(find /Users/payton/me/dev/djibt -name \"Podfile\\\\|Package.swift\\\\|Cartfile\")",
+      "Bash(grep -n \"PersistedCamera\\\\|Codable\\\\|Encodable\" /Users/payton/me/dev/djibt/DJIOsmoKit/Camera/*.swift)",
+      "Bash(grep -B 5 -A 10 \"struct PersistedCamera\" /Users/payton/me/dev/djibt/DJIOsmoKit/Camera/*.swift)",
+      "Bash(xmllint --noout /Users/payton/me/dev/djibt/OsmoMulti/PrivacyInfo.xcprivacy)",
+      "Bash(plutil -lint /Users/payton/me/dev/djibt/OsmoMulti/PrivacyInfo.xcprivacy)",
+      "Bash(find /Users/payton/me/dev/djibt/DJIOsmoKit -name *Log* -o -name *oslog* -o -name *logging*)"
     ]
   }
 }
