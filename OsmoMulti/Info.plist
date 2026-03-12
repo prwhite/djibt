@@ -20,6 +20,8 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Cam Control requires Bluetooth to connect to and control DJI Osmo cameras.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>

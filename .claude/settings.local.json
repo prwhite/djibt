@@ -100,7 +100,8 @@
       "Bash(find /Users/payton/me/dev/djibt/DJIOsmoKit -name *Log* -o -name *oslog* -o -name *logging*)",
       "Bash(find /Users/payton/me/dev/djibt -name \"*.swift\" -type f -exec grep -l \"0x1D\\\\|CmdSet\\\\|CmdID\\\\|Command\" {})",
       "Bash(ls -d /Users/payton/me/dev/djibt/content/*.icon)",
-      "Bash(xcodegen version:*)"
+      "Bash(xcodegen version:*)",
+      "Bash(xargs ls:*)"
     ]
   }
 }
