@@ -17,11 +17,46 @@ final class CameraListViewModel {
     var isScanning: Bool { manager.isScanning }
     var isAddingCamera: Bool = false
 
+    /// Tracks the last known connection state per camera ID for haptic edge detection.
+    private var lastConnectionStates: [UUID: ConnectionState] = [:]
+
     init(manager: OsmoCameraManager = .shared) {
         self.manager = manager
         // Ensure idle timer matches the initial (disabled) state on fresh launch.
         // didSet does not fire during initialization, so set it explicitly.
         UIApplication.shared.isIdleTimerDisabled = false
+
+        // Observe connection state transitions for haptic feedback.
+        startConnectionHapticObservation()
+    }
+
+    private func startConnectionHapticObservation() {
+        // Poll camera states on a 0.5s timer to detect transitions.
+        // withObservationTracking can't easily observe an array of @Observable objects,
+        // so a lightweight timer is more robust.
+        Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(500))
+                guard let self else { return }
+                self.checkConnectionTransitions()
+            }
+        }
+    }
+
+    private func checkConnectionTransitions() {
+        let allCameras = manager.enabledCameras + manager.disabledCameras
+        for camera in allCameras {
+            let current = camera.connectionState
+            let previous = lastConnectionStates[camera.id]
+            if let previous, previous != current {
+                if current == .connected {
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                } else if current == .failed {
+                    UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                }
+            }
+            lastConnectionStates[camera.id] = current
+        }
     }
 
     // MARK: - Toast

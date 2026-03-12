@@ -1,5 +1,6 @@
 import DJIOsmoKit
 import SwiftUI
+import UIKit
 
 /// Detailed view for a single camera with diagnostics and controls.
 struct CameraDetailView: View {
@@ -129,6 +130,15 @@ struct CameraDetailView: View {
 
             // Shutter
             Button {
+                if camera.status.recordingStatus.isRecording {
+                    let haptic = UIImpactFeedbackGenerator(style: .heavy)
+                    haptic.prepare()
+                    haptic.impactOccurred()
+                } else {
+                    let haptic = UIImpactFeedbackGenerator(style: .medium)
+                    haptic.prepare()
+                    haptic.impactOccurred()
+                }
                 Task {
                     do {
                         try await camera.sendShutter()
@@ -150,6 +160,9 @@ struct CameraDetailView: View {
             // Explicit stop (video modes)
             if camera.status.mode?.supportsRecording ?? true {
                 Button {
+                    let haptic = UIImpactFeedbackGenerator(style: .heavy)
+                    haptic.prepare()
+                    haptic.impactOccurred()
                     Task {
                         do {
                             try await camera.sendRecordStop()

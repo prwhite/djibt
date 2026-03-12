@@ -15,9 +15,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "0E57881AA87223D963EB7017"
-               BuildableName = "OsmoMulti.app"
-               BlueprintName = "OsmoMulti"
+               BlueprintIdentifier = "123F66ABB15B6E5A3C44AFBA"
+               BuildableName = "DJIOsmoKit.framework"
+               BlueprintName = "DJIOsmoKit"
                ReferencedContainer = "container:OsmoMulti.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -32,9 +32,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "0E57881AA87223D963EB7017"
-            BuildableName = "OsmoMulti.app"
-            BlueprintName = "OsmoMulti"
+            BlueprintIdentifier = "123F66ABB15B6E5A3C44AFBA"
+            BuildableName = "DJIOsmoKit.framework"
+            BlueprintName = "DJIOsmoKit"
             ReferencedContainer = "container:OsmoMulti.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -55,7 +55,7 @@
       </CommandLineArguments>
    </TestAction>
    <LaunchAction
-      buildConfiguration = "Release"
+      buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
@@ -64,18 +64,15 @@
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
       allowLocationSimulation = "YES">
-      <BuildableProductRunnable
-         runnableDebuggingMode = "0">
+      <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "0E57881AA87223D963EB7017"
-            BuildableName = "OsmoMulti.app"
-            BlueprintName = "OsmoMulti"
+            BlueprintIdentifier = "123F66ABB15B6E5A3C44AFBA"
+            BuildableName = "DJIOsmoKit.framework"
+            BlueprintName = "DJIOsmoKit"
             ReferencedContainer = "container:OsmoMulti.xcodeproj">
          </BuildableReference>
-      </BuildableProductRunnable>
-      <CommandLineArguments>
-      </CommandLineArguments>
+      </MacroExpansion>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -83,18 +80,15 @@
       savedToolIdentifier = ""
       useCustomWorkingDirectory = "NO"
       debugDocumentVersioning = "YES">
-      <BuildableProductRunnable
-         runnableDebuggingMode = "0">
+      <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "0E57881AA87223D963EB7017"
-            BuildableName = "OsmoMulti.app"
-            BlueprintName = "OsmoMulti"
+            BlueprintIdentifier = "123F66ABB15B6E5A3C44AFBA"
+            BuildableName = "DJIOsmoKit.framework"
+            BlueprintName = "DJIOsmoKit"
             ReferencedContainer = "container:OsmoMulti.xcodeproj">
          </BuildableReference>
-      </BuildableProductRunnable>
-      <CommandLineArguments>
-      </CommandLineArguments>
+      </MacroExpansion>
    </ProfileAction>
    <AnalyzeAction
       buildConfiguration = "Debug">

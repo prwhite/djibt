@@ -97,7 +97,10 @@
       "Bash(grep -B 5 -A 10 \"struct PersistedCamera\" /Users/payton/me/dev/djibt/DJIOsmoKit/Camera/*.swift)",
       "Bash(xmllint --noout /Users/payton/me/dev/djibt/OsmoMulti/PrivacyInfo.xcprivacy)",
       "Bash(plutil -lint /Users/payton/me/dev/djibt/OsmoMulti/PrivacyInfo.xcprivacy)",
-      "Bash(find /Users/payton/me/dev/djibt/DJIOsmoKit -name *Log* -o -name *oslog* -o -name *logging*)"
+      "Bash(find /Users/payton/me/dev/djibt/DJIOsmoKit -name *Log* -o -name *oslog* -o -name *logging*)",
+      "Bash(find /Users/payton/me/dev/djibt -name \"*.swift\" -type f -exec grep -l \"0x1D\\\\|CmdSet\\\\|CmdID\\\\|Command\" {})",
+      "Bash(ls -d /Users/payton/me/dev/djibt/content/*.icon)",
+      "Bash(xcodegen version:*)"
     ]
   }
 }

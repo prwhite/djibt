@@ -1,5 +1,6 @@
 import DJIOsmoKit
 import SwiftUI
+import UIKit
 
 /// Top-level controls that apply to all enabled cameras simultaneously.
 ///
@@ -88,13 +89,28 @@ struct GlobalControlsView: View {
     private var shutterButton: some View {
         if intent == .photo {
             ShutterButton(systemImage: "camera.circle.fill", label: "Capture",
-                          tint: .primary) { viewModel.shutterAll() }
+                          tint: .primary) {
+                let haptic = UIImpactFeedbackGenerator(style: .medium)
+                haptic.prepare()
+                haptic.impactOccurred()
+                viewModel.shutterAll()
+            }
         } else if isRecording {
             ShutterButton(systemImage: "stop.fill", label: "Stop",
-                          tint: .red) { viewModel.stopAll() }
+                          tint: .red) {
+                let haptic = UIImpactFeedbackGenerator(style: .heavy)
+                haptic.prepare()
+                haptic.impactOccurred()
+                viewModel.stopAll()
+            }
         } else {
             ShutterButton(systemImage: "record.circle", label: "Record",
-                          tint: .red) { viewModel.startAll() }
+                          tint: .red) {
+                let haptic = UIImpactFeedbackGenerator(style: .medium)
+                haptic.prepare()
+                haptic.impactOccurred()
+                viewModel.startAll()
+            }
         }
     }
 }

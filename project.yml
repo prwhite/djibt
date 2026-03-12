@@ -6,6 +6,10 @@ options:
     watchOS: "26.0"
   createIntermediateGroups: true
 
+configs:
+  Debug: debug
+  Release: release
+
 settings:
   base:
     SWIFT_VERSION: "5.9"
@@ -41,6 +45,8 @@ targets:
     platform: iOS
     sources:
       - path: OsmoMulti
+      - path: content/djibt-ios.icon
+        buildPhase: resources
     info:
       path: OsmoMulti/Info.plist
       properties:
@@ -60,14 +66,62 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: me.payton.OsmoMulti
+        ASSETCATALOG_COMPILER_APPICON_NAME: djibt-ios
 
   OsmoWatch:
     type: application
     platform: watchOS
     sources:
       - path: OsmoWatch
+      - path: content/djibt-ios.icon
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: me.payton.OsmoMulti.watchkitapp
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_WKCompanionAppBundleIdentifier: me.payton.OsmoMulti
+        ASSETCATALOG_COMPILER_APPICON_NAME: djibt-ios
+
+schemes:
+  DJIOsmoKit:
+    build:
+      targets:
+        DJIOsmoKit: all
+    test:
+      config: Debug
+      targets:
+        - DJIOsmoKitTests
+
+  OsmoMulti:
+    build:
+      targets:
+        OsmoMulti: all
+    run:
+      config: Release
+    test:
+      config: Debug
+      targets:
+        - DJIOsmoKitTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
+  OsmoWatch:
+    build:
+      targets:
+        OsmoWatch: all
+        OsmoMulti: all
+    run:
+      config: Release
+      executable: OsmoWatch
+    test:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

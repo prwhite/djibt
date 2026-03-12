@@ -3,16 +3,16 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		0B7AF48C07F6BDE05D611936 /* Logging.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6D85868F51A7E9700410B94 /* Logging.swift */; };
+		0DC17D3D7DE301783BB10F3D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 4068EC99D53D899A6F2CCDFF /* PrivacyInfo.xcprivacy */; };
 		0F221FC7A529600A86D3B42C /* KeyReportCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4517D2ECD87BC34C38F77BF6 /* KeyReportCommand.swift */; };
+		0FA0D4A7DB2ADB3230FBB5AD /* CameraShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8819AE63F91CAD2817D9CD63 /* CameraShortcuts.swift */; };
 		1815B3ACD92C98F9B650B09D /* RecordingCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73574EDDD56A08059E6848F2 /* RecordingCommand.swift */; };
 		1C580A91DDB173AA436DA9BA /* OsmoMultiApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA300F201CB3C612E0FF92C3 /* OsmoMultiApp.swift */; };
-		1C972F572F626269007EFA7C /* djibt-ios.icon in Resources */ = {isa = PBXBuildFile; fileRef = 1C972F562F626269007EFA7C /* djibt-ios.icon */; };
-		1C972F582F626269007EFA7C /* djibt-ios.icon in Resources */ = {isa = PBXBuildFile; fileRef = 1C972F562F626269007EFA7C /* djibt-ios.icon */; };
 		2492B25AAEDEB87B14CE3DB8 /* FrameTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68D8C8ADE10B30ADA4DE66C3 /* FrameTests.swift */; };
 		27CCCBC1C8953BC76749828C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66F24A8E9D09D59C73F80E71 /* ContentView.swift */; };
 		2A061DFDF05CD66C67452F25 /* CRC.swift in Sources */ = {isa = PBXBuildFile; fileRef = C613863961F2D76F2DF57E4F /* CRC.swift */; };
@@ -27,12 +27,15 @@
 		4D9232CC60C795F68D343094 /* OsmoWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 455E2513988A17A0F2CC1588 /* OsmoWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		596EB903881E53379E832005 /* DJIOsmoKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 353451F0F10BCADDAA438278 /* DJIOsmoKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		5E1B6CEB17BBF051CA0F5D62 /* OsmoCamera.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2801D329D80770AF5B55B9FE /* OsmoCamera.swift */; };
+		684833117F654B9F75710B66 /* djibt-ios.icon in Resources */ = {isa = PBXBuildFile; fileRef = DDAED9B4AB672CB7FA28552F /* djibt-ios.icon */; };
 		6881F981E6E4A493D32FAB12 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE44255BF0B5BFC256A3CE67 /* SettingsView.swift */; };
 		68A7E0BA84FA5A23A43D0492 /* ConnectionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6916C08A1CE408C53DBDED99 /* ConnectionState.swift */; };
 		7A935FF533D0028D8B448FA2 /* SignalStrengthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9853A33FE02BF25B8BBEA860 /* SignalStrengthView.swift */; };
+		806E9765F2035B4A52DB44B8 /* CameraIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2430493209B0B966F9D0D5F0 /* CameraIntents.swift */; };
 		80D238E6F1ED98E9687704F5 /* WatchControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77BA1CD115E78338BCBFACC5 /* WatchControlView.swift */; };
 		8145316D33D7FD70E916561A /* VersionQueryCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DC1B54B3EBAEAD34B427C49 /* VersionQueryCommand.swift */; };
 		82C8FF2D45FF8943E4B56C5F /* CameraRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05935ED1F892FD40924DF4D2 /* CameraRowView.swift */; };
+		92F93588A7010BE257D769CA /* djibt-ios.icon in Resources */ = {isa = PBXBuildFile; fileRef = DDAED9B4AB672CB7FA28552F /* djibt-ios.icon */; };
 		9FACCC12CE8DB4D45EB00575 /* CameraListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E9838660BDF128E730E1C78 /* CameraListViewModel.swift */; };
 		A24A222A21DFD4C5AABEF43F /* CameraListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA154D155C699D1747CC716A /* CameraListView.swift */; };
 		A7BBE9C186384A3632127535 /* StatusSubscribeCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40400697BA320D8E1824DF73 /* StatusSubscribeCommand.swift */; };
@@ -118,18 +121,19 @@
 		0EA2991A288C4BAE21024128 /* WatchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchViewModel.swift; sourceTree = "<group>"; };
 		14CBEF2F29EDD094645BE89F /* OsmoBLEConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OsmoBLEConnection.swift; sourceTree = "<group>"; };
 		16BC89933A607C29647FF0EB /* ModeCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModeCommand.swift; sourceTree = "<group>"; };
-		1C972F562F626269007EFA7C /* djibt-ios.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; name = "djibt-ios.icon"; path = "content/djibt-ios.icon"; sourceTree = "<group>"; };
+		2430493209B0B966F9D0D5F0 /* CameraIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraIntents.swift; sourceTree = "<group>"; };
 		2801D329D80770AF5B55B9FE /* OsmoCamera.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OsmoCamera.swift; sourceTree = "<group>"; };
 		28D7898C577133FE6DDDAB86 /* OsmoCameraManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OsmoCameraManager.swift; sourceTree = "<group>"; };
 		3312CE9941F41DB906D52CB1 /* CameraStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraStatus.swift; sourceTree = "<group>"; };
 		353451F0F10BCADDAA438278 /* DJIOsmoKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = DJIOsmoKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		40400697BA320D8E1824DF73 /* StatusSubscribeCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusSubscribeCommand.swift; sourceTree = "<group>"; };
+		4068EC99D53D899A6F2CCDFF /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		4517D2ECD87BC34C38F77BF6 /* KeyReportCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyReportCommand.swift; sourceTree = "<group>"; };
 		455E2513988A17A0F2CC1588 /* OsmoWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OsmoWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4B0A99BDBAF28DB315FE2AA8 /* OsmoCameraManager+Preview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "OsmoCameraManager+Preview.swift"; sourceTree = "<group>"; };
 		5154755099B80CB654708951 /* CameraDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraDetailView.swift; sourceTree = "<group>"; };
 		598F6ACABE4154A2BDBF3382 /* PowerModeCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PowerModeCommand.swift; sourceTree = "<group>"; };
-		5B3D36E242AEFF8485065A07 /* OsmoMulti.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OsmoMulti.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5B3D36E242AEFF8485065A07 /* OsmoMulti.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OsmoMulti.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		66F24A8E9D09D59C73F80E71 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		68D8C8ADE10B30ADA4DE66C3 /* FrameTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameTests.swift; sourceTree = "<group>"; };
 		6916C08A1CE408C53DBDED99 /* ConnectionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionState.swift; sourceTree = "<group>"; };
@@ -138,6 +142,7 @@
 		73574EDDD56A08059E6848F2 /* RecordingCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingCommand.swift; sourceTree = "<group>"; };
 		77BA1CD115E78338BCBFACC5 /* WatchControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchControlView.swift; sourceTree = "<group>"; };
 		7E9838660BDF128E730E1C78 /* CameraListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraListViewModel.swift; sourceTree = "<group>"; };
+		8819AE63F91CAD2817D9CD63 /* CameraShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraShortcuts.swift; sourceTree = "<group>"; };
 		8D82B5852DB15814F0429594 /* GPSPushCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPSPushCommand.swift; sourceTree = "<group>"; };
 		97A0C3C5D3CC6AC613EBFCAA /* ConnectionCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionCommand.swift; sourceTree = "<group>"; };
 		9853A33FE02BF25B8BBEA860 /* SignalStrengthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignalStrengthView.swift; sourceTree = "<group>"; };
@@ -150,13 +155,14 @@
 		D89BC62CAB62EB2AF2705EDC /* FrameBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameBuilder.swift; sourceTree = "<group>"; };
 		DA154D155C699D1747CC716A /* CameraListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraListView.swift; sourceTree = "<group>"; };
 		DB21A75914A5F46FA36BA8B3 /* AddCameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddCameraView.swift; sourceTree = "<group>"; };
+		DDAED9B4AB672CB7FA28552F /* djibt-ios.icon */ = {isa = PBXFileReference; path = "djibt-ios.icon"; sourceTree = "<group>"; };
 		E3EC743303679BC8DF0EFC38 /* CRCTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CRCTests.swift; sourceTree = "<group>"; };
 		E5CB2752607DA6319914F6A2 /* FrameParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameParser.swift; sourceTree = "<group>"; };
 		EB86E24EE94AF69E7E4E57A2 /* OsmoWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OsmoWatchApp.swift; sourceTree = "<group>"; };
 		EDCA5C70829E8EA39D4F8928 /* OsmoLocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OsmoLocationManager.swift; sourceTree = "<group>"; };
 		F459A47517A1E40A0207A7AC /* GlobalControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalControlsView.swift; sourceTree = "<group>"; };
 		F488F37BC194C985DEC62F18 /* CameraMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraMode.swift; sourceTree = "<group>"; };
-		FE827854DB2FD597251E86C3 /* DJIOsmoKitTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper; path = DJIOsmoKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FE827854DB2FD597251E86C3 /* DJIOsmoKitTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = DJIOsmoKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -183,7 +189,9 @@
 			isa = PBXGroup;
 			children = (
 				D7ABD97AE06CB76A157B15ED /* Info.plist */,
+				4068EC99D53D899A6F2CCDFF /* PrivacyInfo.xcprivacy */,
 				871F0137BC2320159A6FF64A /* App */,
+				7CD10214DD91AE1B953E37AF /* Intents */,
 				A1006736BC786583B4B4CC9D /* ViewModels */,
 				535B0A3D08F2903B01B58EAD /* Views */,
 				B46F57D7E37D52C9010DABB4 /* Watch */,
@@ -212,6 +220,14 @@
 				9853A33FE02BF25B8BBEA860 /* SignalStrengthView.swift */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		59400AA57335E77743838D9B /* content */ = {
+			isa = PBXGroup;
+			children = (
+				DDAED9B4AB672CB7FA28552F /* djibt-ios.icon */,
+			);
+			path = content;
 			sourceTree = "<group>";
 		};
 		5AA6E2066E073C7A3C985A36 /* Views */ = {
@@ -248,6 +264,15 @@
 				4B0A99BDBAF28DB315FE2AA8 /* OsmoCameraManager+Preview.swift */,
 			);
 			path = Camera;
+			sourceTree = "<group>";
+		};
+		7CD10214DD91AE1B953E37AF /* Intents */ = {
+			isa = PBXGroup;
+			children = (
+				2430493209B0B966F9D0D5F0 /* CameraIntents.swift */,
+				8819AE63F91CAD2817D9CD63 /* CameraShortcuts.swift */,
+			);
+			path = Intents;
 			sourceTree = "<group>";
 		};
 		871F0137BC2320159A6FF64A /* App */ = {
@@ -298,7 +323,7 @@
 		B346E93BCEA03A830DC96D18 = {
 			isa = PBXGroup;
 			children = (
-				1C972F562F626269007EFA7C /* djibt-ios.icon */,
+				59400AA57335E77743838D9B /* content */,
 				EC24EDDD10F2B634888CB27F /* DJIOsmoKit */,
 				31007B37A5840720AD747925 /* DJIOsmoKitTests */,
 				02A619DD4815D98641C505B1 /* OsmoMulti */,
@@ -490,6 +515,7 @@
 			);
 			mainGroup = B346E93BCEA03A830DC96D18;
 			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -506,7 +532,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1C972F582F626269007EFA7C /* djibt-ios.icon in Resources */,
+				684833117F654B9F75710B66 /* djibt-ios.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -514,7 +540,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1C972F572F626269007EFA7C /* djibt-ios.icon in Resources */,
+				0DC17D3D7DE301783BB10F3D /* PrivacyInfo.xcprivacy in Resources */,
+				92F93588A7010BE257D769CA /* djibt-ios.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -555,9 +582,11 @@
 			files = (
 				2F2FDF003B3A526883CBBE97 /* AddCameraView.swift in Sources */,
 				D7458693C464FCC7949E4C69 /* CameraDetailView.swift in Sources */,
+				806E9765F2035B4A52DB44B8 /* CameraIntents.swift in Sources */,
 				A24A222A21DFD4C5AABEF43F /* CameraListView.swift in Sources */,
 				9FACCC12CE8DB4D45EB00575 /* CameraListViewModel.swift in Sources */,
 				82C8FF2D45FF8943E4B56C5F /* CameraRowView.swift in Sources */,
+				0FA0D4A7DB2ADB3230FBB5AD /* CameraShortcuts.swift in Sources */,
 				27CCCBC1C8953BC76749828C /* ContentView.swift in Sources */,
 				E84DAE80B0207A4188AC117E /* GlobalControlsView.swift in Sources */,
 				1C580A91DDB173AA436DA9BA /* OsmoMultiApp.swift in Sources */,

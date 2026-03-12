@@ -107,10 +107,19 @@ struct CameraRowView: View {
     @ViewBuilder
     private var compactStatusBar: some View {
         let segments = statusSegments
-        if segments.isEmpty {
+        if segments.isEmpty && !camera.status.recordingStatus.isRecording {
             Text(" ").font(.caption2)
         } else {
             HStack(spacing: 4) {
+                // Recording time pill (special color) — before regular pills
+                if camera.status.recordingStatus.isRecording {
+                    Text(formatRecordingDuration(camera.status.recordingSeconds))
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(Color.red.opacity(0.5), in: .rect(cornerRadius: 3))
+                }
                 ForEach(Array(segments.enumerated()), id: \.offset) { index, label in
                     if index.isMultiple(of: 2) {
                         // Plain: system foreground on background
@@ -129,6 +138,13 @@ struct CameraRowView: View {
                 }
             }
         }
+    }
+
+    private func formatRecordingDuration(_ seconds: Int) -> String {
+        if seconds >= 3600 {
+            return String(format: "%d:%02d:%02d", seconds / 3600, (seconds % 3600) / 60, seconds % 60)
+        }
+        return String(format: "%d:%02d", seconds / 60, seconds % 60)
     }
 
     private var subtitleText: String {
