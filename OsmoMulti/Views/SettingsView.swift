@@ -80,6 +80,14 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    Link(destination: URL(string: "https://github.com/prwhite/djibt/issues")!) {
+                        Label("Report an Issue", systemImage: "arrow.up.right")
+                    }
+                } footer: {
+                    Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?") (\(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"))")
+                }
+
+                Section {
                     Button(role: .destructive) {
                         showClearConfirmation = true
                     } label: {

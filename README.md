@@ -145,6 +145,10 @@ Edit Scheme → Run → Arguments → Add "--preview-mode"
 - **Video download is not supported.** DJI Osmo cameras transfer video over direct Wi-Fi, using an undocumented protocol. This feature is not implemented.
 - **Camera modes are one-way.** Mode switching sends a command to the camera, but the camera may reject it silently depending on its current state.
 
+## Privacy Policy
+
+This app does not collect, store, or transmit any personal data beyond device-local BLE pairing and on-device location for geotagging. Location data is sent only to connected cameras over Bluetooth and is never transmitted to any server.
+
 ## License
 
 MIT License. See [LICENSE](LICENSE) for details.

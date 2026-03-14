@@ -92,7 +92,11 @@ struct CameraRowView: View {
         if isVideoMode {
             if let res = camera.status.videoResolution?.displayName { segments.append(res) }
             if let fps = camera.status.frameRate?.displayName { segments.append(fps) }
-            segments.append(camera.status.stabilizationMode?.displayName ?? "EIS unknown")
+            if camera.isPanoCamera {
+                segments.append("EIS N/A")
+            } else {
+                segments.append(camera.status.stabilizationMode?.displayName ?? "EIS unknown")
+            }
         } else {
             if let ratio = camera.status.photoRatio?.displayName { segments.append(ratio) }
             if camera.status.remainingPhotoCount > 0 { segments.append("\(camera.status.remainingPhotoCount) photos") }

@@ -17,6 +17,7 @@ import UIKit
 struct GlobalControlsView: View {
 
     let viewModel: CameraListViewModel
+    let availableWidth: CGFloat
 
     /// Shared height for all control bar items so glass effects render uniformly.
     private static let controlHeight: CGFloat = 56
@@ -50,7 +51,7 @@ struct GlobalControlsView: View {
                     .glassEffect(.regular)
             }
             .padding(4)
-            .frame(maxWidth: .infinity)
+            .frame(width: max(availableWidth - 32, 0))
         }
     }
 
@@ -85,30 +86,34 @@ struct GlobalControlsView: View {
 
     // MARK: - Shutter Button
 
-    @ViewBuilder
+    private var shutterSystemImage: String {
+        if intent == .photo { "camera.circle.fill" }
+        else if isRecording { "stop.fill" }
+        else { "record.circle" }
+    }
+
+    private var shutterLabel: String {
+        if intent == .photo { "Capture" }
+        else if isRecording { "Stop" }
+        else { "Record" }
+    }
+
+    private var shutterTint: Color {
+        intent == .photo ? .primary : .red
+    }
+
     private var shutterButton: some View {
-        if intent == .photo {
-            ShutterButton(systemImage: "camera.circle.fill", label: "Capture",
-                          tint: .primary) {
-                let haptic = UIImpactFeedbackGenerator(style: .medium)
-                haptic.prepare()
-                haptic.impactOccurred()
+        ShutterButton(systemImage: shutterSystemImage, label: shutterLabel,
+                      tint: shutterTint) {
+            let style: UIImpactFeedbackGenerator.FeedbackStyle = isRecording ? .heavy : .medium
+            let haptic = UIImpactFeedbackGenerator(style: style)
+            haptic.prepare()
+            haptic.impactOccurred()
+            if intent == .photo {
                 viewModel.shutterAll()
-            }
-        } else if isRecording {
-            ShutterButton(systemImage: "stop.fill", label: "Stop",
-                          tint: .red) {
-                let haptic = UIImpactFeedbackGenerator(style: .heavy)
-                haptic.prepare()
-                haptic.impactOccurred()
+            } else if isRecording {
                 viewModel.stopAll()
-            }
-        } else {
-            ShutterButton(systemImage: "record.circle", label: "Record",
-                          tint: .red) {
-                let haptic = UIImpactFeedbackGenerator(style: .medium)
-                haptic.prepare()
-                haptic.impactOccurred()
+            } else {
                 viewModel.startAll()
             }
         }

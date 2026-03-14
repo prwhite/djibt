@@ -17,6 +17,7 @@ struct CameraListView: View {
 
     @State private var viewModel: CameraListViewModel
     @State private var showSettings = false
+    @State private var contentWidth: CGFloat = 0
 
     init(manager: OsmoCameraManager) {
         _viewModel = State(wrappedValue: CameraListViewModel(manager: manager))
@@ -24,6 +25,12 @@ struct CameraListView: View {
 
     var body: some View {
         cameraList
+        .background {
+            GeometryReader { geo in
+                Color.clear
+                    .onChange(of: geo.size.width, initial: true) { _, w in contentWidth = w }
+            }
+        }
         .navigationTitle("Cameras")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -53,7 +60,7 @@ struct CameraListView: View {
                 }
             }
             ToolbarItemGroup(placement: .bottomBar) {
-                GlobalControlsView(viewModel: viewModel)
+                GlobalControlsView(viewModel: viewModel, availableWidth: contentWidth)
             }
         }
         .toolbarBackground(.visible, for: .bottomBar)

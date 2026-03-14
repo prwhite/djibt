@@ -163,8 +163,8 @@ public struct CameraStatus: Equatable {
     /// Temperature warning level. 0 = normal, >0 = overheating warning.
     public let temperatureWarning: UInt8
 
-    /// Raw enum bytes we've already logged as unmapped — prevents per-second log spam.
-    nonisolated(unsafe) private static var loggedUnknownBytes: Set<UInt8> = []
+    /// Logs unmapped enum bytes once per unique value — prevents per-second log spam.
+    nonisolated(unsafe) private static var stabilizationLogger = FirstSeenLogger<UInt8>()
 
     // MARK: - Sentinel
 
@@ -249,8 +249,7 @@ public struct CameraStatus: Equatable {
         let powerMode = PowerMode(rawValue: bytes[28]) ?? .normal
         let temperatureWarning = bytes[30]
         let batteryPercentage = min(100, max(0, Int(bytes[37])))
-        if stabilizationMode == nil && rawStabilization != 0 && !loggedUnknownBytes.contains(rawStabilization) {
-            loggedUnknownBytes.insert(rawStabilization)
+        if stabilizationMode == nil && rawStabilization != 0 && stabilizationLogger.insertIfNew(rawStabilization) {
             OsmoLog.camera.info("Unmapped stabilization byte: 0x\(String(rawStabilization, radix: 16), privacy: .public) (mode=0x\(String(rawMode, radix: 16), privacy: .public))")
         }
         return CameraStatus(

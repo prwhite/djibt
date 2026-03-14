@@ -73,8 +73,9 @@ struct CameraDetailView: View {
                 if camera.status.mode?.supportsRecording ?? true {
                     LabeledContent("Resolution", value: camera.status.videoResolution?.displayName ?? "—")
                     LabeledContent("Frame Rate", value: camera.status.frameRate?.displayName ?? "—")
-                    LabeledContent("Stabilization", value: camera.status.stabilizationMode?.displayName
-                        ?? (camera.status.rawStabilization != 0 ? "Unknown (0x\(String(camera.status.rawStabilization, radix: 16)))" : "Off"))
+                    LabeledContent("Stabilization", value: camera.isPanoCamera ? "N/A"
+                        : (camera.status.stabilizationMode?.displayName
+                            ?? (camera.status.rawStabilization != 0 ? "Unknown (0x\(String(camera.status.rawStabilization, radix: 16)))" : "Off")))
                 } else {
                     LabeledContent("Aspect Ratio", value: camera.status.photoRatio?.displayName ?? "—")
                     if camera.status.remainingPhotoCount > 0 {

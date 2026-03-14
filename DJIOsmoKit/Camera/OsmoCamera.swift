@@ -97,10 +97,10 @@ public final class OsmoCamera: Identifiable {
         sdkVersion = nil
         rssi = nil
         rssiHistory.removeAll()
-        loggedModePayloads.removeAll()
+        modeLogger.reset()
     }
-    /// Raw mode bytes we've already logged a hex dump for — avoids flooding the log at 1 Hz.
-    private var loggedModePayloads: Set<UInt8> = []
+    /// Logs full hex dump once per unique raw mode byte — avoids flooding the log at 1 Hz.
+    private var modeLogger = FirstSeenLogger<UInt8>()
     /// Incrementing sequence number for outgoing frames.
     private var sequenceCounter: UInt16 = 0
 
@@ -283,7 +283,7 @@ public final class OsmoCamera: Identifiable {
                 let eisStr = parsed.stabilizationMode?.displayName ?? "raw=\(Array(frame.payload)[4])"
                 OsmoLog.camera.debug("Status: \(modeStr, privacy: .public) \(resStr, privacy: .public) \(fpsStr, privacy: .public) EIS=\(eisStr, privacy: .public) bat=\(parsed.batteryPercentage)% rec=\(String(describing: parsed.recordingStatus), privacy: .public)")
                 // Log full hex dump once per raw mode value — avoids 1 Hz log spam
-                if loggedModePayloads.insert(parsed.rawMode).inserted {
+                if modeLogger.insertIfNew(parsed.rawMode) {
                     let label = parsed.mode?.displayName ?? "unknown"
                     let hex = Array(frame.payload).map { String(format: "%02X", $0) }.joined(separator: " ")
                     OsmoLog.camera.info("Mode 0x\(String(parsed.rawMode, radix: 16, uppercase: true), privacy: .public) (\(label, privacy: .public)) on \(self.name, privacy: .public) — raw payload (\(frame.payload.count)B): \(hex, privacy: .private)")
