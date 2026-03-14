@@ -29,7 +29,7 @@ public final class OsmoBLEScanner: NSObject {
 
     private var centralManager: CBCentralManager?
     private var discoveryContinuation: AsyncStream<DiscoveredCamera>.Continuation?
-    private let queue = DispatchQueue(label: "me.payton.OsmoMulti.scanner", qos: .userInitiated)
+    private let queue = DispatchQueue(label: "net.prehiti.payton.CamControl.scanner", qos: .userInitiated)
 
     /// A stream that emits each discovered DJI camera peripheral. Begins scanning when iterated.
     public var discoveries: AsyncStream<DiscoveredCamera> {

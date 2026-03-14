@@ -3,7 +3,7 @@ import Foundation
 import OSLog
 import WatchConnectivity
 
-private let log = Logger(subsystem: "me.payton.OsmoMulti", category: "WatchBridge")
+private let log = Logger(subsystem: "net.prehiti.payton.CamControl", category: "WatchBridge")
 
 /// Bridges OsmoCameraManager to the Apple Watch via WatchConnectivity.
 ///
@@ -17,7 +17,7 @@ final class WatchBridge: NSObject {
 
     private let manager: OsmoCameraManager
     private let session: WCSession
-    private nonisolated(unsafe) var pushTimer: Timer?
+    private var pushTimer: Timer?
     private var lastPushedContext: [String: Any] = [:]
 
     init(cameraManager: OsmoCameraManager) {
@@ -86,9 +86,6 @@ final class WatchBridge: NSObject {
         }
     }
 
-    deinit {
-        pushTimer?.invalidate()
-    }
 }
 
 // MARK: - WCSessionDelegate

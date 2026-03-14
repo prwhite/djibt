@@ -217,6 +217,7 @@ struct CameraDetailView: View {
             } label: {
                 Label("Force Reconnect", systemImage: "arrow.clockwise")
             }
+            .buttonStyle(.borderless)
             .disabled(camera.connectionState == .connecting
                    || camera.connectionState == .handshaking
                    || camera.connectionState == .reconnecting)

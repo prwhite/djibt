@@ -18,7 +18,7 @@ struct CameraListView: View {
     @State private var viewModel: CameraListViewModel
     @State private var showSettings = false
 
-    init(manager: OsmoCameraManager = .shared) {
+    init(manager: OsmoCameraManager) {
         _viewModel = State(wrappedValue: CameraListViewModel(manager: manager))
     }
 

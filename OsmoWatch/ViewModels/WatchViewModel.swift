@@ -3,7 +3,7 @@ import Observation
 import OSLog
 import WatchConnectivity
 
-private let log = Logger(subsystem: "me.payton.OsmoMulti.watchkitapp", category: "WatchVM")
+private let log = Logger(subsystem: "net.prehiti.payton.CamControl.watchkitapp", category: "WatchVM")
 
 @Observable
 @MainActor
@@ -99,4 +99,11 @@ extension WatchViewModel: WCSessionDelegate {
             self.isReachable = session.isReachable
         }
     }
+
+    #if os(iOS)
+    nonisolated func sessionDidBecomeInactive(_ session: WCSession) {}
+    nonisolated func sessionDidDeactivate(_ session: WCSession) {
+        session.activate()
+    }
+    #endif
 }

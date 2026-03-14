@@ -102,38 +102,26 @@ public final class OsmoCameraManager: NSObject {
             name: discovered.advertisedName ?? "Osmo Camera",
             isEnabled: true
         )
-        camera.peripheral = discovered.peripheral
         camera.knownPeripheralID = discovered.peripheral.identifier
         camera.onPanoCameraDetected = { [weak self] in self?.persistCameras() }
         cameras.append(camera)
         persistCameras()
         OsmoLog.manager.info("Camera added: \(camera.name, privacy: .public) id=\(discovered.peripheral.identifier, privacy: .public)")
-        // First-time connection — use a long discovery timeout to allow for BLE pairing.
-        // The initial GATT connect attempt often fails due to a CoreBluetooth XPC reset
-        // that occurs ~200ms after adding a new camera. The recovery strategy:
-        //   1. First attempt with scan still running (fails fast at 5s GATT timeout)
-        //   2. Stop scan, retrieve fresh peripheral ref, retry (mimics app-restart path)
+        // Stop scanning before connecting — the scanner's CBCentralManager conflicts
+        // with ours, and the discovered peripheral ref may be stale (e.g. after
+        // remove + re-add). Retrieve a fresh peripheral from our own CBCentralManager.
         Task {
-            await connect(camera: camera, discoveryTimeout: 60, suppressRetry: true)
-            // If we're already connected, we're done.
-            guard camera.connectionState != .connected else {
-                if isScanning { stopScanning() }
-                return
-            }
-            // First attempt likely failed due to XPC reset — recover by stopping
-            // the scan and retrieving a fresh peripheral reference, which is what
-            // happens on app restart (and always works).
-            OsmoLog.manager.info("First connect failed for \(camera.name, privacy: .public) — recovering BLE stack")
             if isScanning { stopScanning() }
-            try? await Task.sleep(for: .seconds(1))
-            // Retrieve a fresh peripheral from CoreBluetooth's cache.
+            try? await Task.sleep(for: .milliseconds(200))
             if let freshPeripheral = centralManager.retrievePeripherals(
                 withIdentifiers: [discovered.peripheral.identifier]
             ).first {
                 camera.peripheral = freshPeripheral
-                OsmoLog.manager.info("Retrieved fresh peripheral for \(camera.name, privacy: .public)")
+                OsmoLog.manager.info("Using fresh peripheral for \(camera.name, privacy: .public)")
+            } else {
+                camera.peripheral = discovered.peripheral
+                OsmoLog.manager.info("No cached peripheral — using scanner ref for \(camera.name, privacy: .public)")
             }
-            camera.retryCount = 0
             await connect(camera: camera, discoveryTimeout: 60)
         }
     }
@@ -166,7 +154,10 @@ public final class OsmoCameraManager: NSObject {
     ///   Used by `addCamera()` which handles its own recovery strategy.
     public func connect(camera: OsmoCamera, discoveryTimeout: TimeInterval = 10, suppressRetry: Bool = false) async {
         guard let peripheral = camera.peripheral, camera.isEnabled,
-              cameras.contains(where: { $0.id == camera.id }) else { return }
+              cameras.contains(where: { $0.id == camera.id }) else {
+            OsmoLog.manager.debug("connect: skipping \(camera.name, privacy: .public) — peripheral=\(camera.peripheral == nil ? "nil" : "ok") enabled=\(camera.isEnabled) inList=\(self.cameras.contains(where: { $0.id == camera.id }))")
+            return
+        }
         let gen = camera.advanceConnectionGeneration()
         OsmoLog.manager.info("Connecting: \(camera.name, privacy: .public) → connecting (discoveryTimeout=\(Int(discoveryTimeout))s, gen=\(gen))")
         if camera.connectionState != .connecting {
@@ -211,7 +202,7 @@ public final class OsmoCameraManager: NSObject {
         }
     }
 
-    private func performHandshake(camera: OsmoCamera, connection: OsmoBLEConnection) async throws {
+    private func performHandshake(camera: OsmoCamera, connection: OsmoBLEConnection, pairingRetries: Int = 0) async throws {
         let deviceUUID = vendorUUIDBytes()
 
         // STEP 1: Send connection request to camera
@@ -249,14 +240,25 @@ public final class OsmoCameraManager: NSObject {
         // Any device advertising the DJI manufacturer signature can complete
         // this handshake. Trust is based on the user explicitly adding cameras
         // via the Add Camera flow, which binds to the peripheral's UUID.
-        guard parsed.verifyMode == 2 && parsed.verifyData == 0 else {
+        if parsed.verifyMode == 2 && parsed.verifyData == 0 {
+            let ackFrame = ConnectionCommand.buildResponse(seq: cameraCmd.seq)
+            try camera.send(frame: ackFrame)
+            OsmoLog.manager.info("Handshake step 4: ACK sent for \(camera.name, privacy: .public)")
+        } else if parsed.verifyData == 1 {
+            // verify_data=1 means iOS BLE PIN pairing is still in progress.
+            // Retry the handshake from scratch without tearing down GATT.
+            guard pairingRetries < 15 else {
+                OsmoLog.manager.error("Handshake step 4: PIN pairing timed out after \(pairingRetries) retries for \(camera.name, privacy: .public)")
+                throw BLEConnectionError.connectionFailed(nil)
+            }
+            OsmoLog.manager.info("Handshake step 4: PIN pairing pending for \(camera.name, privacy: .public) — retrying handshake in 2s (attempt \(pairingRetries + 1))")
+            try await Task.sleep(for: .seconds(2))
+            try await performHandshake(camera: camera, connection: connection, pairingRetries: pairingRetries + 1)
+            return
+        } else {
             OsmoLog.manager.error("Handshake step 4: camera rejected (verify_mode=\(parsed.verifyMode) verify_data=\(parsed.verifyData)) for \(camera.name, privacy: .public)")
             throw BLEConnectionError.connectionFailed(nil)
         }
-
-        let ackFrame = ConnectionCommand.buildResponse(seq: cameraCmd.seq)
-        try camera.send(frame: ackFrame)
-        OsmoLog.manager.info("Handshake step 4: ACK sent for \(camera.name, privacy: .public)")
 
         // STEP 5: Subscribe to camera status notifications
         let subSeq = camera.nextSeq()
@@ -300,6 +302,18 @@ public final class OsmoCameraManager: NSObject {
             return
         }
         camera.retryCount = 0
+        // If peripheral ref is nil (e.g. BLE bond lost after OS update), try to
+        // retrieve a fresh one. If that fails, start a scan to rediscover it.
+        if camera.peripheral == nil, let id = camera.knownPeripheralID {
+            if let fresh = centralManager.retrievePeripherals(withIdentifiers: [id]).first {
+                camera.peripheral = fresh
+                OsmoLog.manager.info("retryCamera: retrieved fresh peripheral for \(camera.name, privacy: .public)")
+            } else {
+                OsmoLog.manager.info("retryCamera: no cached peripheral for \(camera.name, privacy: .public) — starting scan")
+                startScanning()
+                return
+            }
+        }
         await connect(camera: camera)
     }
 
@@ -544,7 +558,7 @@ public final class OsmoCameraManager: NSObject {
     private func persistCameras() {
         let data = cameras.map {
             PersistedCamera(id: $0.id, name: $0.name, isEnabled: $0.isEnabled,
-                            peripheralID: $0.peripheral?.identifier,
+                            peripheralID: $0.knownPeripheralID ?? $0.peripheral?.identifier,
                             isPanoCamera: $0.isPanoCamera)
         }
         do {
@@ -606,6 +620,8 @@ extension OsmoCameraManager: @preconcurrency CBCentralManagerDelegate {
                                 advertisementData: [String: Any],
                                 rssi RSSI: NSNumber) {
         guard OsmoBLEScanner.isDJICamera(advertisementData) else { return }
+        let name = advertisementData[CBAdvertisementDataLocalNameKey] as? String
+        OsmoLog.manager.debug("didDiscover: \(name ?? "unnamed", privacy: .public) id=\(peripheral.identifier.uuidString, privacy: .public)")
         // Reconnect a known camera that was re-discovered during a background scan.
         // Match on either the live peripheral reference or the persisted UUID (for cameras
         // that couldn't be retrieved by retrievePeripherals on launch).
@@ -694,11 +710,13 @@ extension OsmoCameraManager: @preconcurrency CBCentralManagerDelegate {
     private func restoreKnownPeripherals() {
         let ids = cameras.compactMap { $0.knownPeripheralID }
         guard !ids.isEmpty else { return }
+        OsmoLog.manager.debug("restoreKnownPeripherals: requesting \(ids.count) UUID(s): \(ids.map(\.uuidString).joined(separator: ", "), privacy: .public)")
         let retrieved = centralManager.retrievePeripherals(withIdentifiers: ids)
+        OsmoLog.manager.debug("restoreKnownPeripherals: CB returned \(retrieved.count) peripheral(s)")
         for peripheral in retrieved {
             if let camera = cameras.first(where: { $0.knownPeripheralID == peripheral.identifier }) {
                 camera.peripheral = peripheral
-                OsmoLog.manager.info("Restored peripheral for \(camera.name, privacy: .public) via known UUID")
+                OsmoLog.manager.debug("Restored peripheral for \(camera.name, privacy: .public) via known UUID")
             }
         }
         let unresolved = cameras.filter { $0.isEnabled && $0.peripheral == nil && $0.knownPeripheralID != nil }
@@ -710,12 +728,18 @@ extension OsmoCameraManager: @preconcurrency CBCentralManagerDelegate {
     private func reconnectEnabledCameras() {
         var startScan = false
         for camera in cameras where camera.isEnabled {
-            guard camera.connectionState == .disconnected else { continue }
+            guard camera.connectionState == .disconnected else {
+                OsmoLog.manager.debug("reconnect: skipping \(camera.name, privacy: .public) — state=\(camera.connectionState.displayLabel, privacy: .public)")
+                continue
+            }
             if camera.peripheral != nil {
+                OsmoLog.manager.debug("reconnect: connecting \(camera.name, privacy: .public) (peripheral available)")
                 Task { await connect(camera: camera) }
             } else if camera.knownPeripheralID != nil {
-                // peripheral UUID known but CB couldn't retrieve it — need a scan to find it
+                OsmoLog.manager.debug("reconnect: \(camera.name, privacy: .public) has no peripheral — will scan (knownID=\(camera.knownPeripheralID!.uuidString, privacy: .public))")
                 startScan = true
+            } else {
+                OsmoLog.manager.info("reconnect: \(camera.name, privacy: .public) has no peripheral and no known ID — cannot reconnect")
             }
         }
         if startScan {

@@ -20,7 +20,7 @@ final class CameraListViewModel {
     /// Tracks the last known connection state per camera ID for haptic edge detection.
     private var lastConnectionStates: [UUID: ConnectionState] = [:]
 
-    init(manager: OsmoCameraManager = .shared) {
+    init(manager: OsmoCameraManager) {
         self.manager = manager
         // Ensure idle timer matches the initial (disabled) state on fresh launch.
         // didSet does not fire during initialization, so set it explicitly.

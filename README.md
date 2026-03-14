@@ -9,17 +9,21 @@ Implements the [DJI Osmo Bluetooth protocol](https://github.com/dji-sdk/Osmo-GPS
 - **Multi-camera management** — connect, monitor, and control up to 10+ cameras at once
 - **Global controls** — start/stop recording, capture photos, switch modes, and sleep all cameras simultaneously
 - **Live status** — real-time battery, resolution, frame rate, stabilization mode, storage remaining, and recording state for every connected camera
+- **Recording timer** — per-camera elapsed recording time displayed in the camera list
 - **GPS geotagging** — pushes iPhone GPS coordinates to cameras at 1 Hz for accurate video location metadata
 - **Apple Watch companion** — status, mode switching, and shutter control from your wrist via WatchConnectivity
+- **Siri Shortcuts** — "Start recording with Cam Control", "Stop recording", and "Sleep cameras" via AppIntents
+- **Haptic feedback** — tactile response on shutter/record/stop actions and camera connection state changes
 - **Connection resilience** — automatic reconnection with configurable watchdog timeout and retry limits
-- **Camera diagnostics** — per-camera detail view with connection state, firmware version, product ID, and force-reconnect
+- **Camera diagnostics** — per-camera detail view with connection state, RSSI signal strength, firmware version, product ID, and force-reconnect
+- **Osmo 360 support** — panoramic video/photo modes with automatic mode intent mapping
 
 ## Requirements
 
 - iOS 26.0+ / watchOS 26.0+
 - Physical iOS device (BLE does not work in the Simulator)
 - Apple Watch (optional, for companion app)
-- One or more DJI Osmo Action cameras (tested Action 4)
+- One or more DJI Osmo cameras (tested with Action 4, Action 5, Osmo 360)
 
 ## Architecture
 
@@ -37,6 +41,7 @@ OsmoMulti/           iOS app — SwiftUI views, view models, WatchConnectivity b
   ├── App/           Entry point + environment wiring
   ├── Views/         CameraListView, CameraDetailView, GlobalControlsView, etc.
   ├── ViewModels/    CameraListViewModel
+  ├── Intents/       AppIntents for Siri Shortcuts (Shutter, Stop, Sleep)
   └── Watch/         WatchBridge — relays commands and state between watch and cameras
 
 OsmoWatch/           watchOS companion app
@@ -114,15 +119,15 @@ Attach a device via USB and stream logs:
 
 ```bash
 # All iPhone app logs
-log stream --predicate 'subsystem == "me.payton.OsmoMulti"' --level debug
+log stream --predicate 'subsystem == "net.prehiti.payton.CamControl"' --level debug
 
 # Filter by category
-log stream --predicate 'subsystem == "me.payton.OsmoMulti" AND category == "BLE.Conn"' --level debug
-log stream --predicate 'subsystem == "me.payton.OsmoMulti" AND category == "Camera"' --level debug
-log stream --predicate 'subsystem == "me.payton.OsmoMulti" AND category == "Location"' --level debug
+log stream --predicate 'subsystem == "net.prehiti.payton.CamControl" AND category == "BLE.Conn"' --level debug
+log stream --predicate 'subsystem == "net.prehiti.payton.CamControl" AND category == "Camera"' --level debug
+log stream --predicate 'subsystem == "net.prehiti.payton.CamControl" AND category == "Location"' --level debug
 
 # Watch app logs
-log stream --predicate 'subsystem == "me.payton.OsmoMulti.watchkitapp"' --level debug
+log stream --predicate 'subsystem == "net.prehiti.payton.CamControl.watchkitapp"' --level debug
 ```
 
 Log categories (iPhone): `BLE.Scan`, `BLE.Conn`, `Camera`, `Manager`, `Protocol`, `Location`, `WatchBridge`
@@ -142,4 +147,6 @@ Edit Scheme → Run → Arguments → Add "--preview-mode"
 
 ## License
 
-This project is not affiliated with or endorsed by DJI. The DJI Osmo Bluetooth protocol is based on [DJI's open-source reference implementation](https://github.com/dji-sdk/Osmo-GPS-Controller-Demo).
+MIT License. See [LICENSE](LICENSE) for details.
+
+This project is not affiliated with or endorsed by DJI. The DJI Osmo Bluetooth protocol implementation is based on [DJI's open-source reference implementation](https://github.com/dji-sdk/Osmo-GPS-Controller-Demo), licensed under MIT by SZ DJI Technology Co., Ltd. See [THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES) for full attribution.

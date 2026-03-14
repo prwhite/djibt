@@ -1,36 +1,19 @@
-# Multi DJI OSMO Controller iOS app.
+# Cam Control for DJI Osmo
 
-We are building an iOS app to control multiple DJI Osmo cameras simultaneously over the DJI Osmo Bluetooth protocol.
-
-## Reference for the DJI BT protocol:
-
-Project home: https://github.com/dji-sdk/Osmo-GPS-Controller-Demo
-
-Supporting docs: https://github.com/dji-sdk/Osmo-GPS-Controller-Demo/blob/main/docs/getting_started_guide.md
-
-* This example project is written for ESP32, but that's not an ideal platform for this for more general use.
-* This is written for managing a _single camera_, which is not enough for a lot of advanced users. So we will develop _from the start_ the structure to handle multiple cameras (maybe 10 is a good practical max to think about, but that's not a hard limit).
+iOS + watchOS app to control multiple DJI Osmo cameras simultaneously over Bluetooth Low Energy. Implements the [DJI Osmo BT protocol](https://github.com/dji-sdk/Osmo-GPS-Controller-Demo) in native Swift.
 
 ## Architecture
 
-* As we reinterpret the ESP32 code and the spec into Swift code, we should build a library encapsulating the communication protocol. Use Apple/Swift idioms for thread management/async operation, event emission, etc.
-  * The library should have an class that represents a single camera connection, and then a manager class that manages all instances of cameras. Then the UI will be a client of these types.
-* I get the feeling the way the protocol works, we will maybe have to round-robin connections to each camera (but maybe that's a bad assumption simply based on how the ESP32 example code is built). We should definitely be showing in the UI the recency of when a camera has been communicated with. And this should be a property (or set of properties) available in the API.
+Three-layer structure:
+1. **DJIOsmoKit** — embedded framework with all BLE + protocol logic (`OsmoCamera`, `OsmoCameraManager`)
+2. **OsmoMulti** — SwiftUI iOS app (views, view models, WatchBridge, AppIntents)
+3. **OsmoWatch** — watchOS companion (proxies commands through iPhone via WatchConnectivity)
 
-## UX
+See `README.md` for full architecture details and protocol documentation.
 
-* The main interface is a list view of all paired cameras showing their brief status.
-* Clicking on a camera in the list view will go to more info, and potentially have troubleshooting UI. One of the big problems with this protocol is cameras drop in and out of communication all the time. So diagnosing and healing these cases will have great value. Potentially, if we can automatically heal stuff, we won't need so much troubleshooting interface.
-* Keeping in mind iOS platform norms, the main view should also include a "+" button to add new camera pairings. This should probably bring up a modal to do the pairing operation.
-* At the top(?) of the UI will be controls for: 1) start/stop video recording, take picture, sleep, wake, force reconnect (maybe) that will apply to the set of paired cameras.
-* The list view of cameras will have to sub sections 1) enabled cameras and 2) disabled cameras. By doing a left swipe on an enabled item, it will become disabled, and vice versa. The definition of "enabled" is a camera that the app is actively communicating with. A user would "disable" a camera that's paired if it wasn't necessary for a particular session, etc. This makes it easy to re-enable a camera in a future session rather than going through the pairing sequence again. We'll have to pivot this plan if we don't think this is possible with the protocol as we get deeper into reading the docs and doing dev/testing.
-* Stretch goal: It would be nice to show periodically updated images from the cameras... if not for all cameras in the list view, at least when you browse to a specific camera's view. I don't know if this is available in the protocol though. Maybe we RE this as we complete other tasks.
-  * Maybe in lieu of this, in the list view we show product images for the particular type of camera connected. 
+## Supported Cameras
 
-## UI
-
-* Let's do best-practices for iOS, including using SwiftUI and aligning with system day/night mode setting.
-* We don't want to use DJI's Mimo app as a model for our UI... there stuff tends to be clunky and not in line with iOS idioms.
+Tested with DJI Osmo Action 4, Action 5, and Osmo 360. The 360 uses panoramic modes (panoVideo/panoPhoto/panoTimelapse) mapped via `ModeIntent`.
 
 ## Agent Team
 
@@ -63,6 +46,14 @@ xcodebuild -project OsmoMulti.xcodeproj -target OsmoWatch -sdk watchos26.2 \
   CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
 ```
 
+## xcodegen
+
+Project generated from `project.yml` at root. Regenerate with: `xcodegen generate`
+
+**Important:** All project settings (targets, schemes, icon references, Info.plist properties) must be defined in `project.yml`. Running `xcodegen generate` overwrites the `.xcodeproj` entirely — any manual Xcode changes will be lost.
+
+Schemes are defined in the top-level `schemes:` section of `project.yml`. Both OsmoMulti and OsmoWatch use Release config for Run (set via `run: config: Release`). The OsmoWatch scheme specifies `executable: OsmoWatch` to launch the watch app instead of the iOS app.
+
 ## Workflow
 
 ### Screenshots for UI feedback
@@ -76,11 +67,11 @@ Then say "screenshot is on the Desktop" and Claude will read the newest `.png` f
 ### Logs (device attached via USB or same Wi-Fi)
 ```bash
 # iPhone app
-log stream --predicate 'subsystem == "me.payton.OsmoMulti"' --level debug
+log stream --predicate 'subsystem == "net.prehiti.payton.CamControl"' --level debug
 # Filter by category:
-log stream --predicate 'subsystem == "me.payton.OsmoMulti" AND category == "BLE.Conn"' --level debug
+log stream --predicate 'subsystem == "net.prehiti.payton.CamControl" AND category == "BLE.Conn"' --level debug
 # Watch app
-log stream --predicate 'subsystem == "me.payton.OsmoMulti.watchkitapp"' --level debug
+log stream --predicate 'subsystem == "net.prehiti.payton.CamControl.watchkitapp"' --level debug
 ```
 
 

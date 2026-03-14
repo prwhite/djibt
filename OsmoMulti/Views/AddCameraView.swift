@@ -17,7 +17,8 @@ struct AddCameraView: View {
                 } else {
                     List(Array(discovered.enumerated()), id: \.offset) { _, camera in
                         Button {
-                            viewModel.pairCamera(camera)
+                            manager.addCamera(camera)
+                            viewModel.dismissAddCamera()
                         } label: {
                             HStack {
                                 VStack(alignment: .leading) {
@@ -39,7 +40,19 @@ struct AddCameraView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { viewModel.dismissAddCamera() }
+                    Button(discovered.isEmpty ? "Cancel" : "Done") {
+                        viewModel.dismissAddCamera()
+                    }
+                }
+                if !discovered.isEmpty {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Add All") {
+                            for camera in discovered {
+                                manager.addCamera(camera)
+                            }
+                            viewModel.dismissAddCamera()
+                        }
+                    }
                 }
             }
         }

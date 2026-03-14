@@ -1,6 +1,6 @@
 name: OsmoMulti
 options:
-  bundleIdPrefix: me.payton
+  bundleIdPrefix: net.prehiti.payton
   deploymentTarget:
     iOS: "26.0"
     watchOS: "26.0"
@@ -15,6 +15,11 @@ settings:
     SWIFT_VERSION: "5.9"
     DEVELOPMENT_TEAM: L485BLVU52
     CODE_SIGN_STYLE: Automatic
+    MARKETING_VERSION: "0.9"
+    CURRENT_PROJECT_VERSION: 1
+    DEAD_CODE_STRIPPING: YES
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    STRING_CATALOG_GENERATE_SYMBOLS: YES
 
 targets:
   DJIOsmoKit:
@@ -24,9 +29,11 @@ targets:
       - path: DJIOsmoKit
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: me.payton.DJIOsmoKit
+        PRODUCT_BUNDLE_IDENTIFIER: net.prehiti.payton.DJIOsmoKit
         GENERATE_INFOPLIST_FILE: YES
         SKIP_INSTALL: YES
+        ENABLE_MODULE_VERIFIER: YES
+        MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS: "gnu11 gnu++14"
 
   DJIOsmoKitTests:
     type: bundle.unit-test
@@ -37,7 +44,7 @@ targets:
       - target: DJIOsmoKit
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: me.payton.DJIOsmoKitTests
+        PRODUCT_BUNDLE_IDENTIFIER: net.prehiti.payton.DJIOsmoKitTests
         GENERATE_INFOPLIST_FILE: YES
 
   OsmoMulti:
@@ -52,12 +59,15 @@ targets:
       properties:
         CFBundleName: "Cam Control for DJI Osmo"
         CFBundleDisplayName: "Cam Control"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         NSBluetoothAlwaysUsageDescription: "Cam Control requires Bluetooth to connect to and control DJI Osmo cameras."
         NSLocationWhenInUseUsageDescription: "Cam Control uses your location to geotag video footage on connected DJI Osmo cameras."
         ITSAppUsesNonExemptEncryption: false
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
     dependencies:
@@ -66,7 +76,8 @@ targets:
       - target: OsmoWatch
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: me.payton.OsmoMulti
+        PRODUCT_BUNDLE_IDENTIFIER: net.prehiti.payton.CamControl
+        TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: djibt-ios
 
   OsmoWatch:
@@ -78,9 +89,9 @@ targets:
         buildPhase: resources
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: me.payton.OsmoMulti.watchkitapp
+        PRODUCT_BUNDLE_IDENTIFIER: net.prehiti.payton.CamControl.watchkitapp
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_WKCompanionAppBundleIdentifier: me.payton.OsmoMulti
+        INFOPLIST_KEY_WKCompanionAppBundleIdentifier: net.prehiti.payton.CamControl
         ASSETCATALOG_COMPILER_APPICON_NAME: djibt-ios
 
 schemes:
