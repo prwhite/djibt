@@ -1,0 +1,66 @@
+@startuml "Camera Discovery & Pairing"
+
+!theme cerulean
+title Camera Discovery & Pairing
+
+actor User
+participant "CameraListView" as CLV
+participant "CameraListViewModel" as VM
+participant "OsmoCameraManager" as Mgr
+participant "CBCentralManager" as CB
+participant "DJI Camera 1" as Cam1
+participant "DJI Camera 2" as Cam2
+
+== BLE Advertising (continuous, independent of app) ==
+
+note over Cam1, Cam2
+  DJI cameras advertise BLE continuously when powered on.
+  Advertisement includes manufacturer data with DJI signature
+  (0xAA 0x08 .. .. 0xFA) and service UUID 0xFFF0.
+  **No pairing or user action needed to advertise.**
+end note
+
+Cam1 -> CB : BLE advertisement
+Cam2 -> CB : BLE advertisement
+
+note right of CB
+  iOS caches nearby peripherals.
+  Advertisements arrive within
+  milliseconds of starting a scan.
+end note
+
+== User Initiates Discovery ==
+
+User -> CLV : Tap "+" button
+CLV -> VM : showAddCamera()
+VM -> Mgr : startScanning()
+Mgr -> CB : scanForPeripherals(\n  withServices: [0xFFF0])
+
+CB -> Mgr : didDiscover(cam1,\n  advertisementData, rssi)
+CB -> Mgr : didDiscover(cam2,\n  advertisementData, rssi)
+
+note right of Mgr
+  Cameras already advertising
+  appear almost instantly.
+  Filter: isDJICamera() checks
+  mfr bytes + RSSI >= -80 dBm
+end note
+
+Mgr --> CLV : AddCameraView shows\n  discovered cameras
+
+== User Adds Cameras ==
+
+User -> CLV : Tap camera row\n  (or "Add All")
+CLV -> VM : pairCamera(discovered)
+VM -> Mgr : addCamera(discovered)
+
+Mgr -> Mgr : Create OsmoCamera(\n  name, peripheralID)
+Mgr -> Mgr : persistCameras()\n  (UserDefaults)
+
+VM -> VM : dismissAddCamera()
+VM -> Mgr : stopScanning()
+Mgr -> CB : stopScan()
+
+Mgr -> Mgr : connect(camera)\n  → see Handshake diagram
+
+@enduml

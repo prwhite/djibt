@@ -1,0 +1,74 @@
+@startuml "Reconnection Flow"
+
+!theme cerulean
+title Reconnection After Disconnect
+
+participant "OsmoCameraManager" as Mgr
+participant "OsmoCamera" as Cam
+participant "CBCentralManager" as CB
+participant "DJI Camera" as DJI
+
+DJI -x CB : BLE link lost
+
+CB --> Mgr : didDisconnect(\n  peripheral, error)
+
+Mgr -> Cam : failPendingCommands()
+Mgr -> Cam : clearStatus()
+
+alt Camera was sleeping
+  Mgr -> Cam : connectionState = .sleeping
+  Mgr -> CB : connect(peripheral)\n  (passive reconnect,\n   no timeout)
+  note right of CB
+    Passive reconnect waits
+    indefinitely for camera
+    to re-advertise after
+    user presses a button
+  end note
+
+else Camera was connected (unexpected disconnect)
+  Mgr -> Cam : connectionState = .reconnecting
+  Mgr -> Mgr : scheduleReconnect(camera)
+
+  alt retryCount <= maxRetries
+    Mgr -> Mgr : Delay 1s (first) or 5s (subsequent)
+    Mgr -> Cam : connectionState = .reconnecting
+    Mgr -> Mgr : connect(camera)
+    note right of Mgr
+      Full connection flow:
+      BLE connect → service discovery
+      → handshake (see Handshake diagram)
+    end note
+
+    alt Handshake succeeds
+      Mgr -> Cam : retryCount = 0
+      Mgr -> Cam : connectionState = .connected
+    else Handshake fails
+      Mgr -> Cam : retryCount += 1
+      Mgr -> Mgr : scheduleReconnect(camera)\n  (loop)
+    end
+
+  else retryCount > maxRetries
+    Mgr -> CB : connect(peripheral)\n  (passive reconnect fallback)
+    note right of CB
+      CoreBluetooth passive reconnect:
+      no timeout, waits for peripheral
+      to appear in scan results.
+
+      Watchdog checks every 30s
+      and kicks stuck passive reconnects.
+    end note
+
+    CB --> Mgr : didConnect(peripheral)
+    Mgr -> Mgr : connect(camera)\n  → full handshake
+  end
+end
+
+== User-Initiated Retry ==
+
+actor User
+User -> Mgr : retryCamera(camera)
+Mgr -> Cam : retryCount = 0
+Mgr -> Cam : connectionState = .reconnecting
+Mgr -> Mgr : connect(camera)
+
+@enduml

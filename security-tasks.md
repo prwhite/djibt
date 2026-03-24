@@ -235,3 +235,21 @@ The 3-way handshake (`DJIOsmoKit/Camera/OsmoCameraManager.swift`) accepts any de
 | **P1 (should fix)** | GPS log redaction (#2), silent failures (#5), Int32 overflow (#4) | 2 hrs |
 | **P2 (recommended)** | Log privacy (#8, #9), BLE rate limiting (#6), pending cap (#7) | 2 hrs |
 | **P3 (when convenient)** | UserDefaults vs Keychain (#3), battery clamp (#13), mode validation (#15) | 2 hrs |
+
+---
+
+## Appendix I — Pre-1.0 Code Review Summary
+
+A full code review of the `DJIOsmoKit` framework and `OsmoMulti` app layers was conducted prior to 1.0 release. The review focused on correctness, safety, and robustness across BLE handling, protocol parsing, concurrency, and UI state management.
+
+### Result
+
+**No blocking issues found.** Three optional cleanups were identified, all deferred as non-blockers:
+
+| Finding | Location | Severity | Notes |
+|---|---|---|---|
+| Force-unwrap tidying | `OsmoCamera` frame-parsing helpers | Cosmetic | Guards already protect the unwraps; refactoring to `guard let` would be cleaner but has no functional impact |
+| Dead state variable | `OsmoCamera.isReady` (or similar) | Cosmetic | Set but never read after handshake refactor; safe to remove when convenient |
+| Defensive assertion | `FrameParser` CRC path | Cosmetic | Could add an `assertionFailure` on an unreachable branch for future-proofing; not a current risk |
+
+All three items are low-effort tidying tasks with no security or correctness implications. They can be addressed opportunistically in future maintenance passes.

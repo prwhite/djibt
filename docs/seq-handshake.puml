@@ -1,0 +1,88 @@
+@startuml "BLE Connection & Handshake"
+
+!theme cerulean
+title BLE Connection & 3-Way Handshake
+
+participant "OsmoCameraManager" as Mgr
+participant "OsmoCamera" as Cam
+participant "OsmoBLEConnection" as BLE
+participant "CBCentralManager" as CB
+participant "DJI Camera" as DJI
+
+Mgr -> Cam : connectionState = .connecting
+Mgr -> BLE : connect(connectTimeout: 5s,\n  discoveryTimeout: 10s)
+
+BLE -> CB : connect(peripheral)
+CB --> BLE : didConnect(peripheral)
+
+BLE -> CB : discoverServices([0xFFF0])
+CB --> BLE : didDiscoverServices
+
+BLE -> CB : discoverCharacteristics(\n  [0xFFF4, 0xFFF5])
+CB --> BLE : didDiscoverCharacteristics
+
+BLE -> CB : setNotifyValue(true,\n  for: 0xFFF4)
+CB --> BLE : didUpdateNotificationState
+
+BLE --> Mgr : connect() returns
+
+Mgr -> Cam : startNotificationLoop()
+Mgr -> Cam : connectionState = .handshaking
+
+== Step 1: Controller → Camera: Connection Request ==
+
+Mgr -> Cam : sendAndWait(\n  ConnectionCommand.build)
+Cam -> BLE : write(frame) → 0xFFF5
+BLE -> DJI : BLE Write\n  CmdSet=0x00, CmdID=0x19\n  cmdType=0x02\n  fw_version=0
+
+== Step 2: Camera → Controller: Response ==
+
+DJI --> BLE : BLE Notify ← 0xFFF4
+BLE --> Cam : notification data
+Cam -> Cam : FrameParser.parse()\n  → IncomingFrame
+Cam -> Cam : Match SEQ → resolve\n  pendingResponse continuation
+
+note right of Cam
+  Response payload:
+  device_id (4B) + ret_code (1B)
+  ret_code at payload[4] must be 0x00
+end note
+
+== Step 3: Camera → Controller: Camera's Own Connection Command ==
+
+DJI --> BLE : BLE Notify\n  (non-response frame)
+BLE --> Cam : notification data
+Cam -> Cam : FrameParser.parse()
+Cam -> Cam : Match cmdSet=0x00,\n  cmdID=0x19 → resolve\n  pendingCommandWaiter
+
+note right of Cam
+  Camera sends its OWN
+  ConnectionCommand (not a response).
+  verify_mode=2, verify_data=0
+end note
+
+== Step 4: Controller → Camera: ACK ==
+
+Mgr -> Cam : send(ConnectionCommand\n  .buildResponse(\n    seq: camera's SEQ,\n    retCode: 0))
+Cam -> BLE : write(frame) → 0xFFF5
+BLE -> DJI : BLE Write\n  cmdType=0x20 (ACK)
+
+== Step 5: Subscribe to Status ==
+
+Mgr -> Cam : sendAndWait(\n  StatusSubscribeCommand.build\n  pushMode=0x03, freq=0x0A)
+Cam -> BLE : write(frame) → 0xFFF5
+DJI --> Cam : Response (ACK)
+
+Mgr -> Cam : connectionState = .connected
+Mgr -> Cam : startRSSIPolling()
+
+== Post-Handshake: Version Query ==
+
+Mgr -> Cam : queryVersion()
+Cam -> BLE : write(VersionQuery) → 0xFFF5
+DJI --> Cam : Response with\n  productID, sdkVersion
+
+Cam -> Cam : Set productName,\n  sdkVersion
+Cam -> Cam : If sdkVersion contains\n  "AC203" → isPanoCamera = true
+
+@enduml

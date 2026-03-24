@@ -1,0 +1,87 @@
+@startuml "Status Push & Staleness Watchdog"
+
+!theme cerulean
+title Status Push & Staleness Watchdog
+
+participant "DJI Camera" as DJI
+participant "OsmoBLEConnection" as BLE
+participant "OsmoCamera" as Cam
+participant "OsmoCameraManager" as Mgr
+participant "UI Views" as UI
+
+== Status Push (1 Hz from Camera) ==
+
+loop every ~1 second
+  DJI -> BLE : BLE Notify ← 0xFFF4\n  CmdSet=0x1D, CmdID=0x02\n  (push, not response)
+
+  BLE -> Cam : AsyncStream yields data
+
+  Cam -> Cam : FrameParser.parse()
+  Cam -> Cam : IncomingFrame:\n  isPush == true\n  cmdSet=0x1D, cmdID=0x02
+
+  Cam -> Cam : CameraStatus.parse(\n  payload: 38 bytes)
+
+  note right of Cam
+    Payload layout:
+    [0]    rawMode
+    [1]    recordingStatus
+    [5-6]  recordingSeconds (LE)
+    [28]   powerMode
+    [37]   batteryPercentage
+    + resolution, fps, ratio,
+      stabilization, storage, etc.
+  end note
+
+  Cam -> Cam : status = parsed status
+  Cam -> Cam : lastSeenDate = Date.now
+
+  Cam -> UI : @Observable triggers\n  view re-render
+end
+
+== Staleness Watchdog (1 Hz tick) ==
+
+loop every 1 second
+  Mgr -> Mgr : checkStaleness()
+
+  loop each enabled connected camera
+    Mgr -> Cam : Check lastSeenDate
+
+    alt now - lastSeenDate > stalenessTimeout (default 5s)
+      alt camera has commands in flight
+        note right of Mgr
+          Skip staleness check:
+          camera may pause status
+          during mode switch or
+          other operations
+        end note
+      else no commands in flight
+        Mgr -> Cam : forceDisconnect()
+        Mgr -> Cam : clearStatus()
+        Mgr -> Cam : connectionState = .reconnecting
+        Mgr -> Mgr : scheduleReconnect(camera)
+      end
+    end
+  end
+
+  note right of Mgr
+    Also checks for stuck passive
+    reconnects (>30s in .reconnecting
+    with no peripheral connection).
+    Kicks these by cancelling and
+    re-issuing CB connect.
+  end note
+end
+
+== Stale Continuation Reaping ==
+
+note over Cam
+  Opportunistic cleanup piggybacked
+  on sendAndWait() calls:
+
+  Any pendingResponse or
+  pendingCommandWaiter older than
+  30 seconds is failed with timeout
+  error and removed.
+end note
+
+@enduml

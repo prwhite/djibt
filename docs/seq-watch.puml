@@ -1,0 +1,81 @@
+@startuml "Watch Communication"
+
+!theme cerulean
+title iPhone ↔ Watch Communication
+
+box "iPhone" #LightBlue
+  participant "OsmoCameraManager" as Mgr
+  participant "WatchBridge" as Bridge
+end box
+
+participant "WCSession" as WC
+
+box "Apple Watch" #LightGreen
+  participant "WatchViewModel" as WVM
+  participant "WatchControlView" as WCV
+end box
+
+== State Push (iPhone → Watch, 1 Hz) ==
+
+Mgr -> Bridge : Observable state changes
+Bridge -> Bridge : pushStateIfChanged()\n  (1 Hz timer)
+
+Bridge -> Bridge : Build context dict:\n  connectedCount, enabledCount,\n  currentMode, isRecording,\n  batteryPercent, timestamp
+
+Bridge -> Bridge : Compare with\n  lastPushedContext\n  (skip if identical)
+
+Bridge -> WC : updateApplicationContext(\n  context)
+
+note right of WC
+  Queued by system.
+  Works even when watch
+  is unreachable (e.g.
+  screen dimmed).
+end note
+
+WC --> WVM : session(_:\n  didReceiveApplicationContext:)
+WVM -> WVM : applyContext(dict)\n  Update all state properties
+
+WVM -> WCV : @Observable triggers\n  view re-render
+
+== Command (Watch → iPhone) ==
+
+actor "Watch User" as WU
+
+WU -> WCV : Tap shutter button
+WCV -> WVM : shutterAll()
+WVM -> WC : sendMessage(\n  ["action": "shutterAll"],\n  replyHandler: { _ in })
+
+note left of WC
+  MUST use non-nil replyHandler
+  to dispatch to correct delegate
+  method on iPhone side.
+
+  Requires iPhone app in foreground.
+  isReachable drops when watch
+  screen dims.
+end note
+
+WC --> Bridge : session(_:\n  didReceiveMessage:\n  replyHandler:)
+
+Bridge -> Mgr : shutterAll()
+Mgr -> Mgr : Execute on all cameras
+
+Bridge --> WC : replyHandler(["ok": true])
+Bridge -> Bridge : pushStateIfChanged()\n  (immediate update)
+
+== Mode Switch (Watch → iPhone) ==
+
+WU -> WCV : Select mode in picker
+WCV -> WVM : switchMode("photo")
+WVM -> WC : sendMessage(\n  ["action": "switchMode",\n   "mode": "photo"])
+WC --> Bridge : didReceiveMessage
+Bridge -> Mgr : switchModeAll(.photo)
+Bridge --> WC : reply
+Bridge -> Bridge : pushStateIfChanged()
+WC --> WVM : didReceiveApplicationContext\n  (updated mode)
+
+WVM -> WCV : currentMode changed
+WCV -> WCV : Update picker\n  (isSyncingMode guard\n   prevents feedback loop)
+
+@enduml

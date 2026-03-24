@@ -1,0 +1,95 @@
+@startuml "Sleep & Wake"
+
+!theme cerulean
+title Sleep & Wake Flow
+
+actor User
+participant "UI" as UI
+participant "OsmoCameraManager" as Mgr
+participant "OsmoCamera" as Cam
+participant "OsmoBLEConnection" as BLE
+participant "CBCentralManager" as CB
+participant "DJI Camera" as DJI
+
+== Sleep ==
+
+User -> UI : Tap sleep button
+UI -> Mgr : sleepAll()
+
+loop each enabled connected camera
+  Mgr -> Cam : sendSleep()
+  Cam -> Cam : PowerModeCommand\n  .buildSleep(seq)
+  Cam -> BLE : write(frame) → 0xFFF5
+  BLE -> DJI : CmdSet=0x00, CmdID=0x1A\n  payload=[0x03]
+  DJI --> Cam : Response (ACK)
+end
+
+note right of DJI
+  Camera enters low-power mode.
+  BLE link drops shortly after.
+end note
+
+DJI -x CB : BLE disconnects
+
+CB --> Mgr : didDisconnect(\n  peripheral, error)
+
+Mgr -> Cam : failPendingCommands()
+Mgr -> Cam : clearStatus()
+Mgr -> Cam : previousConnectionState\n  was .connected →\n  detect as sleep
+
+Mgr -> Cam : connectionState = .sleeping
+
+Mgr -> CB : connect(peripheral)\n  (passive reconnect,\n   waits indefinitely)
+
+note right of CB
+  CoreBluetooth will auto-connect
+  when the peripheral re-advertises.
+  No timeout — waits in background.
+end note
+
+== Wake ==
+
+note over DJI
+  iOS CANNOT wake cameras via BLE.
+  DJI protocol uses broadcast mfr-data
+  advert (0xFF, "WKP", MAC_reversed)
+  but iOS CBPeripheralManager only
+  supports LocalName + ServiceUUIDs.
+
+  User must physically press any
+  button on the camera.
+end note
+
+User -> DJI : Press button on camera
+
+DJI -> DJI : Powers on,\n  starts BLE advertising
+
+CB --> Mgr : didConnect(peripheral)\n  (passive reconnect fires)
+
+Mgr -> Mgr : connect(camera)\n  → full handshake
+
+Mgr -> Cam : connectionState = .connecting
+Mgr -> Cam : connectionState = .handshaking
+
+ref over Mgr, DJI
+  See Handshake diagram
+  (Steps 1-5)
+end ref
+
+Mgr -> Cam : connectionState = .connected
+Mgr -> Cam : retryCount = 0
+
+== Wake Single Camera ==
+
+User -> UI : Tap wake on specific camera
+UI -> Mgr : wakeCamera(camera)
+Mgr -> Cam : connectionState = .reconnecting
+Mgr -> Mgr : connect(camera)
+
+note right of Mgr
+  Starts active reconnect attempt.
+  Will fail until user presses
+  button on that specific camera.
+end note
+
+@enduml

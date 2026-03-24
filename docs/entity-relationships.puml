@@ -1,0 +1,221 @@
+@startuml "Cam Control — Entity Relationships"
+!pragma layout smetana
+!theme cerulean
+skinparam classAttributeIconSize 0
+hide empty methods
+
+package "DJIOsmoKit (Framework)" {
+
+  class OsmoCameraManager <<@Observable @MainActor>> {
+    cameras : [OsmoCamera]
+    isScanning : Bool
+    stalenessTimeout : TimeInterval
+    maxRetries : Int
+    --
+    startScanning()
+    stopScanning()
+    addCamera(DiscoveredCamera)
+    removeCamera(OsmoCamera)
+    connect(camera:)
+    performHandshake(camera:connection:)
+    scheduleReconnect(camera:)
+    shutterAll() -> Int
+    startAll() -> Int
+    stopAll() -> Int
+    switchModeAll(ModeIntent) -> Int
+    sleepAll() -> Int
+    pushGPS(CLLocation)
+  }
+
+  class OsmoCamera <<@Observable @MainActor>> {
+    id : UUID
+    name : String
+    connectionState : ConnectionState
+    status : CameraStatus
+    isEnabled : Bool
+    isPanoCamera : Bool
+    rssi : Int?
+    rssiHistory : [Int]
+    peripheral : CBPeripheral?
+    bleConnection : OsmoBLEConnection?
+    --
+    sendAndWait(frame:seq:timeout:)
+    sendWithRetry(build:)
+    waitForCommand(cmdSet:cmdID:)
+    handleIncomingFrame(IncomingFrame)
+    sendShutter()
+    sendRecordStart()
+    sendRecordStop()
+    switchMode(CameraMode)
+    sendSleep()
+    queryVersion()
+    sendGPSData(CLLocation)
+  }
+
+  class OsmoBLEConnection {
+    peripheral : CBPeripheral
+    notifications : AsyncStream<Data>
+    --
+    connect(connectTimeout:discoveryTimeout:)
+    disconnect()
+    write(Data)
+    readRSSI()
+  }
+
+  class OsmoBLEScanner {
+    discoveries : AsyncStream<DiscoveredCamera>
+    --
+    stopScanning()
+  }
+
+  class DiscoveredCamera {
+    peripheral : CBPeripheral
+    rssi : Int
+    advertisedName : String
+  }
+
+  enum ConnectionState {
+    disconnected
+    scanning
+    connecting
+    handshaking
+    connected
+    sleeping
+    reconnecting
+    failed
+  }
+
+  class CameraStatus {
+    mode : CameraMode?
+    recordingStatus : RecordingStatus
+    recordingSeconds : Int
+    batteryPercentage : Int
+    powerMode : PowerMode
+    videoResolution : VideoResolution?
+    frameRate : FrameRate?
+    photoRatio : PhotoRatio?
+    stabilizationMode : StabilizationMode?
+    remainingPhotoCount : UInt32
+    remainingStorageMB : UInt32
+    remainingRecordTimeSec : UInt32
+    temperatureWarning : UInt8
+  }
+
+  enum CameraMode <<UInt8>> {
+    video | photo | timelapse | ...
+    panoVideo | panoPhoto | ...
+    --
+    isPanoMode : Bool
+    is360Exclusive : Bool
+    intent : ModeIntent?
+    systemImage : String
+  }
+
+  enum ModeIntent <<String>> {
+    video
+    photo
+    slowMotion
+    timelapse
+    hyperlapse
+  }
+
+  class FrameBuilder {
+    {static} build(OutgoingFrame) -> Data
+  }
+
+  class FrameParser {
+    {static} parse(Data) -> IncomingFrame?
+  }
+
+  class IncomingFrame {
+    cmdType : UInt8
+    seq : UInt16
+    cmdSet : UInt8
+    cmdID : UInt8
+    payload : Data
+    isResponse : Bool
+    isPush : Bool
+  }
+
+  OsmoCameraManager "1" *-- "0..*" OsmoCamera : manages
+  OsmoCamera "1" *-- "0..1" OsmoBLEConnection : owns
+  OsmoCamera --> ConnectionState : state
+  OsmoCamera *-- CameraStatus : status
+  CameraStatus --> CameraMode : mode
+  CameraMode --> ModeIntent : resolves to
+  OsmoBLEScanner ..> DiscoveredCamera : produces
+  OsmoCameraManager ..> OsmoBLEScanner : uses for discovery
+  OsmoCamera ..> FrameBuilder : builds outgoing
+  OsmoCamera ..> FrameParser : parses incoming
+  FrameParser ..> IncomingFrame : produces
+}
+
+package "OsmoMulti (iOS App)" {
+
+  class CameraListViewModel <<@Observable @MainActor>> {
+    manager : OsmoCameraManager
+    isAddingCamera : Bool
+    toastMessage : String?
+    screenLockDisabled : Bool
+    currentIntent : ModeIntent?
+    isAnyRecording : Bool
+  }
+
+  class WatchBridge {
+    manager : OsmoCameraManager
+    session : WCSession
+    --
+    pushStateIfChanged()
+    session(didReceiveMessage:replyHandler:)
+  }
+
+  class OsmoLocationManager {
+    --
+    start()
+    stop()
+  }
+
+  class "CameraListView" as CLV <<SwiftUI>>
+  class "CameraDetailView" as CDV <<SwiftUI>>
+  class "CameraRowView" as CRV <<SwiftUI>>
+  class "GlobalControlsView" as GCV <<SwiftUI>>
+  class "AddCameraView" as ACV <<SwiftUI>>
+  class "SettingsView" as SV <<SwiftUI>>
+
+  CLV --> CameraListViewModel : owns
+  CLV --> GCV : bottom toolbar
+  CLV --> CRV : ForEach row
+  CLV ..> CDV : NavigationLink
+  CLV ..> ACV : sheet
+  CLV ..> SV : sheet
+  CameraListViewModel --> OsmoCameraManager : wraps
+  GCV --> CameraListViewModel : reads
+  CDV --> OsmoCamera : reads/commands
+  WatchBridge --> OsmoCameraManager : delegates commands
+  OsmoLocationManager ..> OsmoCameraManager : pushGPS via
+}
+
+package "OsmoWatch (watchOS App)" {
+
+  class WatchViewModel <<@Observable @MainActor>> {
+    connectedCount : Int
+    enabledCount : Int
+    currentMode : String?
+    isRecording : Bool
+    batteryPercent : Int?
+    isReachable : Bool
+    --
+    shutterAll()
+    startAll()
+    stopAll()
+    switchMode(String)
+  }
+
+  class "WatchControlView" as WCV <<SwiftUI>>
+
+  WCV --> WatchViewModel : owns
+}
+
+WatchBridge <.right.> WatchViewModel : WatchConnectivity\n(applicationContext +\nsendMessage)
+
+@enduml

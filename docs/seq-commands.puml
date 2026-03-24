@@ -1,0 +1,76 @@
+@startuml "Command Flow — Shutter, Record, Mode Switch"
+
+!theme cerulean
+title Command Flow: Shutter / Record / Mode Switch
+
+actor User
+participant "GlobalControlsView\nor CameraDetailView" as UI
+participant "CameraListViewModel" as VM
+participant "OsmoCameraManager" as Mgr
+participant "OsmoCamera" as Cam
+participant "OsmoBLEConnection" as BLE
+participant "DJI Camera" as DJI
+
+== Shutter (preferred — KeyReport) ==
+
+User -> UI : Tap shutter button
+UI -> VM : shutterAll()
+VM -> Mgr : shutterAll()
+
+loop each enabled connected camera
+  Mgr -> Cam : sendShutter()
+  Cam -> Cam : seq = nextSeq()
+  Cam -> Cam : KeyReportCommand.shutter(seq)\n  keyCode=0x01, mode=0x01 (event)\n  keyValue=0x0000 (short press)
+  Cam -> Cam : sendWithRetry(maxAttempts: 3)
+  Cam -> BLE : write(frame) → 0xFFF5
+  BLE -> DJI : CmdSet=0x00, CmdID=0x11
+
+  DJI --> Cam : Response (ret_code at byte 0)
+
+  note right of Cam
+    sendWithRetry: if timeout (1.5s)
+    or error, rebuilds frame with
+    new SEQ and retries up to 3x
+  end note
+end
+
+Mgr --> VM : failCount (0 = all ok)
+VM -> VM : showToast() if failures
+
+== Explicit Record Start/Stop ==
+
+User -> UI : Tap record button
+UI -> VM : startAll() or stopAll()
+VM -> Mgr : startAll() / stopAll()
+
+loop each enabled connected camera
+  Mgr -> Cam : sendRecordStart() or\n  sendRecordStop()
+  Cam -> Cam : RecordingCommand\n  .buildStart/.buildStop(seq)
+  Cam -> BLE : write(frame) → 0xFFF5
+  BLE -> DJI : CmdSet=0x1D, CmdID=0x03\n  control=0x00 (start)\n  or 0x01 (stop)
+  DJI --> Cam : Response
+end
+
+== Mode Switch ==
+
+User -> UI : Select mode from picker
+UI -> VM : switchModeAll(intent)
+VM -> Mgr : switchModeAll(intent)
+
+loop each enabled connected camera
+  Mgr -> Cam : switchMode(resolvedMode)
+
+  note right of Cam
+    Each camera resolves ModeIntent
+    to native CameraMode:
+    e.g. .video → .video (Action 4)
+         .video → .panoVideo (Osmo 360)
+  end note
+
+  Cam -> Cam : ModeCommand.build(\n  mode, seq)
+  Cam -> BLE : write(frame) → 0xFFF5
+  BLE -> DJI : CmdSet=0x1D, CmdID=0x04
+  DJI --> Cam : Response
+end
+
+@enduml
