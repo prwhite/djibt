@@ -38,11 +38,11 @@ Spawn agents when a task is clearly scoped to one layer and won't require coordi
 All agents work against the same `OsmoMulti.xcodeproj`. Build with:
 ```bash
 # iOS targets (DJIOsmoKit, OsmoMulti)
-xcodebuild -project OsmoMulti.xcodeproj -target <Target> -sdk iphoneos26.2 \
+xcodebuild -project OsmoMulti.xcodeproj -target <Target> -sdk iphoneos26.4 \
   CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
 
 # watchOS target
-xcodebuild -project OsmoMulti.xcodeproj -target OsmoWatch -sdk watchos26.2 \
+xcodebuild -project OsmoMulti.xcodeproj -target OsmoWatch -sdk watchos26.4 \
   CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
 ```
 

@@ -120,8 +120,9 @@ final class CameraListViewModel {
     }
 
     func switchModeAll(_ intent: ModeIntent) {
+        let prefer360Pano = UserDefaults.standard.object(forKey: "prefer_360_pano_modes") as? Bool ?? true
         Task {
-            let failed = await manager.switchModeAll(intent)
+            let failed = await manager.switchModeAll(intent, prefer360Pano: prefer360Pano)
             if failed > 0 { showToast("Mode switch failed on \(failed) camera(s)") }
         }
     }

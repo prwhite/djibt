@@ -96,18 +96,14 @@ struct CameraListView: View {
             emptyState
         } else {
             List {
-                if !viewModel.enabledCameras.isEmpty {
-                    Section("Active") {
-                        ForEach(viewModel.enabledCameras) { camera in
-                            cameraRow(camera, enabled: true)
-                        }
+                Section("Active") {
+                    ForEach(viewModel.enabledCameras) { camera in
+                        cameraRow(camera, enabled: true)
                     }
                 }
-                if !viewModel.disabledCameras.isEmpty {
-                    Section("Inactive") {
-                        ForEach(viewModel.disabledCameras) { camera in
-                            cameraRow(camera, enabled: false)
-                        }
+                Section("Inactive") {
+                    ForEach(viewModel.disabledCameras) { camera in
+                        cameraRow(camera, enabled: false)
                     }
                 }
             }
@@ -131,7 +127,10 @@ struct CameraListView: View {
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button {
-                viewModel.toggleEnabled(camera)
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(300))
+                    viewModel.toggleEnabled(camera)
+                }
             } label: {
                 Label(enabled ? "Disable" : "Enable",
                       systemImage: enabled ? "pause.circle" : "play.circle")

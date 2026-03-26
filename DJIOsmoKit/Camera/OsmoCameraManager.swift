@@ -367,12 +367,13 @@ public final class OsmoCameraManager: NSObject {
     /// Each camera resolves the intent to its native mode (e.g. 360 cameras get `.panoVideo`).
     /// Returns the number of cameras that failed.
     @discardableResult
-    public func switchModeAll(_ intent: ModeIntent) async -> Int {
+    public func switchModeAll(_ intent: ModeIntent, prefer360Pano: Bool = true) async -> Int {
         let targets = enabledConnectedCameras
         OsmoLog.manager.info("switchModeAll: switching \(targets.count) camera(s) to intent=\(intent.displayName, privacy: .public)")
         // Resolve native modes on the main actor before dispatching to the task group.
         let cameraModes: [(OsmoCamera, CameraMode)] = targets.map { camera in
-            let nativeMode = CameraMode.nativeMode(for: intent, isPano: camera.isPanoCamera, currentMode: camera.status.mode)
+            let nativeMode = CameraMode.nativeMode(for: intent, isPano: camera.isPanoCamera,
+                                                    currentMode: camera.status.mode, prefer360Pano: prefer360Pano)
             return (camera, nativeMode)
         }
         return await withTaskGroup(of: Bool.self) { group in
