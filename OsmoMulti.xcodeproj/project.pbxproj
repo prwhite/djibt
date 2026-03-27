@@ -660,6 +660,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "djibt-ios";
+				BUNDLE_DISPLAY_NAME = "Cam Control";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = OsmoMulti/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -742,6 +743,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "djibt-ios";
+				BUNDLE_DISPLAY_NAME = "Cam Control 🛠";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = OsmoMulti/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
