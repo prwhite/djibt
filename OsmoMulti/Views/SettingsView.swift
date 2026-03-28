@@ -8,7 +8,6 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
     @AppStorage("gps_push_enabled") private var gpsPushEnabled = false
-    @AppStorage("prefer_360_pano_modes") private var prefer360PanoModes = true
     @State private var showClearConfirmation = false
 
     private let timeoutOptions: [(label: String, seconds: TimeInterval)] = [
@@ -78,14 +77,6 @@ struct SettingsView: View {
                     Text("Location")
                 } footer: {
                     Text("Feeds iPhone GPS coordinates to connected cameras for video geotagging at 1 Hz.")
-                }
-
-                Section {
-                    Toggle("Favor 360° modes", isOn: $prefer360PanoModes)
-                } header: {
-                    Text("360 Cameras")
-                } footer: {
-                    Text("When on, Video and Photo switch 360 cameras to their 360° modes. When off, they use single-lens modes matching regular cameras.")
                 }
 
                 Section {

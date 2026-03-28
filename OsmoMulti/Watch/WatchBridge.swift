@@ -151,8 +151,7 @@ extension WatchBridge: WCSessionDelegate {
         case "switchMode":
             if let modeRaw = message["mode"] as? String,
                let intent = ModeIntent(rawValue: modeRaw) {
-                let prefer360Pano = UserDefaults.standard.object(forKey: "prefer_360_pano_modes") as? Bool ?? true
-                await manager.switchModeAll(intent, prefer360Pano: prefer360Pano)
+                await manager.switchModeAll(intent)
             }
         default:
             log.error("WatchBridge: unknown action '\(action, privacy: .public)'")

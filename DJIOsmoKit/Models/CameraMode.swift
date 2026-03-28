@@ -151,17 +151,14 @@ public enum CameraMode: UInt8, CaseIterable, Equatable {
     /// Resolve a mode intent into a native camera mode.
     /// For 360 cameras, respects the current lens group: if the camera is in single-lens
     /// mode, maps to standard modes; if in 360° mode (or unknown), maps to pano variants.
-    /// When `prefer360Pano` is false, 360 cameras use single-lens modes instead of pano variants.
-    public static func nativeMode(for intent: ModeIntent, isPano: Bool,
-                                  currentMode: CameraMode?, prefer360Pano: Bool = true) -> CameraMode {
+    public static func nativeMode(for intent: ModeIntent, isPano: Bool, currentMode: CameraMode?) -> CameraMode {
         // 360 camera in single-lens group → use standard mode bytes
         let inSingleLens = isPano && (currentMode.map { !$0.isPanoMode } ?? false)
-        let usePano = isPano && prefer360Pano && !inSingleLens
         switch intent {
-        case .video:      return usePano ? .panoVideo : .video
-        case .photo:      return usePano ? .panoPhoto : .photo
+        case .video:      return (isPano && !inSingleLens) ? .panoVideo : .video
+        case .photo:      return (isPano && !inSingleLens) ? .panoPhoto : .photo
         case .slowMotion: return .slowMotion
-        case .timelapse:  return usePano ? .panoTimelapse : .timelapse
+        case .timelapse:  return (isPano && !inSingleLens) ? .panoTimelapse : .timelapse
         case .hyperlapse: return .hyperlapse
         }
     }
