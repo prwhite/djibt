@@ -60,7 +60,7 @@ public final class OsmoLocationManager: NSObject {
         isActive = true
 
         // 1 Hz push timer on the main run loop
-        pushTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+        pushTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.pushGPSToAllCameras()
             }
