@@ -103,11 +103,13 @@ public enum CameraMode: UInt8, CaseIterable, Equatable, Hashable {
     }
 
     /// Modes the user can switch to from the controller UI (standard cameras).
-    public static let switchable: [CameraMode] = [.video, .subjectFollow, .photo, .slowMotion, .lowLight, .timelapse, .hyperlapse]
+    /// Keep this in the same user-facing order as `ModeIntent.allCases`.
+    public static let switchable: [CameraMode] = [.video, .subjectFollow, .photo, .slowMotion, .timelapse, .hyperlapse, .lowLight]
 
     /// 360° dual-lens modes (switchable within this group).
+    /// Intent-backed modes come first, then 360-only effect modes.
     public static let switchablePano360: [CameraMode] = [
-        .panoVideo, .panoPhoto, .panoTimelapse, .panoSelfie, .panoVortex, .panoSupernight
+        .panoVideo, .panoPhoto, .panoTimelapse, .panoSupernight, .panoSelfie, .panoVortex
     ]
 
     /// 360° single-lens modes (switchable within this group).

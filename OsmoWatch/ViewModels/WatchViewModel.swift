@@ -74,11 +74,12 @@ struct WatchMode: Identifiable, Equatable {
 
     var id: String { value }
 
+    /// Keep the same order and display names as `ModeIntent.allCases` in DJIOsmoKit.
     static let allCases: [WatchMode] = [
         WatchMode(value: "video", label: "Video", symbol: "video"),
-        WatchMode(value: "subjectTracking", label: "Track", symbol: "person.fill.viewfinder"),
+        WatchMode(value: "subjectTracking", label: "Subject Tracking", symbol: "person.fill.viewfinder"),
         WatchMode(value: "photo", label: "Photo", symbol: "camera"),
-        WatchMode(value: "slowMotion", label: "Slow Mo", symbol: "slowmo"),
+        WatchMode(value: "slowMotion", label: "Slow Motion", symbol: "slowmo"),
         WatchMode(value: "timelapse", label: "Timelapse", symbol: "timelapse"),
         WatchMode(value: "hyperlapse", label: "Hyperlapse", symbol: "figure.walk"),
         WatchMode(value: "superNight", label: "SuperNight", symbol: "moon.stars")

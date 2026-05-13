@@ -136,6 +136,10 @@ final class FrameTests: XCTestCase {
         XCTAssertFalse(CameraMode.supportsIntent(.subjectTracking, isPano: true))
     }
 
+    func testSwitchableModeOrderMatchesModeIntentOrder() {
+        XCTAssertEqual(CameraMode.switchable.compactMap(\.intent), ModeIntent.allCases)
+    }
+
     func testSwitchableModesHideUnsupportedModesButKeepCurrentMode() {
         let filtered = CameraMode.switchableModes(
             isPano: false,
