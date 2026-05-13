@@ -89,14 +89,14 @@ targets:
     platform: watchOS
     sources:
       - path: OsmoWatch
-      - path: content/djibt-ios.icon
+      - path: content/djibt-watch.icon
         buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: net.prehiti.payton.CamControl.watchkitapp
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_WKCompanionAppBundleIdentifier: net.prehiti.payton.CamControl
-        ASSETCATALOG_COMPILER_APPICON_NAME: djibt-ios
+        ASSETCATALOG_COMPILER_APPICON_NAME: djibt-watch
 
 schemes:
   DJIOsmoKit:
