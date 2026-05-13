@@ -13,7 +13,7 @@ enum KeyReportCommand {
     // Key codes as defined in the DJI R SDK protocol
     enum KeyCode: UInt8 {
         case shutter = 0x01  // Record / snapshot button
-        case qs      = 0x06  // Quick-switch mode button
+        case qs      = 0x02  // Quick-switch mode button
     }
 
     /// Report mode: selects how key events are interpreted.

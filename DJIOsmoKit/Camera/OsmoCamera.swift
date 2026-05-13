@@ -48,6 +48,15 @@ public final class OsmoCamera: Identifiable {
     public internal(set) var productName: String?
     /// SDK/firmware version string returned by the camera.
     public internal(set) var sdkVersion: String?
+    /// Display-ready mode name from the newer 1D06 camera status detail push.
+    public internal(set) var modeName: String?
+    /// Display-ready shooting parameter summary from the newer 1D06 camera status detail push.
+    public internal(set) var modeParameters: String?
+    /// Modes hidden for this connection after a switch command was not confirmed by 1D02 status.
+    public internal(set) var unsupportedModes: Set<CameraMode> = []
+    private var pendingModeConfirmation: CameraMode?
+    private var modeConfirmationTask: Task<Void, Never>?
+    private static let modeSwitchConfirmationTimeout: Duration = .seconds(3)
     /// Sticky flag: set `true` by version query (SDK contains "AC203" = Osmo 360),
     /// or as a fallback when a 360-exclusive mode byte is first seen in a status push.
     public internal(set) var isPanoCamera: Bool = false {
@@ -95,6 +104,12 @@ public final class OsmoCamera: Identifiable {
         lastSeenDate = nil
         productName = nil
         sdkVersion = nil
+        modeName = nil
+        modeParameters = nil
+        unsupportedModes.removeAll()
+        pendingModeConfirmation = nil
+        modeConfirmationTask?.cancel()
+        modeConfirmationTask = nil
         rssi = nil
         rssiHistory.removeAll()
         modeLogger.reset()
@@ -277,6 +292,7 @@ public final class OsmoCamera: Identifiable {
         if frame.cmdSet == 0x1D && frame.cmdID == 0x02 {
             // Camera status push
             if let parsed = CameraStatus.parse(from: Array(frame.payload)) {
+                let previousRawMode = status.rawMode
                 let modeStr = parsed.mode?.displayName ?? "raw=0x\(String(parsed.rawMode, radix: 16, uppercase: true))"
                 let resStr = parsed.videoResolution?.displayName ?? "raw=\(Array(frame.payload)[2])"
                 let fpsStr = parsed.frameRate?.displayName ?? "raw=\(Array(frame.payload)[3])"
@@ -288,6 +304,11 @@ public final class OsmoCamera: Identifiable {
                     let hex = Array(frame.payload).map { String(format: "%02X", $0) }.joined(separator: " ")
                     OsmoLog.camera.info("Mode 0x\(String(parsed.rawMode, radix: 16, uppercase: true), privacy: .public) (\(label, privacy: .public)) on \(self.name, privacy: .public) — raw payload (\(frame.payload.count)B): \(hex, privacy: .private)")
                 }
+                if parsed.rawMode != previousRawMode {
+                    modeName = nil
+                    modeParameters = nil
+                }
+                confirmModeIfNeeded(parsed.mode)
                 if parsed != status { status = parsed }
                 if !isPanoCamera, let mode = parsed.mode, mode.is360Exclusive {
                     isPanoCamera = true
@@ -300,6 +321,52 @@ public final class OsmoCamera: Identifiable {
                     OsmoLog.camera.info("Camera \(self.name, privacy: .public) woke up — marking connected")
                     connectionState = .connected
                 }
+            }
+        } else if frame.cmdSet == ModeDetailsPushCommand.cmdSet && frame.cmdID == ModeDetailsPushCommand.cmdID {
+            if let details = ModeDetailsPushCommand.parse(from: frame.payload) {
+                if modeName != details.modeName { modeName = details.modeName }
+                if modeParameters != details.modeParameters { modeParameters = details.modeParameters }
+                OsmoLog.camera.debug("Mode details: name=\(details.modeName ?? "—", privacy: .public) params=\(details.modeParameters ?? "—", privacy: .public)")
+            }
+        }
+    }
+
+    /// Called from 1D02 status pushes to confirm a requested switch or unhide a mode later reported by firmware.
+    private func confirmModeIfNeeded(_ mode: CameraMode?) {
+        guard let mode else { return }
+
+        if unsupportedModes.contains(mode) {
+            var modes = unsupportedModes
+            modes.remove(mode)
+            unsupportedModes = modes
+        }
+
+        guard pendingModeConfirmation == mode else { return }
+        pendingModeConfirmation = nil
+        modeConfirmationTask?.cancel()
+        modeConfirmationTask = nil
+        OsmoLog.camera.info("Mode switch confirmed by 1D02: \(mode.displayName, privacy: .public) camera=\(self.name, privacy: .public)")
+    }
+
+    /// Learns unsupported modes by waiting for the camera to echo the requested mode in 1D02 status.
+    private func startModeConfirmation(for mode: CameraMode) {
+        if status.mode == mode {
+            confirmModeIfNeeded(mode)
+            return
+        }
+
+        pendingModeConfirmation = mode
+        modeConfirmationTask?.cancel()
+        modeConfirmationTask = Task { [weak self] in
+            try? await Task.sleep(for: Self.modeSwitchConfirmationTimeout)
+            await MainActor.run { [weak self] in
+                guard let self, self.pendingModeConfirmation == mode else { return }
+                self.pendingModeConfirmation = nil
+                self.modeConfirmationTask = nil
+                var modes = self.unsupportedModes
+                modes.insert(mode)
+                self.unsupportedModes = modes
+                OsmoLog.camera.warning("Mode switch not confirmed by 1D02; hiding \(mode.displayName, privacy: .public) for \(self.name, privacy: .public)")
             }
         }
     }
@@ -417,8 +484,29 @@ public final class OsmoCamera: Identifiable {
 
     public func switchMode(_ mode: CameraMode) async throws {
         guard connectionState == .connected else { return }
-        OsmoLog.camera.info("Switching mode to \(String(describing: mode), privacy: .public): camera=\(self.name, privacy: .public)")
-        try await sendWithRetry(timeout: 5, maxAttempts: 2) { seq in ModeCommand.build(mode: mode, seq: seq) }
+        guard status.mode != mode else {
+            confirmModeIfNeeded(mode)
+            return
+        }
+
+        // BLE command writes are fire-and-forget here; a short burst makes one UI tap behave reliably.
+        let attempts = 3
+        for attempt in 1...attempts {
+            let seq = nextSeq()
+            OsmoLog.camera.info("Switching mode to \(String(describing: mode), privacy: .public): camera=\(self.name, privacy: .public) seq=\(seq) attempt=\(attempt)")
+            let frame = ModeCommand.build(mode: mode, seq: seq)
+            try send(frame: frame)
+            if attempt == 1 {
+                startModeConfirmation(for: mode)
+            }
+            if attempt < attempts {
+                try? await Task.sleep(for: .milliseconds(150))
+                if status.mode == mode {
+                    confirmModeIfNeeded(mode)
+                    break
+                }
+            }
+        }
     }
 
     public func queryVersion() async {
@@ -439,6 +527,39 @@ public final class OsmoCamera: Identifiable {
             }
         } catch {
             OsmoLog.camera.error("Version query failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// Send a complete raw DJI protocol frame expressed as hex bytes.
+    /// Useful for diagnostics against documented `AA...CRC32` command frames.
+    public func sendRawHexFrame(_ rawDataString: String, timeout: TimeInterval = 5) async throws -> RawFrameCommandResult {
+        guard connectionState == .connected else { throw RawFrameCommandError.notConnected }
+
+        let preparedFrame = try RawFrameCommand.prepare(rawDataString)
+        switch preparedFrame.responseMode {
+        case 0x00:
+            try send(frame: preparedFrame.data)
+            return RawFrameCommand.sentSummary(for: preparedFrame.parsedFrame, noResponse: true)
+        case 0x01:
+            do {
+                let response = try await sendAndWait(
+                    frame: preparedFrame.data,
+                    seq: preparedFrame.parsedFrame.seq,
+                    timeout: timeout
+                )
+                return RawFrameCommand.responseSummary(for: response)
+            } catch BLEConnectionError.timeout {
+                return RawFrameCommand.sentSummary(for: preparedFrame.parsedFrame, noResponse: false)
+            }
+        case 0x02:
+            let response = try await sendAndWait(
+                frame: preparedFrame.data,
+                seq: preparedFrame.parsedFrame.seq,
+                timeout: timeout
+            )
+            return RawFrameCommand.responseSummary(for: response)
+        default:
+            throw RawFrameCommandError.unsupportedCommandType(preparedFrame.parsedFrame.cmdType)
         }
     }
 

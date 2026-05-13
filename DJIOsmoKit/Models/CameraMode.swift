@@ -1,7 +1,7 @@
 import Foundation
 
 /// Camera shooting mode as reported by the DJI status notification (0x1D, 0x02).
-public enum CameraMode: UInt8, CaseIterable, Equatable {
+public enum CameraMode: UInt8, CaseIterable, Equatable, Hashable {
     // Standard modes (Action 4/5 Pro)
     case slowMotion    = 0x00
     case video         = 0x01
@@ -32,23 +32,23 @@ public enum CameraMode: UInt8, CaseIterable, Equatable {
         case .hyperlapse:       return "Hyperlapse"
         case .livestream:       return "Live Stream"
         case .uvc:              return "UVC"
-        case .lowLight:         return "Low Light"
-        case .subjectFollow:    return "Subject Follow"
+        case .lowLight:         return "SuperNight"
+        case .subjectFollow:    return "Subject Tracking"
         case .panoVideo:        return "360° Video"
         case .panoTimelapse:    return "360° Timelapse"
         case .panoSelfie:       return "360° Selfie"
         case .panoPhoto:        return "360° Photo"
         case .panoVortex:       return "360° Vortex"
-        case .panoSupernight:   return "360° Super Night"
+        case .panoSupernight:   return "360° SuperNight"
         case .singleBoost:      return "Single Lens Boost"
-        case .singleSupernight: return "Single Lens Night"
+        case .singleSupernight: return "Single Lens SuperNight"
         }
     }
 
     /// Whether the mode supports video recording.
     public var supportsRecording: Bool {
         switch self {
-        case .video, .hyperlapse, .timelapse, .slowMotion, .livestream,
+        case .video, .hyperlapse, .timelapse, .slowMotion, .livestream, .lowLight, .subjectFollow,
              .panoVideo, .panoTimelapse, .panoSelfie, .panoVortex, .panoSupernight,
              .singleBoost, .singleSupernight:
             return true
@@ -91,16 +91,19 @@ public enum CameraMode: UInt8, CaseIterable, Equatable {
         switch self {
         case .video, .panoVideo, .livestream, .singleBoost: return .video
         case .photo, .panoPhoto:                            return .photo
-        case .slowMotion, .lowLight:                        return .slowMotion
+        case .slowMotion:                                   return .slowMotion
+        case .lowLight:                                     return .superNight
         case .timelapse, .panoTimelapse:                    return .timelapse
         case .hyperlapse:                                   return .hyperlapse
-        case .uvc, .subjectFollow:                          return nil
-        case .panoSelfie, .panoVortex, .panoSupernight, .singleSupernight: return nil
+        case .subjectFollow:                                return .subjectTracking
+        case .uvc:                                          return nil
+        case .panoSupernight, .singleSupernight:             return .superNight
+        case .panoSelfie, .panoVortex:                       return nil
         }
     }
 
     /// Modes the user can switch to from the controller UI (standard cameras).
-    public static let switchable: [CameraMode] = [.video, .photo, .slowMotion, .timelapse, .hyperlapse]
+    public static let switchable: [CameraMode] = [.video, .subjectFollow, .photo, .slowMotion, .lowLight, .timelapse, .hyperlapse]
 
     /// 360° dual-lens modes (switchable within this group).
     public static let switchablePano360: [CameraMode] = [
@@ -117,12 +120,23 @@ public enum CameraMode: UInt8, CaseIterable, Equatable {
     /// mode commands only work within the active group.
     // TODO: Reverse-engineer the 360's lens group toggle command so we can switch
     // between 360° and single-lens groups via BLE (currently only possible on-camera).
-    public static func switchableModes(isPano: Bool, currentMode: CameraMode?) -> [CameraMode] {
-        guard isPano else { return switchable }
-        if let mode = currentMode, !mode.isPanoMode {
-            return switchablePanoSingleLens
+    public static func switchableModes(
+        isPano: Bool,
+        currentMode: CameraMode?,
+        excluding unsupportedModes: Set<CameraMode> = []
+    ) -> [CameraMode] {
+        let modes: [CameraMode]
+        if !isPano {
+            modes = switchable
+        } else if let mode = currentMode, !mode.isPanoMode {
+            modes = switchablePanoSingleLens
+        } else {
+            modes = switchablePano360
         }
-        return switchablePano360
+
+        return modes.filter { mode in
+            mode == currentMode || !unsupportedModes.contains(mode)
+        }
     }
 
     /// SF Symbol name for mode picker display.
@@ -148,18 +162,28 @@ public enum CameraMode: UInt8, CaseIterable, Equatable {
         }
     }
 
+    /// Whether a high-level intent can be sent directly to this camera family.
+    /// Subject Tracking is a standard Action-camera mode; Osmo 360 uses separate pano/single-lens modes.
+    public static func supportsIntent(_ intent: ModeIntent, isPano: Bool) -> Bool {
+        !(isPano && intent == .subjectTracking)
+    }
+
     /// Resolve a mode intent into a native camera mode.
     /// For 360 cameras, respects the current lens group: if the camera is in single-lens
     /// mode, maps to standard modes; if in 360° mode (or unknown), maps to pano variants.
     public static func nativeMode(for intent: ModeIntent, isPano: Bool, currentMode: CameraMode?) -> CameraMode {
-        // 360 camera in single-lens group → use standard mode bytes
+        // 360 camera in single-lens group uses standard mode bytes.
         let inSingleLens = isPano && (currentMode.map { !$0.isPanoMode } ?? false)
         switch intent {
         case .video:      return (isPano && !inSingleLens) ? .panoVideo : .video
+        case .subjectTracking: return .subjectFollow
         case .photo:      return (isPano && !inSingleLens) ? .panoPhoto : .photo
         case .slowMotion: return .slowMotion
         case .timelapse:  return (isPano && !inSingleLens) ? .panoTimelapse : .timelapse
         case .hyperlapse: return .hyperlapse
+        case .superNight:
+            if isPano { return inSingleLens ? .singleSupernight : .panoSupernight }
+            return .lowLight
         }
     }
 }
@@ -172,28 +196,34 @@ public enum CameraMode: UInt8, CaseIterable, Equatable {
 /// to its native `CameraMode` (e.g. `.video` on Action cameras, `.panoVideo` on 360).
 public enum ModeIntent: String, CaseIterable, Equatable {
     case video
+    case subjectTracking
     case photo
     case slowMotion
     case timelapse
     case hyperlapse
+    case superNight
 
     public var displayName: String {
         switch self {
         case .video:      return "Video"
+        case .subjectTracking: return "Subject Tracking"
         case .photo:      return "Photo"
         case .slowMotion: return "Slow Motion"
         case .timelapse:  return "Timelapse"
         case .hyperlapse: return "Hyperlapse"
+        case .superNight: return "SuperNight"
         }
     }
 
     public var systemImage: String {
         switch self {
         case .video:      return "video"
+        case .subjectTracking: return "person.fill.viewfinder"
         case .photo:      return "camera"
         case .slowMotion: return "slowmo"
         case .timelapse:  return "timelapse"
         case .hyperlapse: return "figure.walk"
+        case .superNight: return "moon.stars"
         }
     }
 }
