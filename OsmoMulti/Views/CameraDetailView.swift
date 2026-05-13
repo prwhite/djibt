@@ -7,6 +7,14 @@ struct CameraDetailView: View {
 
     let camera: OsmoCamera
     let viewModel: CameraListViewModel
+
+    @Environment(OsmoLocationManager.self) private var locationManager
+
+    @State private var rawFrameText = ""
+    @State private var rawFrameResult: String?
+    @State private var isSendingRawFrame = false
+    @State private var pendingMode: CameraMode?
+
     var body: some View {
         List {
             if camera.connectionState == .failed {
@@ -18,6 +26,22 @@ struct CameraDetailView: View {
         }
         .navigationTitle(camera.name)
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: camera.status.mode) { _, newMode in
+            if let pendingMode, pendingMode == newMode {
+                self.pendingMode = nil
+            }
+        }
+        .onChange(of: camera.connectionState) { _, newState in
+            if !newState.isUsable {
+                pendingMode = nil
+            }
+        }
+        .onChange(of: camera.unsupportedModes) { _, unsupportedModes in
+            if let pendingMode, unsupportedModes.contains(pendingMode) {
+                self.pendingMode = nil
+                viewModel.showToast("\(pendingMode.displayName) not confirmed")
+            }
+        }
     }
 
     // MARK: - Retry Banner (failed state)
@@ -54,6 +78,25 @@ struct CameraDetailView: View {
         camera.connectionState == .connected || camera.connectionState == .sleeping
     }
 
+    private var validGPSAccuracy: Double? {
+        guard let accuracy = locationManager.lastLocation?.horizontalAccuracy, accuracy >= 0 else { return nil }
+        return accuracy
+    }
+
+    private var modeDisplayName: String {
+        camera.modeName ?? camera.status.mode?.displayName ?? "Unknown"
+    }
+
+    private var selectedMode: CameraMode {
+        pendingMode ?? camera.status.mode ?? (camera.isPanoCamera ? .panoVideo : .video)
+    }
+
+    private var modeOptions: [CameraMode] {
+        CameraMode.switchableModes(isPano: camera.isPanoCamera,
+                                   currentMode: pendingMode ?? camera.status.mode,
+                                   excluding: camera.unsupportedModes)
+    }
+
     private var statusSection: some View {
         Section("Status") {
             LabeledContent("Connection", value: camera.connectionState.displayLabel)
@@ -66,7 +109,10 @@ struct CameraDetailView: View {
                     }
                 }
             }
-            LabeledContent("Mode", value: hasLiveStatus ? (camera.status.mode?.displayName ?? "Unknown") : "—")
+//            LabeledContent("Mode", value: hasLiveStatus ? modeDisplayName : "—")
+//            if hasLiveStatus, let modeParameters = camera.modeParameters {
+//                LabeledContent("Mode Parameters", value: modeParameters)
+//            }
             LabeledContent("Battery", value: hasLiveStatus ? "\(camera.status.batteryPercentage)%" : "—")
 
             if hasLiveStatus {
@@ -94,11 +140,18 @@ struct CameraDetailView: View {
                         Text("Temperature Warning")
                     }
                 }
+                LabeledContent("GPS") {
+                    GPSStatusBadge(
+                        isPushing: locationManager.isActive && camera.connectionState == .connected,
+                        accuracy: validGPSAccuracy,
+                        lastPushAt: locationManager.lastPushAt
+                    )
+                }
             }
 
             // TimelineView isolates lastSeenDate observation from the parent body,
-            // preventing 1 Hz re-renders of the entire detail view.
-            TimelineView(.periodic(from: .now, by: 1.0)) { _ in
+            // Prevents full-detail-view re-renders every 2 seconds.
+            TimelineView(.periodic(from: .now, by: 2)) { _ in
                 if let lastSeen = camera.lastSeenDate {
                     LabeledContent("Last Seen", value: lastSeen.formatted(.relative(presentation: .named)))
                 }
@@ -110,23 +163,39 @@ struct CameraDetailView: View {
 
     private var controlsSection: some View {
         Section("Controls") {
-            // Mode picker — shows native modes for this camera type
-            Picker("Mode", selection: Binding(
-                get: { camera.status.mode ?? (camera.isPanoCamera ? .panoVideo : .video) },
-                set: { newMode in
-                    Task {
-                        do {
-                            try await camera.switchMode(newMode)
-                        } catch {
-                            viewModel.showToast("Mode switch failed")
+            // Mode menu — explicit buttons avoid Picker selection churn while 1D02 status updates arrive.
+            Menu {
+                ForEach(modeOptions, id: \.rawValue) { mode in
+                    Button {
+                        switchToMode(mode)
+                    } label: {
+                        HStack {
+                            Label(mode.displayName, systemImage: mode.systemImage)
+                            if mode == selectedMode {
+                                Image(systemName: "checkmark")
+                            }
                         }
                     }
+                    .disabled(mode == selectedMode)
                 }
-            )) {
-                ForEach(CameraMode.switchableModes(isPano: camera.isPanoCamera, currentMode: camera.status.mode), id: \.rawValue) { mode in
-                    Label(mode.displayName, systemImage: mode.systemImage).tag(mode)
+            } label: {
+                HStack {
+                    Text("Mode")
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    HStack(spacing: 6) {
+                        if pendingMode != nil {
+                            ProgressView()
+                                .controlSize(.mini)
+                        }
+                        Image(systemName: selectedMode.systemImage)
+                        Text(selectedMode.displayName)
+                    }
+                    .foregroundStyle(.secondary)
                 }
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
             .disabled(!camera.connectionState.isUsable)
 
             // Shutter
@@ -223,6 +292,8 @@ struct CameraDetailView: View {
                    || camera.connectionState == .handshaking
                    || camera.connectionState == .reconnecting)
 
+            rawCommandControls
+
             Toggle("Enabled", isOn: Binding(
                 get: { camera.isEnabled },
                 set: { _ in viewModel.toggleEnabled(camera) }
@@ -230,12 +301,64 @@ struct CameraDetailView: View {
         }
     }
 
+    private var rawCommandControls: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            TextField("Raw DJI frame (AA...)", text: $rawFrameText)
+                .font(.caption.monospaced())
+                .textInputAutocapitalization(.characters)
+                .autocorrectionDisabled()
+
+            Button {
+                Task { await sendRawFrame() }
+            } label: {
+                Label(isSendingRawFrame ? "Sending Raw Frame" : "Send Raw Frame", systemImage: "terminal")
+            }
+            .disabled(!camera.connectionState.isUsable
+                      || rawFrameText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                      || isSendingRawFrame)
+
+            if let rawFrameResult {
+                Text(rawFrameResult)
+                    .font(.caption2.monospaced())
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+            }
+        }
+    }
+
     // MARK: - Helpers
+
+    private func switchToMode(_ mode: CameraMode) {
+        pendingMode = mode
+        Task { @MainActor in
+            do {
+                try await camera.switchMode(mode)
+            } catch {
+                if pendingMode == mode {
+                    pendingMode = nil
+                }
+                viewModel.showToast("Mode switch failed")
+            }
+        }
+    }
 
     private func forceReconnect() async {
         camera.forceDisconnect()
         try? await Task.sleep(for: .seconds(1))
         await viewModel.retryCameraAsync(camera)
+    }
+
+    private func sendRawFrame() async {
+        isSendingRawFrame = true
+        defer { isSendingRawFrame = false }
+
+        do {
+            let result = try await camera.sendRawHexFrame(rawFrameText)
+            rawFrameResult = result.summary
+        } catch {
+            rawFrameResult = error.localizedDescription
+            viewModel.showToast("Raw command failed")
+        }
     }
 
     private func formatDuration(_ seconds: Int) -> String {
