@@ -35,16 +35,25 @@ Spawn agents when a task is clearly scoped to one layer and won't require coordi
 - UI changes → ui-engineer
 - Cross-layer changes → do yourself or use integrator
 
-All agents work against the same `OsmoMulti.xcodeproj`. Build with:
+All agents work against the same `OsmoMulti.xcodeproj`. Prefer the Makefile (`make help` lists targets); raw commands:
 ```bash
-# iOS targets (DJIOsmoKit, OsmoMulti)
-xcodebuild -project OsmoMulti.xcodeproj -target <Target> -sdk iphoneos26.4 \
-  CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+xcodegen generate            # make gen — after editing project.yml
 
-# watchOS target
-xcodebuild -project OsmoMulti.xcodeproj -target OsmoWatch -sdk watchos26.4 \
-  CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+# Signed device build — app + valid embedded watch app (automatic signing, team L485BLVU52)
+xcodebuild -project OsmoMulti.xcodeproj -scheme OsmoMulti \
+  -destination 'generic/platform=iOS' -configuration Debug \
+  -derivedDataPath build -allowProvisioningUpdates build                # make build
+
+# Compile-only check, no signing — add: CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=""  # make build-ci
+
+# Install built app / embedded watch app to a device (see 'make devices' for IDs)
+xcrun devicectl device install app --device <id> build/Build/Products/Debug-iphoneos/OsmoMulti.app             # make install / deploy
+xcrun devicectl device install app --device <id> build/Build/Products/Debug-iphoneos/OsmoMulti.app/Watch/OsmoWatch.app  # make install-watch
 ```
+
+> **⚠️ Build via the scheme, NOT `-target OsmoMulti -sdk iphoneos`.** `-sdk iphoneos` forces *every* target in the graph — including the embedded `OsmoWatch` — through the iOS SDK, which omits the `WKApplication` Info.plist key. The build & signing succeed, but on-device install fails with `InvalidWatchKitApp` / `CoreDeviceError 3002`. (Archive/TestFlight builds are unaffected — they build each target for its own platform, which is why beta builds were always valid.) The scheme + `generic/platform=iOS` form builds each target for its correct platform. Keep `-sdk` **unpinned** (not `iphoneos26.4`) so builds survive Xcode SDK bumps.
+>
+> **Fresh-machine gotcha:** builds need the **matching iOS _and_ watchOS Simulator runtimes installed — even for device builds.** The app icon is an Icon Composer `.icon`, and `actool` needs the runtime matching the active SDK or the build dies with *"No simulator runtime … available."* The scheme also embeds + builds the watch app, so the watchOS SDK + runtime are mandatory. Install both via `xcodebuild -downloadPlatform iOS && xcodebuild -downloadPlatform watchOS` (`make runtimes`).
 
 ## xcodegen
 
