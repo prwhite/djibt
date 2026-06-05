@@ -55,7 +55,7 @@ public final class OsmoLocationManager: NSObject {
 
     // MARK: - Start / Stop
 
-    /// Request location authorization, begin CL updates, and start the 1 Hz push timer.
+    /// Request location authorization, begin CL updates, and start the 10 Hz push timer.
     public func start() {
         guard !isActive else { return }
         locationManager.requestWhenInUseAuthorization()
@@ -88,7 +88,7 @@ public final class OsmoLocationManager: NSObject {
             OsmoLog.location.debug("GPS push skipped: no camera manager")
             return
         }
-        guard let location = lastLocation else {
+        guard let location = lastLocation, location.horizontalAccuracy >= 0 else {
             OsmoLog.location.debug("GPS push skipped: no location yet")
             return
         }

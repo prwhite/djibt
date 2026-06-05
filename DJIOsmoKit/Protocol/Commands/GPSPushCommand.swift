@@ -22,12 +22,10 @@ enum GPSPushCommand {
     static func build(location: CLLocation, seq: UInt16) -> Data {
         var payload = Data(count: 48)
 
-        // -- Timestamp in DJI format (UTC+8) --
+        // -- Timestamp in DJI format (UTC) --
         var cal = Calendar(identifier: .gregorian)
-        // DJI protocol requires timestamps in UTC+8 (China Standard Time).
-        // This matches the reference implementation in dji-sdk/Osmo-GPS-Controller-Demo.
-        // The camera interprets all GPS timestamps as CST regardless of the user's locale.
-        cal.timeZone = TimeZone(secondsFromGMT: 0 * 3600)!
+        // Keep GPS timestamps stable and locale-independent; camera local-time sync is not exposed here.
+        cal.timeZone = TimeZone(secondsFromGMT: 0)!
         let comps = cal.dateComponents(
             [.year, .month, .day, .hour, .minute, .second],
             from: location.timestamp
@@ -69,14 +67,7 @@ enum GPSPushCommand {
         payload.writeLE(hAcc, at: 36)
         payload.writeLE(sAcc, at: 40)
         payload.writeLE(UInt32(8), at: 44)  // fake satellite_number; CLLocation does not provide this
-        
-        OsmoLog.location.debug("""
-        GPS accuracy:
-          verticalAccuracy=\(location.verticalAccuracy)m -> vAcc=\(vAcc)mm
-          horizontalAccuracy=\(location.horizontalAccuracy)m -> hAcc=\(hAcc)mm
-          speedAccuracy=\(location.speedAccuracy)m/s -> sAcc=\(sAcc)cm/s
-        """)
-        
+
         return FrameBuilder.build(OutgoingFrame(
             cmdType: 0x00,  // fire-and-forget, no response expected
             seq: seq,
