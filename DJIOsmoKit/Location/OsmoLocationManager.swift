@@ -3,7 +3,7 @@ import Foundation
 import Observation
 import OSLog
 
-/// Manages Core Location updates and pushes GPS data to all connected cameras at 1 Hz.
+/// Manages Core Location updates and pushes GPS data to all connected cameras at 10 Hz.
 ///
 /// `OsmoLocationManager` is `@Observable` so SwiftUI views can react to
 /// `isActive` and `lastLocation` changes. It is `@MainActor` to match
@@ -12,7 +12,7 @@ import OSLog
 /// Usage:
 /// ```swift
 /// let locationManager = OsmoLocationManager(cameraManager: .shared)
-/// locationManager.start()   // begins CL updates + 1 Hz GPS push
+/// locationManager.start()   // begins CL updates + 10 Hz GPS push
 /// locationManager.stop()    // stops everything
 /// ```
 @Observable
@@ -26,6 +26,9 @@ public final class OsmoLocationManager: NSObject {
 
     /// The most recent location received from Core Location.
     public private(set) var lastLocation: CLLocation?
+
+    /// Time of the most recent GPS frame pushed to connected cameras.
+    public private(set) var lastPushAt: Date?
 
     /// Current Core Location authorization status.
     public var authorizationStatus: CLAuthorizationStatus {
@@ -52,15 +55,15 @@ public final class OsmoLocationManager: NSObject {
 
     // MARK: - Start / Stop
 
-    /// Request location authorization, begin CL updates, and start the 1 Hz push timer.
+    /// Request location authorization, begin CL updates, and start the 10 Hz push timer.
     public func start() {
         guard !isActive else { return }
         locationManager.requestWhenInUseAuthorization()
         locationManager.startUpdatingLocation()
         isActive = true
 
-        // 1 Hz push timer on the main run loop
-        pushTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+        // 10 Hz push timer on the main run loop
+        pushTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.pushGPSToAllCameras()
             }
@@ -85,13 +88,18 @@ public final class OsmoLocationManager: NSObject {
             OsmoLog.location.debug("GPS push skipped: no camera manager")
             return
         }
-        guard let location = lastLocation else {
+        guard let location = lastLocation, location.horizontalAccuracy >= 0 else {
             OsmoLog.location.debug("GPS push skipped: no location yet")
             return
         }
         let targets = manager.enabledConnectedCameras.count
+        guard targets > 0 else {
+            OsmoLog.location.debug("GPS push skipped: no connected cameras")
+            return
+        }
         OsmoLog.location.debug("GPS push → \(targets) camera(s) @ \(String(format: "%.6f", location.coordinate.latitude), privacy: .private),\(String(format: "%.6f", location.coordinate.longitude), privacy: .private)")
         manager.pushGPS(location)
+        lastPushAt = Date()
     }
 }
 
