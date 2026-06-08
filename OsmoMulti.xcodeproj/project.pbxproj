@@ -3,10 +3,11 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
+		08489E83436311DEBA811A49 /* djibt-watch.icon in Resources */ = {isa = PBXBuildFile; fileRef = 3645B389DAB08594CA9C4BE1 /* djibt-watch.icon */; };
 		0B7AF48C07F6BDE05D611936 /* Logging.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6D85868F51A7E9700410B94 /* Logging.swift */; };
 		0DC17D3D7DE301783BB10F3D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 4068EC99D53D899A6F2CCDFF /* PrivacyInfo.xcprivacy */; };
 		0F221FC7A529600A86D3B42C /* KeyReportCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4517D2ECD87BC34C38F77BF6 /* KeyReportCommand.swift */; };
@@ -35,15 +36,18 @@
 		80D238E6F1ED98E9687704F5 /* WatchControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77BA1CD115E78338BCBFACC5 /* WatchControlView.swift */; };
 		8145316D33D7FD70E916561A /* VersionQueryCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DC1B54B3EBAEAD34B427C49 /* VersionQueryCommand.swift */; };
 		82C8FF2D45FF8943E4B56C5F /* CameraRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05935ED1F892FD40924DF4D2 /* CameraRowView.swift */; };
+		8706D5083E5862825CAFE781 /* GPSStatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = B505EB3D1A029831A83D5C12 /* GPSStatusBadge.swift */; };
 		92F93588A7010BE257D769CA /* djibt-ios.icon in Resources */ = {isa = PBXBuildFile; fileRef = DDAED9B4AB672CB7FA28552F /* djibt-ios.icon */; };
 		9FACCC12CE8DB4D45EB00575 /* CameraListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E9838660BDF128E730E1C78 /* CameraListViewModel.swift */; };
 		A24A222A21DFD4C5AABEF43F /* CameraListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA154D155C699D1747CC716A /* CameraListView.swift */; };
+		A78F130A1B57187EA3E2BD18 /* RawFrameCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 882B71AD36860EA8FED4A351 /* RawFrameCommand.swift */; };
 		A7BBE9C186384A3632127535 /* StatusSubscribeCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40400697BA320D8E1824DF73 /* StatusSubscribeCommand.swift */; };
 		ADBA3C21DF0DABF9AFF7BF31 /* CameraStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3312CE9941F41DB906D52CB1 /* CameraStatus.swift */; };
 		AFB1DE62757C2A143DF603B5 /* OsmoCameraManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28D7898C577133FE6DDDAB86 /* OsmoCameraManager.swift */; };
 		BBFED5FDB3C21C96D3A0A9CD /* ConnectionCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97A0C3C5D3CC6AC613EBFCAA /* ConnectionCommand.swift */; };
 		CACC83F5E3367323F06DD518 /* GPSPushCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D82B5852DB15814F0429594 /* GPSPushCommand.swift */; };
 		D28B1B70A771347BEE54C437 /* OsmoWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB86E24EE94AF69E7E4E57A2 /* OsmoWatchApp.swift */; };
+		D3A6BF72ECFD46DCC620D7D4 /* ModeDetailsPushCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5748F9425ECD83D3EE0F0C6B /* ModeDetailsPushCommand.swift */; };
 		D7458693C464FCC7949E4C69 /* CameraDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5154755099B80CB654708951 /* CameraDetailView.swift */; };
 		D9CC6824B4F1BC37F152ED4E /* FrameParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5CB2752607DA6319914F6A2 /* FrameParser.swift */; };
 		E77A8E007FD275212F1CE7DF /* ModeCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16BC89933A607C29647FF0EB /* ModeCommand.swift */; };
@@ -54,10 +58,6 @@
 		F9628096EEA3E7FF751D227F /* FrameBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = D89BC62CAB62EB2AF2705EDC /* FrameBuilder.swift */; };
 		FD7D35A738741DB080A6C091 /* WatchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69A871470DA3A519D7F9EC81 /* WatchBridge.swift */; };
 		FF43A991CDBDB4C362519699 /* CameraMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = F488F37BC194C985DEC62F18 /* CameraMode.swift */; };
-		FF44C4082FB262C000B0AC11 /* GPSStatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF44C4072FB262C000B0AC11 /* GPSStatusBadge.swift */; };
-		FF44C40A2FB26C2700B0AC11 /* ModeDetailsPushCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF44C4092FB26C2700B0AC11 /* ModeDetailsPushCommand.swift */; };
-		FF44C40C2FB26C3900B0AC11 /* RawFrameCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF44C40B2FB26C3900B0AC11 /* RawFrameCommand.swift */; };
-		FFC427AB2FB4A26500EE139D /* djibt-watch.icon in Resources */ = {isa = PBXBuildFile; fileRef = FFC427A92FB4A26500EE139D /* djibt-watch.icon */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -109,7 +109,7 @@
 		};
 		BF84FCFAC433996B5F93E75E /* Embed Watch Content */ = {
 			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 12;
+			buildActionMask = 2147483647;
 			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
 			dstSubfolderSpec = 16;
 			files = (
@@ -130,15 +130,17 @@
 		28D7898C577133FE6DDDAB86 /* OsmoCameraManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OsmoCameraManager.swift; sourceTree = "<group>"; };
 		3312CE9941F41DB906D52CB1 /* CameraStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraStatus.swift; sourceTree = "<group>"; };
 		353451F0F10BCADDAA438278 /* DJIOsmoKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = DJIOsmoKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		3645B389DAB08594CA9C4BE1 /* djibt-watch.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = "djibt-watch.icon"; sourceTree = "<group>"; };
 		40400697BA320D8E1824DF73 /* StatusSubscribeCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusSubscribeCommand.swift; sourceTree = "<group>"; };
-		4068EC99D53D899A6F2CCDFF /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		4068EC99D53D899A6F2CCDFF /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		4517D2ECD87BC34C38F77BF6 /* KeyReportCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyReportCommand.swift; sourceTree = "<group>"; };
 		455E2513988A17A0F2CC1588 /* OsmoWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OsmoWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4B0A99BDBAF28DB315FE2AA8 /* OsmoCameraManager+Preview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "OsmoCameraManager+Preview.swift"; sourceTree = "<group>"; };
 		5154755099B80CB654708951 /* CameraDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraDetailView.swift; sourceTree = "<group>"; };
 		54EA7058CEAC7390F6A85784 /* FirstSeenLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstSeenLogger.swift; sourceTree = "<group>"; };
+		5748F9425ECD83D3EE0F0C6B /* ModeDetailsPushCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModeDetailsPushCommand.swift; sourceTree = "<group>"; };
 		598F6ACABE4154A2BDBF3382 /* PowerModeCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PowerModeCommand.swift; sourceTree = "<group>"; };
-		5B3D36E242AEFF8485065A07 /* OsmoMulti.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OsmoMulti.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5B3D36E242AEFF8485065A07 /* OsmoMulti.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OsmoMulti.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		66F24A8E9D09D59C73F80E71 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		68D8C8ADE10B30ADA4DE66C3 /* FrameTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameTests.swift; sourceTree = "<group>"; };
 		6916C08A1CE408C53DBDED99 /* ConnectionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionState.swift; sourceTree = "<group>"; };
@@ -148,10 +150,12 @@
 		77BA1CD115E78338BCBFACC5 /* WatchControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchControlView.swift; sourceTree = "<group>"; };
 		7E9838660BDF128E730E1C78 /* CameraListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraListViewModel.swift; sourceTree = "<group>"; };
 		8819AE63F91CAD2817D9CD63 /* CameraShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraShortcuts.swift; sourceTree = "<group>"; };
+		882B71AD36860EA8FED4A351 /* RawFrameCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawFrameCommand.swift; sourceTree = "<group>"; };
 		8D82B5852DB15814F0429594 /* GPSPushCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPSPushCommand.swift; sourceTree = "<group>"; };
 		97A0C3C5D3CC6AC613EBFCAA /* ConnectionCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionCommand.swift; sourceTree = "<group>"; };
 		9853A33FE02BF25B8BBEA860 /* SignalStrengthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignalStrengthView.swift; sourceTree = "<group>"; };
 		AE44255BF0B5BFC256A3CE67 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		B505EB3D1A029831A83D5C12 /* GPSStatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPSStatusBadge.swift; sourceTree = "<group>"; };
 		BA300F201CB3C612E0FF92C3 /* OsmoMultiApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OsmoMultiApp.swift; sourceTree = "<group>"; };
 		BF5E9ED9B3C9E0CA998698BC /* OsmoBLEScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OsmoBLEScanner.swift; sourceTree = "<group>"; };
 		C613863961F2D76F2DF57E4F /* CRC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CRC.swift; sourceTree = "<group>"; };
@@ -160,18 +164,14 @@
 		D89BC62CAB62EB2AF2705EDC /* FrameBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameBuilder.swift; sourceTree = "<group>"; };
 		DA154D155C699D1747CC716A /* CameraListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraListView.swift; sourceTree = "<group>"; };
 		DB21A75914A5F46FA36BA8B3 /* AddCameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddCameraView.swift; sourceTree = "<group>"; };
-		DDAED9B4AB672CB7FA28552F /* djibt-ios.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "djibt-ios.icon"; sourceTree = "<group>"; };
+		DDAED9B4AB672CB7FA28552F /* djibt-ios.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = "djibt-ios.icon"; sourceTree = "<group>"; };
 		E3EC743303679BC8DF0EFC38 /* CRCTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CRCTests.swift; sourceTree = "<group>"; };
 		E5CB2752607DA6319914F6A2 /* FrameParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameParser.swift; sourceTree = "<group>"; };
 		EB86E24EE94AF69E7E4E57A2 /* OsmoWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OsmoWatchApp.swift; sourceTree = "<group>"; };
 		EDCA5C70829E8EA39D4F8928 /* OsmoLocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OsmoLocationManager.swift; sourceTree = "<group>"; };
 		F459A47517A1E40A0207A7AC /* GlobalControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalControlsView.swift; sourceTree = "<group>"; };
 		F488F37BC194C985DEC62F18 /* CameraMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraMode.swift; sourceTree = "<group>"; };
-		FE827854DB2FD597251E86C3 /* DJIOsmoKitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DJIOsmoKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		FF44C4072FB262C000B0AC11 /* GPSStatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPSStatusBadge.swift; sourceTree = "<group>"; };
-		FF44C4092FB26C2700B0AC11 /* ModeDetailsPushCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModeDetailsPushCommand.swift; sourceTree = "<group>"; };
-		FF44C40B2FB26C3900B0AC11 /* RawFrameCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawFrameCommand.swift; sourceTree = "<group>"; };
-		FFC427A92FB4A26500EE139D /* djibt-watch.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "djibt-watch.icon"; sourceTree = "<group>"; };
+		FE827854DB2FD597251E86C3 /* DJIOsmoKitTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = DJIOsmoKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -225,9 +225,9 @@
 				DA154D155C699D1747CC716A /* CameraListView.swift */,
 				05935ED1F892FD40924DF4D2 /* CameraRowView.swift */,
 				F459A47517A1E40A0207A7AC /* GlobalControlsView.swift */,
+				B505EB3D1A029831A83D5C12 /* GPSStatusBadge.swift */,
 				AE44255BF0B5BFC256A3CE67 /* SettingsView.swift */,
 				9853A33FE02BF25B8BBEA860 /* SignalStrengthView.swift */,
-				FF44C4072FB262C000B0AC11 /* GPSStatusBadge.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -236,7 +236,7 @@
 			isa = PBXGroup;
 			children = (
 				DDAED9B4AB672CB7FA28552F /* djibt-ios.icon */,
-				FFC427A92FB4A26500EE139D /* djibt-watch.icon */,
+				3645B389DAB08594CA9C4BE1 /* djibt-watch.icon */,
 			);
 			path = content;
 			sourceTree = "<group>";
@@ -401,12 +401,12 @@
 				8D82B5852DB15814F0429594 /* GPSPushCommand.swift */,
 				4517D2ECD87BC34C38F77BF6 /* KeyReportCommand.swift */,
 				16BC89933A607C29647FF0EB /* ModeCommand.swift */,
+				5748F9425ECD83D3EE0F0C6B /* ModeDetailsPushCommand.swift */,
 				598F6ACABE4154A2BDBF3382 /* PowerModeCommand.swift */,
+				882B71AD36860EA8FED4A351 /* RawFrameCommand.swift */,
 				73574EDDD56A08059E6848F2 /* RecordingCommand.swift */,
 				40400697BA320D8E1824DF73 /* StatusSubscribeCommand.swift */,
 				6DC1B54B3EBAEAD34B427C49 /* VersionQueryCommand.swift */,
-				FF44C4092FB26C2700B0AC11 /* ModeDetailsPushCommand.swift */,
-				FF44C40B2FB26C3900B0AC11 /* RawFrameCommand.swift */,
 			);
 			path = Commands;
 			sourceTree = "<group>";
@@ -499,9 +499,10 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 2640;
+				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					0E57881AA87223D963EB7017 = {
+						DevelopmentTeam = L485BLVU52;
 						ProvisioningStyle = Automatic;
 					};
 					123F66ABB15B6E5A3C44AFBA = {
@@ -513,6 +514,7 @@
 						ProvisioningStyle = Automatic;
 					};
 					EC1EF8D172B34EDF64A31ADA = {
+						DevelopmentTeam = L485BLVU52;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -544,7 +546,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				FFC427AB2FB4A26500EE139D /* djibt-watch.icon in Resources */,
+				08489E83436311DEBA811A49 /* djibt-watch.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -570,13 +572,13 @@
 				BBFED5FDB3C21C96D3A0A9CD /* ConnectionCommand.swift in Sources */,
 				68A7E0BA84FA5A23A43D0492 /* ConnectionState.swift in Sources */,
 				1BE92A02CD2AE74D3DEA2585 /* FirstSeenLogger.swift in Sources */,
-				FF44C40A2FB26C2700B0AC11 /* ModeDetailsPushCommand.swift in Sources */,
 				F9628096EEA3E7FF751D227F /* FrameBuilder.swift in Sources */,
 				D9CC6824B4F1BC37F152ED4E /* FrameParser.swift in Sources */,
 				CACC83F5E3367323F06DD518 /* GPSPushCommand.swift in Sources */,
 				0F221FC7A529600A86D3B42C /* KeyReportCommand.swift in Sources */,
 				0B7AF48C07F6BDE05D611936 /* Logging.swift in Sources */,
 				E77A8E007FD275212F1CE7DF /* ModeCommand.swift in Sources */,
+				D3A6BF72ECFD46DCC620D7D4 /* ModeDetailsPushCommand.swift in Sources */,
 				396BA941F2DA4C6D498ECAAF /* OsmoBLEConnection.swift in Sources */,
 				36A8D280F92A8AA6F72B7F15 /* OsmoBLEScanner.swift in Sources */,
 				5E1B6CEB17BBF051CA0F5D62 /* OsmoCamera.swift in Sources */,
@@ -584,7 +586,7 @@
 				AFB1DE62757C2A143DF603B5 /* OsmoCameraManager.swift in Sources */,
 				EE45C36217677383E88D4E73 /* OsmoLocationManager.swift in Sources */,
 				2EE102F3249EC8BD9D30EA53 /* PowerModeCommand.swift in Sources */,
-				FF44C40C2FB26C3900B0AC11 /* RawFrameCommand.swift in Sources */,
+				A78F130A1B57187EA3E2BD18 /* RawFrameCommand.swift in Sources */,
 				1815B3ACD92C98F9B650B09D /* RecordingCommand.swift in Sources */,
 				A7BBE9C186384A3632127535 /* StatusSubscribeCommand.swift in Sources */,
 				8145316D33D7FD70E916561A /* VersionQueryCommand.swift in Sources */,
@@ -603,11 +605,11 @@
 				82C8FF2D45FF8943E4B56C5F /* CameraRowView.swift in Sources */,
 				0FA0D4A7DB2ADB3230FBB5AD /* CameraShortcuts.swift in Sources */,
 				27CCCBC1C8953BC76749828C /* ContentView.swift in Sources */,
+				8706D5083E5862825CAFE781 /* GPSStatusBadge.swift in Sources */,
 				E84DAE80B0207A4188AC117E /* GlobalControlsView.swift in Sources */,
 				1C580A91DDB173AA436DA9BA /* OsmoMultiApp.swift in Sources */,
 				6881F981E6E4A493D32FAB12 /* SettingsView.swift in Sources */,
 				7A935FF533D0028D8B448FA2 /* SignalStrengthView.swift in Sources */,
-				FF44C4082FB262C000B0AC11 /* GPSStatusBadge.swift in Sources */,
 				FD7D35A738741DB080A6C091 /* WatchBridge.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -674,13 +676,12 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = "djibt-ios";
 				BUNDLE_DISPLAY_NAME = "Cam Control";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = 94GM3Q222L;
 				INFOPLIST_FILE = OsmoMulti/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = nl.pauldejong.djibt;
+				PRODUCT_BUNDLE_IDENTIFIER = net.prehiti.payton.CamControl;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -758,13 +759,12 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = "djibt-ios";
 				BUNDLE_DISPLAY_NAME = "Cam Control 🛠";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = 94GM3Q222L;
 				INFOPLIST_FILE = OsmoMulti/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = nl.pauldejong.djibt;
+				PRODUCT_BUNDLE_IDENTIFIER = net.prehiti.payton.CamControl;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -774,10 +774,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "djibt-watch";
-				DEVELOPMENT_TEAM = 94GM3Q222L;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = nl.pauldejong.djibt;
-				PRODUCT_BUNDLE_IDENTIFIER = nl.pauldejong.djibt.watchkitapp;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = net.prehiti.payton.CamControl;
+				PRODUCT_BUNDLE_IDENTIFIER = net.prehiti.payton.CamControl.watchkitapp;
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = 4;
@@ -788,7 +787,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -859,7 +857,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -923,10 +920,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "djibt-watch";
-				DEVELOPMENT_TEAM = 94GM3Q222L;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = nl.pauldejong.djibt;
-				PRODUCT_BUNDLE_IDENTIFIER = nl.pauldejong.djibt.watchkitapp;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = net.prehiti.payton.CamControl;
+				PRODUCT_BUNDLE_IDENTIFIER = net.prehiti.payton.CamControl.watchkitapp;
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = 4;
