@@ -63,6 +63,17 @@ Project generated from `project.yml` at root. Regenerate with: `xcodegen generat
 
 Schemes are defined in the top-level `schemes:` section of `project.yml`. Both OsmoMulti and OsmoWatch use Release config for Run (set via `run: config: Release`). The OsmoWatch scheme specifies `executable: OsmoWatch` to launch the watch app instead of the iOS app.
 
+## Signing & bundle identity (per-developer, never committed)
+
+Signing identity is **not** in `project.yml` — it lives in `Config/Signing.xcconfig`, which sets two values consumed by the build:
+
+- `DEVELOPMENT_TEAM` — the signing team.
+- `BUNDLE_ID_PREFIX` — every target's `PRODUCT_BUNDLE_IDENTIFIER` is `$(BUNDLE_ID_PREFIX).<Name>` in `project.yml`.
+
+`Config/Signing.xcconfig` holds the **owner defaults** (team `L485BLVU52`, prefix `net.prehiti.payton`) and ends with `#include? "Signing.local.xcconfig"` — an *optional* override. A contributor not on the owner's Apple team runs **`make signing-local`** (scaffolds `Config/Signing.local.xcconfig` from the `.example`), sets their own team + prefix, and rebuilds. That file is **gitignored**.
+
+**Why this exists:** because team/prefix are kept out of `project.yml`, the generated `project.pbxproj` contains the literal `$(BUNDLE_ID_PREFIX)` variable and only the owner-default team — so `make gen` produces a **byte-identical pbxproj for every developer** regardless of their local override (verified: identical even with a local `.local.xcconfig` present). A contributor's signing identity therefore *cannot* leak into a commit. (This replaced an earlier setup where a contributor's committed pbxproj carried their bundle IDs onto `main` and broke the owner's signed build.) Compile-only `make build-ci` needs no signing at all.
+
 ## Workflow
 
 ### Screenshots for UI feedback

@@ -58,26 +58,29 @@ OsmoWatch/           watchOS companion app
 
 ## Building
 
-The Xcode project is generated from `project.yml` using [xcodegen](https://github.com/yonaskolb/XcodeGen):
+The Xcode project is generated from `project.yml` using [xcodegen](https://github.com/yonaskolb/XcodeGen). A `Makefile` wraps the common commands — run `make help` to list them:
 
 ```bash
-# Generate the Xcode project
-xcodegen generate
-
-# Build the iOS app
-xcodebuild -project OsmoMulti.xcodeproj -target OsmoMulti \
-  -sdk iphoneos build
-
-# Build the watchOS app
-xcodebuild -project OsmoMulti.xcodeproj -target OsmoWatch \
-  -sdk watchos build
-
-# Run unit tests
-xcodebuild -project OsmoMulti.xcodeproj -target DJIOsmoKitTests \
-  -sdk iphoneos build
+make gen        # regenerate OsmoMulti.xcodeproj from project.yml
+make build-ci   # compile-only check, no signing (no Apple account needed)
+make build      # signed device build (app + embedded watch app)
+make deploy DEVICE=<id>   # build + install to a device (make devices lists IDs)
 ```
 
+> Build via the **scheme** (which `make build` does), not `xcodebuild -target OsmoMulti -sdk iphoneos`. The `-sdk iphoneos` form pushes the embedded watchOS target through the iOS SDK, which omits the `WKApplication` Info.plist key and makes on-device install fail with `InvalidWatchKitApp`. Building both the iOS and watchOS Simulator runtimes is required even for device builds (`make runtimes`).
+
 Or open `OsmoMulti.xcodeproj` in Xcode and build/run on a connected device. Deploy the watch app via the OsmoWatch scheme.
+
+### Signing setup (contributors)
+
+Signing identity is kept out of the committed project so it can't leak between developers. `Config/Signing.xcconfig` carries the project owner's defaults (team + bundle-ID prefix). If you're **not** on the owner's Apple Developer team, supply your own:
+
+```bash
+make signing-local   # creates Config/Signing.local.xcconfig from the template
+# then edit DEVELOPMENT_TEAM and BUNDLE_ID_PREFIX in that file, and rebuild
+```
+
+`Config/Signing.local.xcconfig` is gitignored — your team and bundle IDs never get committed. You only need this for **signed** builds; `make build-ci` (compile-only) needs no Apple account at all.
 
 ## DJI Osmo BLE Protocol
 

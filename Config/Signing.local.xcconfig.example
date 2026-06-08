@@ -1,0 +1,13 @@
+// Local signing override — TEMPLATE.
+//
+//   cp Config/Signing.local.xcconfig.example Config/Signing.local.xcconfig
+//   # then edit the two values below
+//   (or just run: make signing-local)
+//
+// Signing.local.xcconfig is gitignored, so your team/bundle id never get
+// committed. Use this if you are NOT on the project owner's Apple Developer
+// team: set your own team and a bundle prefix you can provision under it.
+// Compile-only checks (`make build-ci`) need none of this.
+
+DEVELOPMENT_TEAM = YOUR_TEAM_ID
+BUNDLE_ID_PREFIX = com.example.yourname

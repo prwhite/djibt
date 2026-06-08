@@ -10,10 +10,18 @@ configs:
   Debug: debug
   Release: release
 
+# Signing identity (DEVELOPMENT_TEAM) + BUNDLE_ID_PREFIX come from
+# Config/Signing.xcconfig (committed owner defaults; optionally overridden by a
+# gitignored Config/Signing.local.xcconfig). Keeping them OUT of project.yml's
+# settings means the generated project.pbxproj holds no developer-specific
+# identity — see Config/Signing.xcconfig for the rationale.
+configFiles:
+  Debug: Config/Signing.xcconfig
+  Release: Config/Signing.xcconfig
+
 settings:
   base:
     SWIFT_VERSION: "5.9"
-    DEVELOPMENT_TEAM: L485BLVU52
     CODE_SIGN_STYLE: Automatic
     MARKETING_VERSION: "0.9.2"
     CURRENT_PROJECT_VERSION: 1
@@ -29,7 +37,7 @@ targets:
       - path: DJIOsmoKit
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: net.prehiti.payton.DJIOsmoKit
+        PRODUCT_BUNDLE_IDENTIFIER: $(BUNDLE_ID_PREFIX).DJIOsmoKit
         GENERATE_INFOPLIST_FILE: YES
         SKIP_INSTALL: YES
         ENABLE_MODULE_VERIFIER: YES
@@ -44,7 +52,7 @@ targets:
       - target: DJIOsmoKit
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: net.prehiti.payton.DJIOsmoKitTests
+        PRODUCT_BUNDLE_IDENTIFIER: $(BUNDLE_ID_PREFIX).DJIOsmoKitTests
         GENERATE_INFOPLIST_FILE: YES
 
   OsmoMulti:
@@ -76,7 +84,7 @@ targets:
       - target: OsmoWatch
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: net.prehiti.payton.CamControl
+        PRODUCT_BUNDLE_IDENTIFIER: $(BUNDLE_ID_PREFIX).CamControl
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: djibt-ios
         BUNDLE_DISPLAY_NAME: "Cam Control"
@@ -93,9 +101,9 @@ targets:
         buildPhase: resources
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: net.prehiti.payton.CamControl.watchkitapp
+        PRODUCT_BUNDLE_IDENTIFIER: $(BUNDLE_ID_PREFIX).CamControl.watchkitapp
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_WKCompanionAppBundleIdentifier: net.prehiti.payton.CamControl
+        INFOPLIST_KEY_WKCompanionAppBundleIdentifier: $(BUNDLE_ID_PREFIX).CamControl
         ASSETCATALOG_COMPILER_APPICON_NAME: djibt-watch
 
 schemes:

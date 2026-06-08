@@ -146,6 +146,7 @@
 		6916C08A1CE408C53DBDED99 /* ConnectionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionState.swift; sourceTree = "<group>"; };
 		69A871470DA3A519D7F9EC81 /* WatchBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
 		6DC1B54B3EBAEAD34B427C49 /* VersionQueryCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionQueryCommand.swift; sourceTree = "<group>"; };
+		7232CFC18FC2C9A32DCC4141 /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
 		73574EDDD56A08059E6848F2 /* RecordingCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingCommand.swift; sourceTree = "<group>"; };
 		77BA1CD115E78338BCBFACC5 /* WatchControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchControlView.swift; sourceTree = "<group>"; };
 		7E9838660BDF128E730E1C78 /* CameraListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraListViewModel.swift; sourceTree = "<group>"; };
@@ -206,6 +207,14 @@
 				B46F57D7E37D52C9010DABB4 /* Watch */,
 			);
 			path = OsmoMulti;
+			sourceTree = "<group>";
+		};
+		101EBBD1B772E6C5C31222EC /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				7232CFC18FC2C9A32DCC4141 /* Signing.xcconfig */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 		31007B37A5840720AD747925 /* DJIOsmoKitTests */ = {
@@ -334,6 +343,7 @@
 		B346E93BCEA03A830DC96D18 = {
 			isa = PBXGroup;
 			children = (
+				101EBBD1B772E6C5C31222EC /* Config */,
 				59400AA57335E77743838D9B /* content */,
 				EC24EDDD10F2B634888CB27F /* DJIOsmoKit */,
 				31007B37A5840720AD747925 /* DJIOsmoKitTests */,
@@ -664,7 +674,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = net.prehiti.payton.DJIOsmoKitTests;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX).DJIOsmoKitTests";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -681,7 +691,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = net.prehiti.payton.CamControl;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX).CamControl";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -704,7 +714,7 @@
 					"@executable_path/Frameworks",
 				);
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
-				PRODUCT_BUNDLE_IDENTIFIER = net.prehiti.payton.DJIOsmoKit;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX).DJIOsmoKit";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -722,7 +732,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = net.prehiti.payton.DJIOsmoKitTests;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX).DJIOsmoKitTests";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -745,7 +755,7 @@
 					"@executable_path/Frameworks",
 				);
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
-				PRODUCT_BUNDLE_IDENTIFIER = net.prehiti.payton.DJIOsmoKit;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX).DJIOsmoKit";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -764,7 +774,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = net.prehiti.payton.CamControl;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX).CamControl";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -775,8 +785,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "djibt-watch";
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = net.prehiti.payton.CamControl;
-				PRODUCT_BUNDLE_IDENTIFIER = net.prehiti.payton.CamControl.watchkitapp;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "$(BUNDLE_ID_PREFIX).CamControl";
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX).CamControl.watchkitapp";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = 4;
@@ -785,6 +795,7 @@
 		};
 		82F661A8980817D297099F04 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7232CFC18FC2C9A32DCC4141 /* Signing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -821,7 +832,6 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = L485BLVU52;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -855,6 +865,7 @@
 		};
 		A915A99B8E1721285D9FD8C4 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7232CFC18FC2C9A32DCC4141 /* Signing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -891,7 +902,6 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = L485BLVU52;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -921,8 +931,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "djibt-watch";
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = net.prehiti.payton.CamControl;
-				PRODUCT_BUNDLE_IDENTIFIER = net.prehiti.payton.CamControl.watchkitapp;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "$(BUNDLE_ID_PREFIX).CamControl";
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX).CamControl.watchkitapp";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = 4;

@@ -1,0 +1,18 @@
+// Signing & bundle identity — committed DEFAULTS (project owner).
+//
+// These resolve for anyone with NO local override: the owner's builds,
+// Xcode Cloud, and compile-only `make build-ci`. project.yml references
+// $(BUNDLE_ID_PREFIX) and pulls DEVELOPMENT_TEAM from here, so the generated
+// project.pbxproj contains NO developer-specific identity — it is identical
+// no matter who runs `make gen`. That is what stops a contributor's team /
+// bundle id from ever landing in a commit.
+//
+// Contributors NOT on the owner's Apple Developer team: create
+// Config/Signing.local.xcconfig (gitignored) to override the two values
+// below. See Signing.local.xcconfig.example, or run `make signing-local`.
+// The optional include is last, so its values win.
+
+DEVELOPMENT_TEAM = L485BLVU52
+BUNDLE_ID_PREFIX = net.prehiti.payton
+
+#include? "Signing.local.xcconfig"
