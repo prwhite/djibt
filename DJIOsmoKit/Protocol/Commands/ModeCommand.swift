@@ -8,16 +8,14 @@ enum ModeCommand {
     static let cmdSet: UInt8 = 0x1D
     static let cmdID: UInt8  = 0x04
 
-    static func build(mode: CameraMode, deviceID: UInt32 = 0x01, seq: UInt16) -> Data {
-        // Payload: device_id (uint32_t LE) + mode (uint8_t) + reserved (4 bytes) = 9 bytes
-        var payload = Data(count: 9)
-        payload[0] = UInt8(deviceID & 0xFF)
-        payload[1] = UInt8((deviceID >> 8) & 0xFF)
-        payload[2] = UInt8((deviceID >> 16) & 0xFF)
-        payload[3] = UInt8((deviceID >> 24) & 0xFF)
-        payload[4] = mode.rawValue
+    static func build(mode: CameraMode, seq: UInt16) -> Data {
+        // DJI's demo sends 1D04 as response-or-not and uses this controller/device marker.
+        var payload = Data()
+        payload.appendLE(UInt32(0xFF330000))
+        payload.append(mode.rawValue)
+        payload.append(contentsOf: [0x01, 0x47, 0x39, 0x36])
         return FrameBuilder.build(OutgoingFrame(
-            cmdType: 0x02,
+            cmdType: 0x01,
             seq: seq,
             cmdSet: cmdSet,
             cmdID: cmdID,

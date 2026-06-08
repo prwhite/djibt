@@ -99,4 +99,89 @@ final class FrameTests: XCTestCase {
             }
         }
     }
+
+    func testQuickSwitchUsesDJIKeyCode() throws {
+        let built = KeyReportCommand.quickSwitch(seq: 12)
+        let parsed = try XCTUnwrap(FrameParser.parse(built))
+        XCTAssertEqual(parsed.cmdSet, KeyReportCommand.cmdSet)
+        XCTAssertEqual(parsed.cmdID, KeyReportCommand.cmdID)
+        XCTAssertEqual(parsed.payload.first, 0x02)
+    }
+
+    func testModeSwitchCommandMatchesDJIProtocolShape() throws {
+        let built = ModeCommand.build(mode: .lowLight, seq: 0x1234)
+        let parsed = try XCTUnwrap(FrameParser.parse(built))
+
+        XCTAssertEqual(parsed.cmdType, 0x01)
+        XCTAssertEqual(parsed.cmdSet, ModeCommand.cmdSet)
+        XCTAssertEqual(parsed.cmdID, ModeCommand.cmdID)
+        XCTAssertEqual(parsed.payload, Data([0x00, 0x00, 0x33, 0xFF, 0x28, 0x01, 0x47, 0x39, 0x36]))
+    }
+
+    func testSuperNightIsSwitchable() {
+        XCTAssertTrue(CameraMode.switchable.contains(.lowLight))
+        XCTAssertEqual(CameraMode.lowLight.displayName, "SuperNight")
+        XCTAssertEqual(CameraMode.lowLight.intent, .superNight)
+        XCTAssertEqual(CameraMode.nativeMode(for: .superNight, isPano: false, currentMode: .video), .lowLight)
+        XCTAssertEqual(CameraMode.nativeMode(for: .superNight, isPano: true, currentMode: .panoVideo), .panoSupernight)
+        XCTAssertEqual(CameraMode.nativeMode(for: .superNight, isPano: true, currentMode: .video), .singleSupernight)
+    }
+
+    func testSubjectTrackingIsSwitchable() {
+        XCTAssertTrue(CameraMode.switchable.contains(.subjectFollow))
+        XCTAssertEqual(CameraMode.subjectFollow.displayName, "Subject Tracking")
+        XCTAssertTrue(CameraMode.subjectFollow.supportsRecording)
+        XCTAssertEqual(CameraMode.subjectFollow.intent, .subjectTracking)
+        XCTAssertEqual(CameraMode.nativeMode(for: .subjectTracking, isPano: false, currentMode: .video), .subjectFollow)
+        XCTAssertFalse(CameraMode.supportsIntent(.subjectTracking, isPano: true))
+    }
+
+    func testSwitchableModeOrderMatchesModeIntentOrder() {
+        XCTAssertEqual(CameraMode.switchable.compactMap(\.intent), ModeIntent.allCases)
+    }
+
+    func testSwitchableModesHideUnsupportedModesButKeepCurrentMode() {
+        let filtered = CameraMode.switchableModes(
+            isPano: false,
+            currentMode: .video,
+            excluding: [.hyperlapse]
+        )
+        XCTAssertFalse(filtered.contains(.hyperlapse))
+        XCTAssertTrue(filtered.contains(.video))
+
+        let currentModeStillVisible = CameraMode.switchableModes(
+            isPano: false,
+            currentMode: .hyperlapse,
+            excluding: [.hyperlapse]
+        )
+        XCTAssertTrue(currentModeStillVisible.contains(.hyperlapse))
+    }
+
+    func testModeDetailsPushParsesNameAndParameters() throws {
+        var payload = Data(count: 46)
+        let modeName = Array("Panoramic Video".utf8)
+        let modeParameters = Array("8K 30fps".utf8)
+
+        payload[0] = 0x01
+        payload[1] = UInt8(modeName.count)
+        payload.replaceSubrange(2..<2 + modeName.count, with: modeName)
+        payload[23] = 0x02
+        payload[24] = UInt8(modeParameters.count)
+        payload.replaceSubrange(25..<25 + modeParameters.count, with: modeParameters)
+
+        let details = try XCTUnwrap(ModeDetailsPushCommand.parse(from: payload))
+        XCTAssertEqual(details.modeName, "Panoramic Video")
+        XCTAssertEqual(details.modeParameters, "8K 30fps")
+    }
+
+    func testRawFrameCommandAcceptsFormattedHex() throws {
+        let frame = FrameBuilder.build(OutgoingFrame(cmdType: 0x00, seq: 3, cmdSet: 0x00, cmdID: 0x17))
+        let formatted = frame.map { String(format: "0x%02X", $0) }.joined(separator: ", ")
+        let prepared = try RawFrameCommand.prepare("[\(formatted)]")
+
+        XCTAssertEqual(prepared.data, frame)
+        XCTAssertEqual(prepared.responseMode, 0x00)
+        XCTAssertEqual(prepared.parsedFrame.cmdSet, 0x00)
+        XCTAssertEqual(prepared.parsedFrame.cmdID, 0x17)
+    }
 }

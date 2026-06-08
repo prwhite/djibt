@@ -8,15 +8,15 @@ Implements the [DJI Osmo Bluetooth protocol](https://github.com/dji-sdk/Osmo-GPS
 
 - **Multi-camera management** — connect, monitor, and control up to 10+ cameras at once
 - **Global controls** — start/stop recording, capture photos, switch modes, and sleep all cameras simultaneously
-- **Live status** — real-time battery, resolution, frame rate, stabilization mode, storage remaining, and recording state for every connected camera
+- **Live status** — real-time battery, resolution, frame rate, stabilization mode, storage/time remaining, GPS push state, and recording state for every connected camera
 - **Recording timer** — per-camera elapsed recording time displayed in the camera list
-- **GPS geotagging** — pushes iPhone GPS coordinates to cameras at 1 Hz for accurate video location metadata
+- **GPS geotagging** — pushes iPhone GPS coordinates to cameras at 10 Hz for accurate video location metadata
 - **Apple Watch companion** — status, mode switching, and shutter control from your wrist via WatchConnectivity
 - **Siri Shortcuts** — "Start recording with Cam Control", "Stop recording", and "Sleep cameras" via AppIntents
 - **Haptic feedback** — tactile response on shutter/record/stop actions and camera connection state changes
 - **Connection resilience** — automatic reconnection with configurable watchdog timeout and retry limits
-- **Camera diagnostics** — per-camera detail view with connection state, RSSI signal strength, firmware version, product ID, and force-reconnect
-- **Osmo 360 support** — panoramic video/photo modes with automatic mode intent mapping
+- **Camera diagnostics** — per-camera detail view with connection state, RSSI signal strength, firmware version, product ID, raw frame sender, and force-reconnect
+- **Expanded mode support** — Video, Subject Tracking, Photo, Slow Motion, SuperNight, Timelapse, Hyperlapse, and Osmo 360 panoramic/single-lens mode mapping
 
 ## Requirements
 
@@ -100,18 +100,22 @@ This app implements the DJI R SDK Bluetooth protocol as documented in the [Osmo 
 | Version Query | `0x00` | `0x00` | Firmware + product ID |
 | Key Report | `0x00` | `0x11` | Shutter / button press |
 | GPS Push | `0x00` | `0x17` | Location data for geotagging |
-| Mode Switch | `0x1D` | `0x00` | Change camera mode |
-| Power Mode | `0x1D` | `0x01` | Sleep camera |
+| Power Mode | `0x00` | `0x1A` | Sleep camera |
+| Camera Status Push | `0x1D` | `0x02` | Parse live mode, recording, resolution, storage, battery, and power state |
 | Recording | `0x1D` | `0x03` | Start/stop recording |
+| Mode Switch | `0x1D` | `0x04` | Change camera mode |
 | Status Subscribe | `0x1D` | `0x05` | Enable 1 Hz status push |
+| Mode Details Push | `0x1D` | `0x06` | Parse newer display-ready mode name and parameter text |
+| Raw Frame Sender | any | any | Diagnostic sender for complete `AA...CRC32` DJI frames |
 
 ### Connection Flow
 
 1. **Scan** — filter by DJI manufacturer data signature (`0xAA`, `0x08`, `0xFA`)
 2. **Connect** — GATT connection, discover service `0xFFF0`, subscribe to notify `0xFFF4`
 3. **Handshake** — 3-way exchange: controller request → camera response → camera command → controller ACK
-4. **Subscribe** — enable status push notifications (38-byte payload at 1 Hz)
-5. **Version Query** — request product name and SDK version (non-fatal if it fails)
+4. **Subscribe** — enable status push notifications
+5. **Parse status** — decode `1D02` live status (38-byte payload at 1 Hz) and optional `1D06` mode detail text
+6. **Version Query** — request product name and SDK version (non-fatal if it fails)
 
 ## Debugging
 
@@ -142,8 +146,12 @@ Edit Scheme → Run → Arguments → Add "--preview-mode"
 ## Known Limitations
 
 - **Wake from iOS is not possible.** The DJI protocol wakes cameras via a broadcast manufacturer-data BLE advertisement, which iOS does not support. Users must press a button on the camera to wake it from sleep.
+- **Resolution changes are not implemented.** The public DJI BLE demo reports current resolution/fps in status, but does not document a set-resolution or set-fps command.
 - **Video download is not supported.** DJI Osmo cameras transfer video over direct Wi-Fi, using an undocumented protocol. This feature is not implemented.
-- **Camera modes are one-way.** Mode switching sends a command to the camera, but the camera may reject it silently depending on its current state.
+- **Mode switching is limited to modes accepted by the camera.** The app learns unsupported modes when `1D02` does not confirm a switch and hides them for that session.
+- **Osmo 360 lens-group switching is not implemented.** The app maps mode intents within the camera's current panoramic or single-lens group; changing that group still needs to happen on-camera.
+- Osmo Camera internal clock is not synchronized from GPS push due to SDK limitation (see [Setting clock and Time Code dji-sdk/Osmo-GPS-Controller-Demo#13](https://github.com/dji-sdk/Osmo-GPS-Controller-Demo/issues/13)). 
+- Timestamps in MP4 metadata depend on camera RTC when using DJI Mimo dashboard, not on pushed GPS timestamps.
 
 ## Privacy Policy
 

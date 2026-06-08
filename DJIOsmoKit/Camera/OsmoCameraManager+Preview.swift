@@ -120,6 +120,8 @@ public extension OsmoCameraManager {
         cam6.isPanoCamera = true
         cam6.productName = "DJI-ACTION4"
         cam6.sdkVersion = "SDK-v1.1 DEBUG AC203-03.04.80.15"
+        cam6.modeName = "Panoramic Video"
+        cam6.modeParameters = "8K 30fps"
         cam6.status = CameraStatus(
             mode: .panoVideo,
             recordingStatus: .liveView,

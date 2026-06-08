@@ -59,11 +59,14 @@ struct CameraListView: View {
                         .foregroundStyle(viewModel.screenLockDisabled ? .yellow : .secondary)
                 }
             }
-            ToolbarItemGroup(placement: .bottomBar) {
-                GlobalControlsView(viewModel: viewModel, availableWidth: contentWidth)
-            }
         }
-        .toolbarBackground(.visible, for: .bottomBar)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            GlobalControlsView(viewModel: viewModel, availableWidth: contentWidth)
+                .padding(.top, 8)
+                .padding(.bottom, 8)
+                .frame(maxWidth: .infinity)
+                .background(.bar)
+        }
         .overlay(alignment: .bottom) {
             if let toast = viewModel.toastMessage {
                 Text(toast)
@@ -71,7 +74,7 @@ struct CameraListView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .background(.ultraThinMaterial, in: Capsule())
-                    .padding(.bottom, 80)
+                    .padding(.bottom, 96)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                     .animation(.easeInOut, value: viewModel.toastMessage)
             }

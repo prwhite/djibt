@@ -12,6 +12,8 @@ final class WatchViewModel: NSObject {
     var connectedCount: Int = 0
     var enabledCount: Int = 0
     var currentMode: String?
+    /// Raw `ModeIntent` values supplied by the iPhone so watch mode choices match the main app.
+    var availableModes: [String] = WatchMode.allCases.map(\.value)
     var isRecording: Bool = false
     var batteryPercent: Int?
     var isReachable: Bool = false
@@ -58,10 +60,30 @@ final class WatchViewModel: NSObject {
         connectedCount = context["connectedCount"] as? Int ?? 0
         enabledCount = context["enabledCount"] as? Int ?? 0
         currentMode = context["currentMode"] as? String
+        availableModes = context["availableModes"] as? [String] ?? WatchMode.allCases.map(\.value)
         isRecording = context["isRecording"] as? Bool ?? false
         batteryPercent = context["batteryPercent"] as? Int
-        log.info("applyContext: enabled=\(self.enabledCount) connected=\(self.connectedCount) mode=\(self.currentMode ?? "nil", privacy: .public) recording=\(self.isRecording)")
+        log.info("applyContext: enabled=\(self.enabledCount) connected=\(self.connectedCount) mode=\(self.currentMode ?? "nil", privacy: .public) modes=\(self.availableModes.count) recording=\(self.isRecording)")
     }
+}
+
+struct WatchMode: Identifiable, Equatable {
+    let value: String
+    let label: String
+    let symbol: String
+
+    var id: String { value }
+
+    /// Keep the same order and display names as `ModeIntent.allCases` in DJIOsmoKit.
+    static let allCases: [WatchMode] = [
+        WatchMode(value: "video", label: "Video", symbol: "video"),
+        WatchMode(value: "subjectTracking", label: "Subject Tracking", symbol: "person.fill.viewfinder"),
+        WatchMode(value: "photo", label: "Photo", symbol: "camera"),
+        WatchMode(value: "slowMotion", label: "Slow Motion", symbol: "slowmo"),
+        WatchMode(value: "timelapse", label: "Timelapse", symbol: "timelapse"),
+        WatchMode(value: "hyperlapse", label: "Hyperlapse", symbol: "figure.walk"),
+        WatchMode(value: "superNight", label: "SuperNight", symbol: "moon.stars")
+    ]
 }
 
 // MARK: - WCSessionDelegate

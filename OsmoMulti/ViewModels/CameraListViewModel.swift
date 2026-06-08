@@ -91,6 +91,24 @@ final class CameraListViewModel {
         manager.enabledConnectedCameras.first?.status.mode?.intent
     }
 
+    /// Global mode intents that all currently connected targets have not rejected this session.
+    var availableIntents: [ModeIntent] {
+        let targets = manager.enabledConnectedCameras
+        guard !targets.isEmpty else { return ModeIntent.allCases }
+
+        return ModeIntent.allCases.filter { intent in
+            targets.allSatisfy { camera in
+                guard CameraMode.supportsIntent(intent, isPano: camera.isPanoCamera) else {
+                    return false
+                }
+                let mode = CameraMode.nativeMode(for: intent,
+                                                 isPano: camera.isPanoCamera,
+                                                 currentMode: camera.status.mode)
+                return !camera.unsupportedModes.contains(mode)
+            }
+        }
+    }
+
     /// True if any connected camera is currently recording.
     var isAnyRecording: Bool {
         manager.enabledConnectedCameras.contains { $0.status.recordingStatus.isRecording }

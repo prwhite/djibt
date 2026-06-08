@@ -94,8 +94,14 @@ struct CameraRowView: View {
             if let fps = camera.status.frameRate?.displayName { segments.append(fps) }
             if camera.isPanoCamera {
                 segments.append("EIS N/A")
-            } else {
-                segments.append(camera.status.stabilizationMode?.displayName ?? "EIS unknown")
+            } else if let stabilization = camera.status.stabilizationMode?.displayName {
+                segments.append(stabilization)
+            } else if camera.status.rawStabilization != 0xFF {
+                segments.append("EIS unknown")
+            }
+
+            if segments.isEmpty, let modeParameters = camera.modeParameters, !modeParameters.isEmpty {
+                segments.append(modeParameters)
             }
         } else {
             if let ratio = camera.status.photoRatio?.displayName { segments.append(ratio) }
@@ -103,8 +109,14 @@ struct CameraRowView: View {
         }
         let mb = camera.status.remainingStorageMB
         if mb > 0 {
-            segments.append(mb >= 1024 ? String(format: "%.0f GB", Double(mb) / 1024.0) : "\(mb) MB")
+            if isVideoMode && camera.status.remainingRecordTimeSec > 0 {
+                segments.append(formatStorage(mb) + " / ~\(formatCompactDuration(Int(camera.status.remainingRecordTimeSec)))")
+            }
+            else {
+                segments.append(formatStorage(mb))
+            }
         }
+        
         return segments
     }
 
@@ -151,10 +163,23 @@ struct CameraRowView: View {
         return String(format: "%d:%02d", seconds / 60, seconds % 60)
     }
 
+    private func formatStorage(_ mb: UInt32) -> String {
+        mb >= 1024 ? String(format: "%.0f GB", Double(mb) / 1024.0) : "\(mb) MB"
+    }
+
+    private func formatCompactDuration(_ seconds: Int) -> String {
+        if seconds >= 3600 {
+            let hours = seconds / 3600
+            let minutes = (seconds % 3600) / 60
+            return minutes > 0 ? "\(hours)h \(minutes)m" : "\(hours)h"
+        }
+        return "\(max(1, seconds / 60))m"
+    }
+
     private var subtitleText: String {
         switch camera.connectionState {
         case .connected:
-            let mode = camera.status.mode?.displayName ?? "Unknown Mode"
+            let mode = camera.modeName ?? camera.status.mode?.displayName ?? "Unknown Mode"
             if let elapsed = elapsedSeconds, elapsed >= 2 {
                 return "\(mode) · \(elapsed)s ago"
             }

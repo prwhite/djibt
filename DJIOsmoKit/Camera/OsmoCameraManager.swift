@@ -371,8 +371,19 @@ public final class OsmoCameraManager: NSObject {
         let targets = enabledConnectedCameras
         OsmoLog.manager.info("switchModeAll: switching \(targets.count) camera(s) to intent=\(intent.displayName, privacy: .public)")
         // Resolve native modes on the main actor before dispatching to the task group.
-        let cameraModes: [(OsmoCamera, CameraMode)] = targets.map { camera in
+        var unsupportedCount = 0
+        let cameraModes: [(OsmoCamera, CameraMode)] = targets.compactMap { camera in
+            guard CameraMode.supportsIntent(intent, isPano: camera.isPanoCamera) else {
+                unsupportedCount += 1
+                OsmoLog.manager.info("switchModeAll: skipping unsupported intent=\(intent.displayName, privacy: .public) for \(camera.name, privacy: .public)")
+                return nil
+            }
             let nativeMode = CameraMode.nativeMode(for: intent, isPano: camera.isPanoCamera, currentMode: camera.status.mode)
+            guard !camera.unsupportedModes.contains(nativeMode) else {
+                unsupportedCount += 1
+                OsmoLog.manager.info("switchModeAll: skipping unsupported \(nativeMode.displayName, privacy: .public) for \(camera.name, privacy: .public)")
+                return nil
+            }
             return (camera, nativeMode)
         }
         return await withTaskGroup(of: Bool.self) { group in
@@ -386,7 +397,7 @@ public final class OsmoCameraManager: NSObject {
                     }
                 }
             }
-            var failCount = 0
+            var failCount = unsupportedCount
             for await success in group {
                 if !success { failCount += 1 }
             }
@@ -524,7 +535,7 @@ public final class OsmoCameraManager: NSObject {
     // MARK: - GPS Push
 
     /// Send GPS location data to all connected cameras (fire-and-forget).
-    /// Called by `OsmoLocationManager` at 1 Hz.
+    /// Called by `OsmoLocationManager` at 10 Hz.
     public func pushGPS(_ location: CLLocation) {
         for camera in enabledConnectedCameras {
             camera.sendGPSData(location)

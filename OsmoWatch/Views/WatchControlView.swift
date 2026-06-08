@@ -9,13 +9,11 @@ struct WatchControlView: View {
     /// to match the iPhone's current mode.
     @State private var isSyncingMode = false
 
-    private let modes: [(value: String, label: String, symbol: String)] = [
-        ("video", "Video", "video"),
-        ("photo", "Photo", "camera"),
-        ("slowMotion", "Slow Mo", "slowmo"),
-        ("timelapse", "Timelapse", "timelapse"),
-        ("hyperlapse", "Hyperlapse", "figure.walk"),
-    ]
+    private var modes: [WatchMode] {
+        let allowed = Set(viewModel.availableModes)
+        let filtered = WatchMode.allCases.filter { allowed.contains($0.value) }
+        return filtered.isEmpty ? WatchMode.allCases : filtered
+    }
 
     var body: some View {
         NavigationStack {
@@ -30,8 +28,7 @@ struct WatchControlView: View {
         }
         .onChange(of: viewModel.currentMode) { _, newMode in
             if let newMode, newMode != selectedMode {
-                let validModes = modes.map(\.value)
-                guard validModes.contains(newMode) else { return }
+                guard modes.contains(where: { $0.value == newMode }) else { return }
                 isSyncingMode = true
                 selectedMode = newMode
                 isSyncingMode = false
@@ -121,7 +118,7 @@ struct WatchControlView: View {
 
     private var modeSection: some View {
         Picker("Mode", selection: $selectedMode) {
-            ForEach(modes, id: \.value) { mode in
+            ForEach(modes) { mode in
                 Label(mode.label, systemImage: mode.symbol)
                     .tag(mode.value)
             }

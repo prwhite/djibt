@@ -59,7 +59,7 @@ struct GlobalControlsView: View {
 
     private var modePicker: some View {
         Menu {
-            ForEach(ModeIntent.allCases, id: \.self) { m in
+            ForEach(viewModel.availableIntents, id: \.self) { m in
                 Button {
                     viewModel.switchModeAll(m)
                 } label: {
@@ -74,14 +74,16 @@ struct GlobalControlsView: View {
                 Image(systemName: intent?.systemImage ?? "video")
                     .font(.title3)
                     .foregroundStyle(.primary)
-                Text(intent?.displayName ?? "Mode")
+                Text(intent?.compactButtonTitle ?? "Mode")
                     .font(.caption2)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .allowsTightening(true)
+                    .frame(maxWidth: .infinity)
                     .foregroundStyle(.secondary)
             }
         }
-        // Force Menu label refresh — Menu can cache stale content across
-        // @Observable updates in some SwiftUI versions.
-        .id(intent)
+        .animation(.snappy(duration: 0.15), value: intent)
     }
 
     // MARK: - Shutter Button
@@ -116,6 +118,19 @@ struct GlobalControlsView: View {
             } else {
                 viewModel.startAll()
             }
+        }
+    }
+}
+
+private extension ModeIntent {
+    /// Short labels for the fixed-width round mode button; menus still use full display names.
+    var compactButtonTitle: String {
+        switch self {
+        case .timelapse: return "Time"
+        case .hyperlapse: return "Hyper"
+        case .superNight: return "Night"
+        case .subjectTracking: return "Track"
+        default: return displayName
         }
     }
 }

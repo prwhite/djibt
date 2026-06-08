@@ -56,6 +56,7 @@ final class WatchBridge: NSObject {
         var context: [String: Any] = [
             "connectedCount": connectedCameras.count,
             "enabledCount": enabledCount,
+            "availableModes": availableIntents(for: connectedCameras).map(\.rawValue),
             "isRecording": connectedCameras.contains { $0.status.recordingStatus.isRecording },
             "timestamp": Date().timeIntervalSince1970
         ]
@@ -71,6 +72,7 @@ final class WatchBridge: NSObject {
         let changed = lastPushedContext.isEmpty
             || (lastPushedContext["connectedCount"] as? Int) != (context["connectedCount"] as? Int)
             || (lastPushedContext["enabledCount"] as? Int) != (context["enabledCount"] as? Int)
+            || (lastPushedContext["availableModes"] as? [String]) != (context["availableModes"] as? [String])
             || (lastPushedContext["currentMode"] as? String) != (context["currentMode"] as? String)
             || (lastPushedContext["isRecording"] as? Bool) != (context["isRecording"] as? Bool)
             || (lastPushedContext["batteryPercent"] as? Int) != (context["batteryPercent"] as? Int)
@@ -83,6 +85,23 @@ final class WatchBridge: NSObject {
             log.info("pushState: pushed — enabled=\(enabledCount) connected=\(connectedCameras.count) paired=\(self.session.isPaired) reachable=\(self.session.isReachable)")
         } catch {
             log.error("pushState: failed — \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// Keep the watch mode picker aligned with the iPhone global controls.
+    private func availableIntents(for targets: [OsmoCamera]) -> [ModeIntent] {
+        guard !targets.isEmpty else { return ModeIntent.allCases }
+
+        return ModeIntent.allCases.filter { intent in
+            targets.allSatisfy { camera in
+                guard CameraMode.supportsIntent(intent, isPano: camera.isPanoCamera) else {
+                    return false
+                }
+                let mode = CameraMode.nativeMode(for: intent,
+                                                 isPano: camera.isPanoCamera,
+                                                 currentMode: camera.status.mode)
+                return !camera.unsupportedModes.contains(mode)
+            }
         }
     }
 
