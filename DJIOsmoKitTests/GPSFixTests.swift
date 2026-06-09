@@ -38,4 +38,21 @@ final class GPSFixTests: XCTestCase {
         )
         XCTAssertFalse(loc.hasValidGPSFix)
     }
+
+    // MARK: - GPSFixState
+
+    func testGPSFixStateRawValuesMatchWatchRelayStrings() {
+        // These string raw values are the wire format relayed to the watch
+        // ("off" / "noFix" / "good"); changing them breaks the watch indicator.
+        XCTAssertEqual(GPSFixState.off.rawValue, "off")
+        XCTAssertEqual(GPSFixState.noFix.rawValue, "noFix")
+        XCTAssertEqual(GPSFixState.good.rawValue, "good")
+    }
+
+    func testGPSFixStateRoundTripsThroughRawValue() {
+        XCTAssertEqual(GPSFixState(rawValue: "off"), .off)
+        XCTAssertEqual(GPSFixState(rawValue: "noFix"), .noFix)
+        XCTAssertEqual(GPSFixState(rawValue: "good"), .good)
+        XCTAssertNil(GPSFixState(rawValue: "bogus"))
+    }
 }

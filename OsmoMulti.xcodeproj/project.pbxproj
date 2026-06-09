@@ -32,6 +32,7 @@
 		5E1B6CEB17BBF051CA0F5D62 /* OsmoCamera.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2801D329D80770AF5B55B9FE /* OsmoCamera.swift */; };
 		6881F981E6E4A493D32FAB12 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE44255BF0B5BFC256A3CE67 /* SettingsView.swift */; };
 		68A7E0BA84FA5A23A43D0492 /* ConnectionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6916C08A1CE408C53DBDED99 /* ConnectionState.swift */; };
+		6AEB2ADA5443DA78118ADB7F /* GPSFixState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97608A344AA044814077E8B0 /* GPSFixState.swift */; };
 		7A935FF533D0028D8B448FA2 /* SignalStrengthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9853A33FE02BF25B8BBEA860 /* SignalStrengthView.swift */; };
 		806E9765F2035B4A52DB44B8 /* CameraIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2430493209B0B966F9D0D5F0 /* CameraIntents.swift */; };
 		80D238E6F1ED98E9687704F5 /* WatchControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77BA1CD115E78338BCBFACC5 /* WatchControlView.swift */; };
@@ -157,6 +158,7 @@
 		882B71AD36860EA8FED4A351 /* RawFrameCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawFrameCommand.swift; sourceTree = "<group>"; };
 		8D82B5852DB15814F0429594 /* GPSPushCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPSPushCommand.swift; sourceTree = "<group>"; };
 		962E9FA7F63BC494BA990B32 /* CLLocation+Fix.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CLLocation+Fix.swift"; sourceTree = "<group>"; };
+		97608A344AA044814077E8B0 /* GPSFixState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPSFixState.swift; sourceTree = "<group>"; };
 		97A0C3C5D3CC6AC613EBFCAA /* ConnectionCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionCommand.swift; sourceTree = "<group>"; };
 		9853A33FE02BF25B8BBEA860 /* SignalStrengthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignalStrengthView.swift; sourceTree = "<group>"; };
 		AE44255BF0B5BFC256A3CE67 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -267,6 +269,7 @@
 			isa = PBXGroup;
 			children = (
 				962E9FA7F63BC494BA990B32 /* CLLocation+Fix.swift */,
+				97608A344AA044814077E8B0 /* GPSFixState.swift */,
 				EDCA5C70829E8EA39D4F8928 /* OsmoLocationManager.swift */,
 			);
 			path = Location;
@@ -591,6 +594,7 @@
 				1BE92A02CD2AE74D3DEA2585 /* FirstSeenLogger.swift in Sources */,
 				F9628096EEA3E7FF751D227F /* FrameBuilder.swift in Sources */,
 				D9CC6824B4F1BC37F152ED4E /* FrameParser.swift in Sources */,
+				6AEB2ADA5443DA78118ADB7F /* GPSFixState.swift in Sources */,
 				CACC83F5E3367323F06DD518 /* GPSPushCommand.swift in Sources */,
 				0F221FC7A529600A86D3B42C /* KeyReportCommand.swift in Sources */,
 				0B7AF48C07F6BDE05D611936 /* Logging.swift in Sources */,
