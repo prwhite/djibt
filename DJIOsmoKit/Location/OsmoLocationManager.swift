@@ -138,6 +138,7 @@ public final class OsmoLocationManager: NSObject {
 
     // MARK: - Push
 
+    #if DEBUG
     /// Outcome of the pre-send guards, surfaced for tests.
     enum PushPrecheck: Equatable {
         case noManager, noLocation, invalidFix, noCameras, ready
@@ -153,6 +154,7 @@ public final class OsmoLocationManager: NSObject {
         }
         return .ready
     }
+    #endif
 
     private func pushGPSToAllCameras() {
         guard let manager = cameraManager else {
