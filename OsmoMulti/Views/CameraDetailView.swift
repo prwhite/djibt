@@ -78,11 +78,6 @@ struct CameraDetailView: View {
         camera.connectionState == .connected || camera.connectionState == .sleeping
     }
 
-    private var validGPSAccuracy: Double? {
-        guard let accuracy = locationManager.lastLocation?.horizontalAccuracy, accuracy >= 0 else { return nil }
-        return accuracy
-    }
-
     private var modeDisplayName: String {
         camera.modeName ?? camera.status.mode?.displayName ?? "Unknown"
     }
@@ -139,13 +134,6 @@ struct CameraDetailView: View {
                             .foregroundStyle(.orange)
                         Text("Temperature Warning")
                     }
-                }
-                LabeledContent("GPS") {
-                    GPSStatusBadge(
-                        isPushing: locationManager.isActive && camera.connectionState == .connected,
-                        accuracy: validGPSAccuracy,
-                        lastPushAt: locationManager.lastPushAt
-                    )
                 }
             }
 
