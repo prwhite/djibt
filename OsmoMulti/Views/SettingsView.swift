@@ -26,6 +26,19 @@ struct SettingsView: View {
         ("Unlimited",   0),
     ]
 
+    /// "±N m, last update Xs ago" when we have a usable fix, otherwise "No fix".
+    /// `now` comes from the enclosing TimelineView so the age advances each second.
+    private func fixReadout(at now: Date) -> String {
+        guard locationManager.fixState != .noFix else { return "No fix" }
+        guard let accuracy = locationManager.accuracy else { return "No fix" }
+        let meters = Int(accuracy.rounded())
+        guard let last = locationManager.lastPushAt else {
+            return "±\(meters) m"
+        }
+        let age = max(0, Int(now.timeIntervalSince(last)))
+        return "±\(meters) m, last update \(age)s ago"
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -73,10 +86,34 @@ struct SettingsView: View {
                             }
                         }
                     ))
+
+                    if gpsPushEnabled {
+                        Picker("Update Rate", selection: Binding(
+                            get: { locationManager.rateHz },
+                            set: { locationManager.rateHz = $0 }
+                        )) {
+                            Text("1 Hz").tag(1)
+                            Text("10 Hz").tag(10)
+                        }
+                        .pickerStyle(.segmented)
+
+                        // Ticks once a second while Settings is open so the
+                        // "Xs ago" counter advances even with no new GPS fix.
+                        TimelineView(.periodic(from: .now, by: 1.0)) { timeline in
+                            LabeledContent("Fix") {
+                                Text(fixReadout(at: timeline.date))
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
+                                    .monospacedDigit()
+                            }
+                        }
+                    }
                 } header: {
                     Text("Location")
                 } footer: {
-                    Text("Feeds iPhone GPS coordinates to connected cameras for video geotagging at 1 Hz.")
+                    Text(gpsPushEnabled
+                        ? "Feeds iPhone GPS coordinates to connected cameras for video geotagging. 10 Hz uses more battery and BLE bandwidth, especially with many cameras."
+                        : "Feeds iPhone GPS coordinates to connected cameras for video geotagging.")
                 }
 
                 Section {
