@@ -60,6 +60,7 @@ final class WatchBridge: NSObject {
             "enabledCount": enabledCount,
             "availableModes": availableIntents(for: connectedCameras).map(\.rawValue),
             "isRecording": connectedCameras.contains { $0.status.recordingStatus.isRecording },
+            "gpsFix": gpsFixString(),
             "timestamp": Date().timeIntervalSince1970
         ]
         // Only include optional values when non-nil — WCSession rejects NSNull/nil.
@@ -78,6 +79,7 @@ final class WatchBridge: NSObject {
             || (lastPushedContext["currentMode"] as? String) != (context["currentMode"] as? String)
             || (lastPushedContext["isRecording"] as? Bool) != (context["isRecording"] as? Bool)
             || (lastPushedContext["batteryPercent"] as? Int) != (context["batteryPercent"] as? Int)
+            || (lastPushedContext["gpsFix"] as? String) != (context["gpsFix"] as? String)
 
         guard changed else { return }
 
@@ -87,6 +89,16 @@ final class WatchBridge: NSObject {
             log.info("pushState: pushed — enabled=\(enabledCount) connected=\(connectedCameras.count) paired=\(self.session.isPaired) reachable=\(self.session.isReachable)")
         } catch {
             log.error("pushState: failed — \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// Wire-format string for the watch GPS indicator. OsmoWatch does not link
+    /// DJIOsmoKit, so the watch never sees `GPSFixState` — only these strings.
+    private func gpsFixString() -> String {
+        switch locationManager.fixState {
+        case .off:   return "off"
+        case .noFix: return "noFix"
+        case .good:  return "good"
         }
     }
 
