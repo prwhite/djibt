@@ -79,6 +79,19 @@ struct WatchControlView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
+            gpsIndicator
+        }
+    }
+
+    /// Tri-state GPS fix dot: hidden when "off", red for "noFix", green for "good".
+    /// Icon + color only — no text label (small-screen budget).
+    @ViewBuilder
+    private var gpsIndicator: some View {
+        if let color = gpsColor(for: viewModel.gpsFix) {
+            Image(systemName: "location.fill")
+                .font(.subheadline)
+                .foregroundStyle(color)
+                .accessibilityLabel(viewModel.gpsFix == "good" ? "GPS fix" : "No GPS fix")
         }
     }
 
@@ -147,6 +160,15 @@ struct WatchControlView: View {
         case 0...15: return .red
         case 16...30: return .orange
         default: return .green
+        }
+    }
+
+    /// nil => indicator hidden (GPS off / unknown). red => noFix, green => good.
+    private func gpsColor(for fix: String) -> Color? {
+        switch fix {
+        case "noFix": return .red
+        case "good":  return .green
+        default:      return nil   // "off" and any unexpected value: hidden
         }
     }
 }
