@@ -16,12 +16,14 @@ private let log = Logger(subsystem: "net.prehiti.payton.CamControl", category: "
 final class WatchBridge: NSObject {
 
     private let manager: OsmoCameraManager
+    private let locationManager: OsmoLocationManager
     private let session: WCSession
     private var pushTimer: Timer?
     private var lastPushedContext: [String: Any] = [:]
 
-    init(cameraManager: OsmoCameraManager) {
+    init(cameraManager: OsmoCameraManager, locationManager: OsmoLocationManager) {
         self.manager = cameraManager
+        self.locationManager = locationManager
         self.session = WCSession.default
         super.init()
         guard WCSession.isSupported() else {
