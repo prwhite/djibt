@@ -113,4 +113,38 @@ final class GPSFixTests: XCTestCase {
         XCTAssertEqual(mgr.rateHz, 1, "Out-of-range rate (0) must clamp to 1 Hz")
         UserDefaults.standard.removeObject(forKey: "gps_push_hz")
     }
+
+    // MARK: - pushGPSToAllCameras guard split
+
+    @MainActor
+    func testPushSkippedWhenNoLocation() {
+        let mgr = OsmoLocationManager(cameraManager: OsmoCameraManager.makePreview())
+        mgr._testSetActive(true, location: nil)
+        XCTAssertEqual(mgr._testPushPrecheck(), .noLocation)
+    }
+
+    @MainActor
+    func testPushSkippedWhenInvalidFix() {
+        let mgr = OsmoLocationManager(cameraManager: OsmoCameraManager.makePreview())
+        let invalid = CLLocation(
+            coordinate: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+            altitude: 0, horizontalAccuracy: -1, verticalAccuracy: -1, timestamp: Date()
+        )
+        mgr._testSetActive(true, location: invalid)
+        XCTAssertEqual(mgr._testPushPrecheck(), .invalidFix)
+    }
+
+    @MainActor
+    func testPushReadyWithValidFixAndConnectedCameras() {
+        let mgr = OsmoLocationManager(cameraManager: OsmoCameraManager.makePreview())
+        let valid = CLLocation(
+            coordinate: CLLocationCoordinate2D(latitude: 37, longitude: -122),
+            altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5, timestamp: Date()
+        )
+        mgr._testSetActive(true, location: valid)
+        // makePreview() seeds 4 enabled+connected cameras, so a valid fix
+        // passes all guards → .ready. (This proves the location AND fix guards
+        // both pass; the .noLocation / .invalidFix tests above prove they fire.)
+        XCTAssertEqual(mgr._testPushPrecheck(), .ready)
+    }
 }

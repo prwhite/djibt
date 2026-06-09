@@ -138,13 +138,33 @@ public final class OsmoLocationManager: NSObject {
 
     // MARK: - Push
 
+    /// Outcome of the pre-send guards, surfaced for tests.
+    enum PushPrecheck: Equatable {
+        case noManager, noLocation, invalidFix, noCameras, ready
+    }
+
+    /// Evaluate the pre-send guards without performing the send.
+    func _testPushPrecheck() -> PushPrecheck {
+        guard cameraManager != nil else { return .noManager }
+        guard let location = lastLocation else { return .noLocation }
+        guard location.hasValidGPSFix else { return .invalidFix }
+        guard let manager = cameraManager, manager.enabledConnectedCameras.count > 0 else {
+            return .noCameras
+        }
+        return .ready
+    }
+
     private func pushGPSToAllCameras() {
         guard let manager = cameraManager else {
             OsmoLog.location.debug("GPS push skipped: no camera manager")
             return
         }
-        guard let location = lastLocation, location.horizontalAccuracy >= 0 else {
+        guard let location = lastLocation else {
             OsmoLog.location.debug("GPS push skipped: no location yet")
+            return
+        }
+        guard location.hasValidGPSFix else {
+            OsmoLog.location.debug("GPS push skipped: invalid fix (no satellites / indoors)")
             return
         }
         let targets = manager.enabledConnectedCameras.count
