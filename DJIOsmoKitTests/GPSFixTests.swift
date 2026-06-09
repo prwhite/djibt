@@ -105,4 +105,12 @@ final class GPSFixTests: XCTestCase {
         XCTAssertEqual(mgr2.rateHz, 10)
         UserDefaults.standard.removeObject(forKey: "gps_push_hz")
     }
+
+    @MainActor
+    func testRateHzClampsOutOfRangeToOne() {
+        let mgr = OsmoLocationManager(cameraManager: OsmoCameraManager.makePreview())
+        mgr.rateHz = 0
+        XCTAssertEqual(mgr.rateHz, 1, "Out-of-range rate (0) must clamp to 1 Hz")
+        UserDefaults.standard.removeObject(forKey: "gps_push_hz")
+    }
 }

@@ -3,7 +3,8 @@ import Foundation
 import Observation
 import OSLog
 
-/// Manages Core Location updates and pushes GPS data to all connected cameras at 10 Hz.
+/// Manages Core Location updates and pushes GPS data to all connected cameras
+/// at the configured rate (`rateHz`).
 ///
 /// `OsmoLocationManager` is `@Observable` so SwiftUI views can react to
 /// `isActive` and `lastLocation` changes. It is `@MainActor` to match
@@ -12,7 +13,7 @@ import OSLog
 /// Usage:
 /// ```swift
 /// let locationManager = OsmoLocationManager(cameraManager: .shared)
-/// locationManager.start()   // begins CL updates + 10 Hz GPS push
+/// locationManager.start()   // begins CL updates + GPS push at the configured rate (`rateHz`)
 /// locationManager.stop()    // stops everything
 /// ```
 @Observable
@@ -35,6 +36,13 @@ public final class OsmoLocationManager: NSObject {
     /// While active, changing this reschedules the push timer at 1/rateHz.
     public var rateHz: Int = 1 {
         didSet {
+            // Only 1 and 10 Hz are valid (UI offers just these); clamp anything
+            // else so the timer interval 1.0/rateHz can never be invalid.
+            let valid = (rateHz == 1 || rateHz == 10) ? rateHz : 1
+            if valid != rateHz {
+                rateHz = valid   // re-enters didSet once; guard below stops a loop
+                return
+            }
             guard rateHz != oldValue else { return }
             UserDefaults.standard.set(rateHz, forKey: "gps_push_hz")
             if isActive { restartTimer() }
@@ -75,15 +83,18 @@ public final class OsmoLocationManager: NSObject {
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.distanceFilter = kCLDistanceFilterNone
         locationManager.activityType = .other
-        // Read persisted rate (next to gps_push_enabled, read in App.init).
-        // Default to 1 Hz if unset (UserDefaults.integer returns 0 for missing).
+        // Seed rateHz from the persisted value (UserDefaults.integer returns 0
+        // for a missing key, so fall back to 1 Hz). The didSet equality guard +
+        // isActive == false make this a safe no-op for persistence/timer during
+        // init: no bad write, no timer scheduled while inactive.
         let storedHz = UserDefaults.standard.integer(forKey: "gps_push_hz")
         rateHz = (storedHz == 1 || storedHz == 10) ? storedHz : 1
     }
 
     // MARK: - Start / Stop
 
-    /// Request location authorization, begin CL updates, and start the 10 Hz push timer.
+    /// Request location authorization, begin CL updates, and start the push
+    /// timer at the configured rate (`rateHz`).
     public func start() {
         guard !isActive else { return }
         locationManager.requestWhenInUseAuthorization()
