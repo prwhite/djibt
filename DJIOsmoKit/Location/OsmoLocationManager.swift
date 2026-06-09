@@ -71,6 +71,7 @@ public final class OsmoLocationManager: NSObject {
 
     private let locationManager = CLLocationManager()
     private var pushTimer: Timer?
+    private var lastAggregateAt = Date()
     private weak var cameraManager: OsmoCameraManager?
 
     // MARK: - Init
@@ -100,6 +101,7 @@ public final class OsmoLocationManager: NSObject {
         locationManager.requestWhenInUseAuthorization()
         locationManager.startUpdatingLocation()
         isActive = true
+        cameraManager?.enabledCameras.forEach { $0.resetGPSSendHealth() }
         restartTimer()
         OsmoLog.location.info("GPS push started")
     }
@@ -119,10 +121,15 @@ public final class OsmoLocationManager: NSObject {
     private func restartTimer() {
         pushTimer?.invalidate()
         let interval = 1.0 / Double(rateHz)
+        lastAggregateAt = Date()
         pushTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
             Task { @MainActor in
-                self?.pushGPSToAllCameras()
-                self?.aggregateGPSSecond()   // added in Task 1.8; harmless no-op until then
+                guard let self else { return }
+                self.pushGPSToAllCameras()
+                if Date().timeIntervalSince(self.lastAggregateAt) >= 1.0 {
+                    self.lastAggregateAt = Date()
+                    self.aggregateGPSSecond()
+                }
             }
         }
     }
@@ -179,8 +186,20 @@ public final class OsmoLocationManager: NSObject {
         lastPushAt = Date()
     }
 
-    /// 1 Hz aggregation tick — fleshed out in Task 1.8.
-    private func aggregateGPSSecond() { }
+    /// 1 Hz aggregation tick (owned here — single timer, no per-view timers).
+    /// While active, snapshot each enabled camera's open second into its
+    /// gpsSendHistory; a stall appends nil (gray) and the sparkline advances.
+    private func aggregateGPSSecond() {
+        guard isActive, let manager = cameraManager else { return }
+        for camera in manager.enabledCameras {
+            camera.snapshotGPSSecond()
+        }
+    }
+
+    #if DEBUG
+    /// Test-only: run one aggregation tick synchronously.
+    func _testAggregateOnce() { aggregateGPSSecond() }
+    #endif
 }
 
 // MARK: - CLLocationManagerDelegate

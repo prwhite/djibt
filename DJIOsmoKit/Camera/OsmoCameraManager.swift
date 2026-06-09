@@ -537,8 +537,11 @@ public final class OsmoCameraManager: NSObject {
     /// Send GPS location data to all connected cameras (fire-and-forget).
     /// Called by `OsmoLocationManager` at 10 Hz.
     public func pushGPS(_ location: CLLocation) {
+        // Encode the 48-byte payload ONCE per tick (shared Calendar decomposition);
+        // each camera wraps it with its own seq + CRCs (which cannot be shared).
+        let payload = GPSPushCommand.encodePayload(location: location)
         for camera in enabledConnectedCameras {
-            camera.sendGPSData(location)
+            camera.sendGPSData(payload: payload)
         }
     }
 

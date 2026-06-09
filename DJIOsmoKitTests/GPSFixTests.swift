@@ -232,4 +232,37 @@ final class GPSFixTests: XCTestCase {
         XCTAssertEqual(cam.gpsAttempted, 0,
             "Disconnected camera records no attempt (the 1 Hz tick appends nil instead)")
     }
+
+    // MARK: - 1 Hz aggregation tick
+
+    @MainActor
+    func testAggregateAppendsNilForCameraWithNoAttempts() {
+        let manager = OsmoCameraManager.makePreview()
+        let mgr = OsmoLocationManager(cameraManager: manager)
+        // Make at least one enabled camera visible to the aggregator.
+        let cam = manager.enabledCameras.first ?? OsmoCamera(name: "Fallback")
+        cam.resetGPSSendHealth()
+
+        mgr._testSetActive(true, location: CLLocation(
+            coordinate: CLLocationCoordinate2D(latitude: 37, longitude: -122),
+            altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5, timestamp: Date()
+        ))
+        mgr._testAggregateOnce()
+
+        // Every enabled camera with no attempts this second gets a nil bucket.
+        XCTAssertEqual(cam.gpsSendHistory.last ?? .some(0), Double?.none,
+            "No attempts → nil bucket (gray), advancing the sparkline")
+    }
+
+    @MainActor
+    func testAggregateDoesNothingWhenInactive() {
+        let manager = OsmoCameraManager.makePreview()
+        let mgr = OsmoLocationManager(cameraManager: manager)
+        let cam = manager.enabledCameras.first ?? OsmoCamera(name: "Fallback")
+        cam.resetGPSSendHealth()
+        // Not active.
+        mgr._testAggregateOnce()
+        XCTAssertTrue(cam.gpsSendHistory.isEmpty,
+            "Aggregation only runs while GPS is active")
+    }
 }
