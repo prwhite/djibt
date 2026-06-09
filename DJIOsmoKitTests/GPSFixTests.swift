@@ -147,4 +147,73 @@ final class GPSFixTests: XCTestCase {
         // both pass; the .noLocation / .invalidFix tests above prove they fire.)
         XCTAssertEqual(mgr._testPushPrecheck(), .ready)
     }
+
+    // MARK: - OsmoCamera GPS send-health
+
+    @MainActor
+    func testRecordGPSSendUpdatesCountersForSent() {
+        let cam = OsmoCamera(name: "Test")
+        cam.recordGPSSend(sent: true)
+        cam.recordGPSSend(sent: true)
+        XCTAssertEqual(cam.gpsAttempted, 2)
+        XCTAssertEqual(cam.gpsSkipped, 0)
+        XCTAssertEqual(cam.gpsSecondAttempts, 2)
+        XCTAssertEqual(cam.gpsSecondSent, 2)
+    }
+
+    @MainActor
+    func testRecordGPSSendUpdatesCountersForSkipped() {
+        let cam = OsmoCamera(name: "Test")
+        cam.recordGPSSend(sent: true)
+        cam.recordGPSSend(sent: false)
+        XCTAssertEqual(cam.gpsAttempted, 2)
+        XCTAssertEqual(cam.gpsSkipped, 1)
+        XCTAssertEqual(cam.gpsSecondAttempts, 2)
+        XCTAssertEqual(cam.gpsSecondSent, 1)
+    }
+
+    @MainActor
+    func testSnapshotGPSSecondAppendsFractionAndResetsSecond() {
+        let cam = OsmoCamera(name: "Test")
+        cam.recordGPSSend(sent: true)
+        cam.recordGPSSend(sent: true)
+        cam.recordGPSSend(sent: false)   // 2/3 sent
+        cam.snapshotGPSSecond()
+        XCTAssertEqual(cam.gpsSendHistory.last!!, 2.0 / 3.0, accuracy: 0.0001)
+        // Per-second counters reset; session totals untouched.
+        XCTAssertEqual(cam.gpsSecondAttempts, 0)
+        XCTAssertEqual(cam.gpsSecondSent, 0)
+        XCTAssertEqual(cam.gpsAttempted, 3)
+        XCTAssertEqual(cam.gpsSkipped, 1)
+    }
+
+    @MainActor
+    func testSnapshotGPSSecondAppendsNilWhenNoAttempts() {
+        let cam = OsmoCamera(name: "Test")
+        cam.snapshotGPSSecond()
+        XCTAssertEqual(cam.gpsSendHistory.count, 1)
+        XCTAssertNil(cam.gpsSendHistory.last!,
+            "No attempts that second must append nil (gray), not 0.0 (red)")
+    }
+
+    @MainActor
+    func testGPSSendHistoryCapsAt16() {
+        let cam = OsmoCamera(name: "Test")
+        for _ in 0..<20 { cam.snapshotGPSSecond() }   // all nil
+        XCTAssertEqual(cam.gpsSendHistory.count, 16)
+    }
+
+    @MainActor
+    func testResetGPSSendHealthClearsEverything() {
+        let cam = OsmoCamera(name: "Test")
+        cam.recordGPSSend(sent: true)
+        cam.recordGPSSend(sent: false)
+        cam.snapshotGPSSecond()
+        cam.resetGPSSendHealth()
+        XCTAssertEqual(cam.gpsAttempted, 0)
+        XCTAssertEqual(cam.gpsSkipped, 0)
+        XCTAssertEqual(cam.gpsSecondAttempts, 0)
+        XCTAssertEqual(cam.gpsSecondSent, 0)
+        XCTAssertTrue(cam.gpsSendHistory.isEmpty)
+    }
 }

@@ -80,6 +80,55 @@ public final class OsmoCamera: Identifiable {
     /// Recent RSSI samples for sparkline display (max 16, newest last).
     public internal(set) var rssiHistory: [Int] = []
 
+    // MARK: - GPS Send Health (per-camera)
+
+    /// Session total GPS frames attempted (reset on each GPS start()).
+    public internal(set) var gpsAttempted: Int = 0
+    /// Session total GPS frames skipped because the BLE link wasn't ready.
+    public internal(set) var gpsSkipped: Int = 0
+    /// Attempts in the current open 1-second bucket (snapshotted + reset by the tick).
+    public internal(set) var gpsSecondAttempts: Int = 0
+    /// Sends in the current open 1-second bucket.
+    public internal(set) var gpsSecondSent: Int = 0
+    /// Per-second sent fraction for the sparkline (max 16, newest last).
+    /// nil = no attempts that second (gray), 0.0 = all skipped (red),
+    /// 1.0 = all sent (green), 0.x = partial split bar.
+    public internal(set) var gpsSendHistory: [Double?] = []
+
+    /// Record one GPS send attempt. `sent` = the local CoreBluetooth stack
+    /// accepted the write (canSendWriteWithoutResponse was true).
+    func recordGPSSend(sent: Bool) {
+        gpsAttempted += 1
+        gpsSecondAttempts += 1
+        if sent {
+            gpsSecondSent += 1
+        } else {
+            gpsSkipped += 1
+        }
+    }
+
+    /// Snapshot the current second into `gpsSendHistory` and reset the bucket.
+    /// Called by the 1 Hz aggregation tick on OsmoLocationManager.
+    func snapshotGPSSecond() {
+        let fraction: Double? = gpsSecondAttempts > 0
+            ? Double(gpsSecondSent) / Double(gpsSecondAttempts)
+            : nil
+        gpsSendHistory.append(fraction)
+        if gpsSendHistory.count > 16 { gpsSendHistory.removeFirst() }
+        gpsSecondAttempts = 0
+        gpsSecondSent = 0
+    }
+
+    /// Reset all send-health state. Called on each GPS start() so the readout
+    /// reflects the current run, not lifetime.
+    func resetGPSSendHealth() {
+        gpsAttempted = 0
+        gpsSkipped = 0
+        gpsSecondAttempts = 0
+        gpsSecondSent = 0
+        gpsSendHistory.removeAll()
+    }
+
     // MARK: - BLE
 
     /// The CoreBluetooth peripheral. Nil when not yet discovered or after forgetting.
@@ -112,6 +161,7 @@ public final class OsmoCamera: Identifiable {
         modeConfirmationTask = nil
         rssi = nil
         rssiHistory.removeAll()
+        resetGPSSendHealth()
         modeLogger.reset()
     }
     /// Logs full hex dump once per unique raw mode byte — avoids flooding the log at 1 Hz.
