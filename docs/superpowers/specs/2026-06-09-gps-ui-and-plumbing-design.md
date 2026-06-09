@@ -89,6 +89,7 @@ One bar always = one second, whether `rateHz` is 1 or 10.
 - Each tick, while GPS is active, for every enabled camera: append `gpsSecondAttempts > 0 ? Double(gpsSecondSent)/Double(gpsSecondAttempts) : nil` to `gpsSendHistory` (cap ~16), then reset the per-second counters.
 - **Time-based:** the tick fires on wall-clock and always appends, so a stall appends `nil` (gray) and the sparkline advances rather than freezing — visibly showing the gap.
 - Buckets accrue only while GPS is active; GPS off ⇒ sparkline hidden entirely (rule A).
+- **Update mechanism — ONE timer, NO per-view timers.** The single 1 Hz tick (`OsmoLocationManager`) mutates each camera's `@Observable gpsSendHistory`; rows re-render automatically via observation, exactly like the RSSI `SignalStrengthView(history: camera.rssiHistory)` does today (which has no timer of its own). Views observe their *own* camera's array, so a row re-renders only when its camera's data changes — not on every tick for every camera. Do NOT give `GPSSendHealthView` a `TimelineView`/timer; that pattern is only for "Xs ago" text that must advance with no new data. This is the coalescing: N cameras, 1 model timer, 0 view timers.
 
 ## iOS UI
 
