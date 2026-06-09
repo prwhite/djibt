@@ -8,8 +8,6 @@ struct CameraDetailView: View {
     let camera: OsmoCamera
     let viewModel: CameraListViewModel
 
-    @Environment(OsmoLocationManager.self) private var locationManager
-
     @State private var rawFrameText = ""
     @State private var rawFrameResult: String?
     @State private var isSendingRawFrame = false
