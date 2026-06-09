@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		02DF8697D3FDCD19027485D5 /* GPSSendHealthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6E30F3ACE1C7F990378C2E8 /* GPSSendHealthView.swift */; };
 		05299D56957A330EC4DAF748 /* CLLocation+Fix.swift in Sources */ = {isa = PBXBuildFile; fileRef = 962E9FA7F63BC494BA990B32 /* CLLocation+Fix.swift */; };
 		08489E83436311DEBA811A49 /* djibt-watch.icon in Resources */ = {isa = PBXBuildFile; fileRef = 3645B389DAB08594CA9C4BE1 /* djibt-watch.icon */; };
 		0B7AF48C07F6BDE05D611936 /* Logging.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6D85868F51A7E9700410B94 /* Logging.swift */; };
@@ -165,6 +166,7 @@
 		BF5E9ED9B3C9E0CA998698BC /* OsmoBLEScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OsmoBLEScanner.swift; sourceTree = "<group>"; };
 		C613863961F2D76F2DF57E4F /* CRC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CRC.swift; sourceTree = "<group>"; };
 		C6D85868F51A7E9700410B94 /* Logging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logging.swift; sourceTree = "<group>"; };
+		D6E30F3ACE1C7F990378C2E8 /* GPSSendHealthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPSSendHealthView.swift; sourceTree = "<group>"; };
 		D7ABD97AE06CB76A157B15ED /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		D89BC62CAB62EB2AF2705EDC /* FrameBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameBuilder.swift; sourceTree = "<group>"; };
 		DA154D155C699D1747CC716A /* CameraListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraListView.swift; sourceTree = "<group>"; };
@@ -239,6 +241,7 @@
 				DA154D155C699D1747CC716A /* CameraListView.swift */,
 				05935ED1F892FD40924DF4D2 /* CameraRowView.swift */,
 				F459A47517A1E40A0207A7AC /* GlobalControlsView.swift */,
+				D6E30F3ACE1C7F990378C2E8 /* GPSSendHealthView.swift */,
 				AE44255BF0B5BFC256A3CE67 /* SettingsView.swift */,
 				9853A33FE02BF25B8BBEA860 /* SignalStrengthView.swift */,
 			);
@@ -623,6 +626,7 @@
 				82C8FF2D45FF8943E4B56C5F /* CameraRowView.swift in Sources */,
 				0FA0D4A7DB2ADB3230FBB5AD /* CameraShortcuts.swift in Sources */,
 				27CCCBC1C8953BC76749828C /* ContentView.swift in Sources */,
+				02DF8697D3FDCD19027485D5 /* GPSSendHealthView.swift in Sources */,
 				E84DAE80B0207A4188AC117E /* GlobalControlsView.swift in Sources */,
 				1C580A91DDB173AA436DA9BA /* OsmoMultiApp.swift in Sources */,
 				6881F981E6E4A493D32FAB12 /* SettingsView.swift in Sources */,
