@@ -55,4 +55,54 @@ final class GPSFixTests: XCTestCase {
         XCTAssertEqual(GPSFixState(rawValue: "good"), .good)
         XCTAssertNil(GPSFixState(rawValue: "bogus"))
     }
+
+    // MARK: - OsmoLocationManager fixState / accuracy
+
+    @MainActor
+    func testFixStateOffWhenInactive() {
+        let mgr = OsmoLocationManager(cameraManager: OsmoCameraManager.makePreview())
+        // Fresh manager: not active → off, regardless of location.
+        XCTAssertEqual(mgr.fixState, .off)
+        XCTAssertNil(mgr.accuracy)
+    }
+
+    @MainActor
+    func testFixStateGoodWithValidFixWhileActive() {
+        let mgr = OsmoLocationManager(cameraManager: OsmoCameraManager.makePreview())
+        let valid = CLLocation(
+            coordinate: CLLocationCoordinate2D(latitude: 37, longitude: -122),
+            altitude: 0, horizontalAccuracy: 4, verticalAccuracy: 4, timestamp: Date()
+        )
+        mgr._testSetActive(true, location: valid)
+        XCTAssertEqual(mgr.fixState, .good)
+        XCTAssertEqual(mgr.accuracy, 4)
+    }
+
+    @MainActor
+    func testFixStateNoFixWithInvalidFixWhileActive() {
+        let mgr = OsmoLocationManager(cameraManager: OsmoCameraManager.makePreview())
+        let invalid = CLLocation(
+            coordinate: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+            altitude: 0, horizontalAccuracy: -1, verticalAccuracy: -1, timestamp: Date()
+        )
+        mgr._testSetActive(true, location: invalid)
+        XCTAssertEqual(mgr.fixState, .noFix)
+        XCTAssertNil(mgr.accuracy)   // accuracy nil when fix invalid
+    }
+
+    @MainActor
+    func testRateHzDefaultsTo1AndPersists() {
+        UserDefaults.standard.removeObject(forKey: "gps_push_hz")
+        let mgr = OsmoLocationManager(cameraManager: OsmoCameraManager.makePreview())
+        XCTAssertEqual(mgr.rateHz, 1, "Default rate is 1 Hz when key unset")
+
+        mgr.rateHz = 10
+        XCTAssertEqual(UserDefaults.standard.integer(forKey: "gps_push_hz"), 10,
+                       "didSet must persist rateHz to gps_push_hz")
+
+        // A freshly-constructed manager reads the persisted value at init.
+        let mgr2 = OsmoLocationManager(cameraManager: OsmoCameraManager.makePreview())
+        XCTAssertEqual(mgr2.rateHz, 10)
+        UserDefaults.standard.removeObject(forKey: "gps_push_hz")
+    }
 }

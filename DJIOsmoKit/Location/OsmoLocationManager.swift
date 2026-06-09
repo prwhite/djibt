@@ -30,6 +30,30 @@ public final class OsmoLocationManager: NSObject {
     /// Time of the most recent GPS frame pushed to connected cameras.
     public private(set) var lastPushAt: Date?
 
+    /// GPS push frequency in Hz. UI constrains to {1, 10}. Owns persistence:
+    /// read from `UserDefaults` ("gps_push_hz") at init, written here on change.
+    /// While active, changing this reschedules the push timer at 1/rateHz.
+    public var rateHz: Int = 1 {
+        didSet {
+            guard rateHz != oldValue else { return }
+            UserDefaults.standard.set(rateHz, forKey: "gps_push_hz")
+            if isActive { restartTimer() }
+        }
+    }
+
+    /// Phone-global fix quality — the one place "off/noFix/good" is derived.
+    public var fixState: GPSFixState {
+        guard isActive else { return .off }
+        return (lastLocation?.hasValidGPSFix == true) ? .good : .noFix
+    }
+
+    /// Horizontal accuracy in metres for the Settings "±N m" readout,
+    /// or nil when there is no valid fix.
+    public var accuracy: Double? {
+        guard let l = lastLocation, l.hasValidGPSFix else { return nil }
+        return l.horizontalAccuracy
+    }
+
     /// Current Core Location authorization status.
     public var authorizationStatus: CLAuthorizationStatus {
         locationManager.authorizationStatus
@@ -51,6 +75,10 @@ public final class OsmoLocationManager: NSObject {
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.distanceFilter = kCLDistanceFilterNone
         locationManager.activityType = .other
+        // Read persisted rate (next to gps_push_enabled, read in App.init).
+        // Default to 1 Hz if unset (UserDefaults.integer returns 0 for missing).
+        let storedHz = UserDefaults.standard.integer(forKey: "gps_push_hz")
+        rateHz = (storedHz == 1 || storedHz == 10) ? storedHz : 1
     }
 
     // MARK: - Start / Stop
@@ -61,13 +89,7 @@ public final class OsmoLocationManager: NSObject {
         locationManager.requestWhenInUseAuthorization()
         locationManager.startUpdatingLocation()
         isActive = true
-
-        // 10 Hz push timer on the main run loop
-        pushTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.pushGPSToAllCameras()
-            }
-        }
+        restartTimer()
         OsmoLog.location.info("GPS push started")
     }
 
@@ -80,6 +102,28 @@ public final class OsmoLocationManager: NSObject {
         isActive = false
         OsmoLog.location.info("GPS push stopped")
     }
+
+    /// (Re)schedule the push timer at the current rate. Safe to call repeatedly.
+    /// Used by `start()` and by `rateHz.didSet` while active.
+    private func restartTimer() {
+        pushTimer?.invalidate()
+        let interval = 1.0 / Double(rateHz)
+        pushTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.pushGPSToAllCameras()
+                self?.aggregateGPSSecond()   // added in Task 1.8; harmless no-op until then
+            }
+        }
+    }
+
+    #if DEBUG
+    /// Test-only hook to drive `fixState`/`accuracy` derivation without a real
+    /// CLLocationManager. Not for production use.
+    func _testSetActive(_ active: Bool, location: CLLocation?) {
+        isActive = active
+        lastLocation = location
+    }
+    #endif
 
     // MARK: - Push
 
@@ -101,6 +145,9 @@ public final class OsmoLocationManager: NSObject {
         manager.pushGPS(location)
         lastPushAt = Date()
     }
+
+    /// 1 Hz aggregation tick — fleshed out in Task 1.8.
+    private func aggregateGPSSecond() { }
 }
 
 // MARK: - CLLocationManagerDelegate
