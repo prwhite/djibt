@@ -6,6 +6,8 @@ struct CameraRowView: View {
 
     let camera: OsmoCamera
 
+    @Environment(OsmoLocationManager.self) private var locationManager
+
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 12) {
@@ -23,9 +25,26 @@ struct CameraRowView: View {
                 // Signal + battery (show for connected and sleeping)
                 if camera.connectionState == .connected || camera.connectionState == .sleeping {
                     if !camera.rssiHistory.isEmpty {
+                        // Antenna/radiowaves stands in for "BLE link" — there is no
+                        // literal bluetooth SF Symbol.
+                        Image(systemName: "antenna.radiowaves.left.and.right")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                         SignalStrengthView(history: camera.rssiHistory)
                     }
                     BatteryView(percentage: camera.status.batteryPercentage)
+                }
+
+                // GPS send-health (rule A): present on EVERY row whenever GPS push
+                // is active, hidden entirely when off — independent of per-camera
+                // connection. Just-connected/no-history shows the icon + a 1-bar
+                // empty track (mirroring RSSI's isEmpty handling) so the row does
+                // not reflow when the first second's bucket arrives.
+                if locationManager.isActive {
+                    Image(systemName: "globe.americas.fill")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    GPSSendHealthView(history: gpsHistoryForDisplay)
                 }
 
                 // Recording indicator — always occupies space so layout doesn't shift.
@@ -63,6 +82,16 @@ struct CameraRowView: View {
         case .disconnected,
              .failed:        return .red
         }
+    }
+
+    /// Keeps the GPS sparkline a fixed minimum width before the first 1 Hz bucket
+    /// arrives, so turning GPS on doesn't make the row reflow when bar #1 lands.
+    /// `GPSSendHealthView` renders an empty Canvas for `[]`, so we feed a single
+    /// placeholder `nil` bucket (gray/empty) until real history exists — same
+    /// spirit as RSSI's `isEmpty` guard, applied here so the icon + track are
+    /// stable from the moment GPS is active.
+    private var gpsHistoryForDisplay: [Double?] {
+        camera.gpsSendHistory.isEmpty ? [nil] : camera.gpsSendHistory
     }
 
     /// Seconds since last frame, or nil if not connected / no frame yet received.
