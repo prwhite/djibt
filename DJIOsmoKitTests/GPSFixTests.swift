@@ -216,4 +216,20 @@ final class GPSFixTests: XCTestCase {
         XCTAssertEqual(cam.gpsSecondSent, 0)
         XCTAssertTrue(cam.gpsSendHistory.isEmpty)
     }
+
+    // MARK: - sendGPSData readiness gating
+
+    @MainActor
+    func testSendGPSDataRecordsSkipWhenNotConnected() {
+        let cam = OsmoCamera(name: "Test")
+        // No connection established → not connected → send is skipped and counted.
+        let payload = GPSPushCommand.encodePayload(location: CLLocation(
+            coordinate: CLLocationCoordinate2D(latitude: 37, longitude: -122),
+            altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5, timestamp: Date()
+        ))
+        cam.sendGPSData(payload: payload)
+        // Not connected → no attempt recorded at all (early return before counters).
+        XCTAssertEqual(cam.gpsAttempted, 0,
+            "Disconnected camera records no attempt (the 1 Hz tick appends nil instead)")
+    }
 }

@@ -613,12 +613,29 @@ public final class OsmoCamera: Identifiable {
         }
     }
 
-    /// Send GPS data to this camera (fire-and-forget, no response expected).
-    /// Called periodically by `OsmoLocationManager` at 1 Hz.
-    public func sendGPSData(_ location: CLLocation) {
-        guard connectionState == .connected else { return }
+    /// Send a pre-encoded GPS payload to this camera (fire-and-forget).
+    /// Consults BLE readiness and records send-health. Per-camera seq means
+    /// the frame (with both CRCs) is built here, not shared across cameras.
+    public func sendGPSData(payload: Data) {
+        guard connectionState == .connected else { return }  // no attempt; tick appends nil
+        let ready = bleConnection?.canSendGPSWrite ?? false
+        guard ready else {
+            recordGPSSend(sent: false)   // link not ready → skip (red)
+            return
+        }
         let seq = nextSeq()
-        let frame = GPSPushCommand.build(location: location, seq: seq)
-        try? send(frame: frame)
+        let frame = GPSPushCommand.frame(payload: payload, seq: seq)
+        do {
+            try send(frame: frame)
+            recordGPSSend(sent: true)
+        } catch {
+            recordGPSSend(sent: false)
+        }
+    }
+
+    /// Convenience overload — encodes the payload then sends. Kept for callers
+    /// that have a `CLLocation` rather than a pre-encoded payload.
+    public func sendGPSData(_ location: CLLocation) {
+        sendGPSData(payload: GPSPushCommand.encodePayload(location: location))
     }
 }
