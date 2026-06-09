@@ -89,9 +89,8 @@ enum GPSPushCommand {
         ))
     }
 
-    /// Convenience wrapper preserving the original single-call API.
-    /// `frame(encodePayload(location), seq)`. Output is byte-identical to the
-    /// pre-refactor implementation.
+    /// Convenience wrapper: frame(encodePayload(location), seq). Framing is
+    /// unchanged; satellite_number now reflects fix validity (see encodePayload).
     static func build(location: CLLocation, seq: UInt16) -> Data {
         frame(payload: encodePayload(location: location), seq: seq)
     }

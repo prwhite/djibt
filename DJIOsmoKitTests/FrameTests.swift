@@ -235,16 +235,31 @@ final class FrameTests: XCTestCase {
         XCTAssertNotEqual(Data(a[8...9]), Data(b[8...9]), "SEQ bytes must differ")
     }
 
-    func testTwoPhaseEqualsLegacyBuildByteForByte() {
-        let loc = makeValidLocation()
-        let payload = GPSPushCommand.encodePayload(location: loc)
+    /// `build` must embed the encoded payload unmodified at the correct frame
+    /// offset and produce a frame that parses back cleanly. Cross-checked
+    /// against FrameParser and raw byte offsets (not re-derived via
+    /// frame/encodePayload), so it is independently meaningful.
+    func testBuildEmbedsEncodedPayloadAndParsesBack() throws {
+        let payload = GPSPushCommand.encodePayload(location: makeValidLocation())
+        let frame = GPSPushCommand.build(location: makeValidLocation(), seq: 100)
+        let a = [UInt8](frame)
 
-        for seq: UInt16 in [0, 1, 7, 100, 65535] {
-            let twoPhase = GPSPushCommand.frame(payload: payload, seq: seq)
-            let legacy = GPSPushCommand.build(location: loc, seq: seq)
-            XCTAssertEqual(twoPhase, legacy,
-                "Two-phase frame must equal legacy build() for seq \(seq)")
-        }
+        // Total length: frameOverhead (18) + payload (48).
+        XCTAssertEqual(frame.count, 18 + 48)
+        // SOF.
+        XCTAssertEqual(a[0], 0xAA)
+        // SEQ little-endian 100 at indices 8-9.
+        XCTAssertEqual(a[8], 100)
+        XCTAssertEqual(a[9], 0)
+        // Payload region (frame bytes 14..<62) is the encoded payload verbatim.
+        XCTAssertEqual(Data(frame[14..<62]), payload,
+            "build() must embed encodePayload() unmodified at offset 14")
+
+        // Round-trips through FrameParser.
+        let parsed = try XCTUnwrap(FrameParser.parse(frame))
+        XCTAssertEqual(parsed.cmdSet, GPSPushCommand.cmdSet)
+        XCTAssertEqual(parsed.cmdID, GPSPushCommand.cmdID)
+        XCTAssertEqual(parsed.payload, payload)
     }
 
     func testSatelliteByteGatedOnValidFix() {
@@ -253,11 +268,9 @@ final class FrameTests: XCTestCase {
         let invalid = GPSPushCommand.encodePayload(location: makeInvalidLocation())
 
         // Field is a little-endian UInt32 at offset 44.
-        XCTAssertEqual(valid[44], UInt8(GPSPushCommand.nominalSatelliteCount),
-                       "Valid fix → nominal satellite count")
-        XCTAssertEqual(valid[45], 0); XCTAssertEqual(valid[46], 0); XCTAssertEqual(valid[47], 0)
-
-        XCTAssertEqual(invalid[44], 0, "Invalid fix → satellite count 0")
-        XCTAssertEqual(invalid[45], 0); XCTAssertEqual(invalid[46], 0); XCTAssertEqual(invalid[47], 0)
+        let satValid = UInt32(valid[44]) | (UInt32(valid[45]) << 8) | (UInt32(valid[46]) << 16) | (UInt32(valid[47]) << 24)
+        XCTAssertEqual(satValid, GPSPushCommand.nominalSatelliteCount, "Valid fix → nominal satellite count")
+        let satInvalid = UInt32(invalid[44]) | (UInt32(invalid[45]) << 8) | (UInt32(invalid[46]) << 16) | (UInt32(invalid[47]) << 24)
+        XCTAssertEqual(satInvalid, 0, "Invalid fix → satellite count 0")
     }
 }
