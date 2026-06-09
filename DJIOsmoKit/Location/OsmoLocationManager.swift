@@ -71,7 +71,7 @@ public final class OsmoLocationManager: NSObject {
 
     private let locationManager = CLLocationManager()
     private var pushTimer: Timer?
-    private var lastAggregateAt = Date()
+    private var aggregateTimer: Timer?
     private weak var cameraManager: OsmoCameraManager?
 
     // MARK: - Init
@@ -103,6 +103,14 @@ public final class OsmoLocationManager: NSObject {
         isActive = true
         cameraManager?.enabledCameras.forEach { $0.resetGPSSendHealth() }
         restartTimer()
+        // Aggregation runs at a fixed 1 Hz regardless of rateHz, so it gets its
+        // own timer that start()/stop() own — it must NOT be rescheduled when
+        // rateHz changes (only pushTimer does that in restartTimer()).
+        aggregateTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.aggregateGPSSecond()
+            }
+        }
         OsmoLog.location.info("GPS push started")
     }
 
@@ -112,6 +120,8 @@ public final class OsmoLocationManager: NSObject {
         locationManager.stopUpdatingLocation()
         pushTimer?.invalidate()
         pushTimer = nil
+        aggregateTimer?.invalidate()
+        aggregateTimer = nil
         isActive = false
         OsmoLog.location.info("GPS push stopped")
     }
@@ -121,15 +131,9 @@ public final class OsmoLocationManager: NSObject {
     private func restartTimer() {
         pushTimer?.invalidate()
         let interval = 1.0 / Double(rateHz)
-        lastAggregateAt = Date()
         pushTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
             Task { @MainActor in
-                guard let self else { return }
-                self.pushGPSToAllCameras()
-                if Date().timeIntervalSince(self.lastAggregateAt) >= 1.0 {
-                    self.lastAggregateAt = Date()
-                    self.aggregateGPSSecond()
-                }
+                self?.pushGPSToAllCameras()
             }
         }
     }
