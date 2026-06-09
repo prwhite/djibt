@@ -16,6 +16,9 @@ final class WatchViewModel: NSObject {
     var availableModes: [String] = WatchMode.allCases.map(\.value)
     var isRecording: Bool = false
     var batteryPercent: Int?
+    /// Relayed GPS fix state from the iPhone: "off" / "noFix" / "good". Plain String
+    /// because OsmoWatch does not link DJIOsmoKit and never sees GPSFixState.
+    var gpsFix: String = "off"
     var isReachable: Bool = false
 
     private let session: WCSession
@@ -63,7 +66,8 @@ final class WatchViewModel: NSObject {
         availableModes = context["availableModes"] as? [String] ?? WatchMode.allCases.map(\.value)
         isRecording = context["isRecording"] as? Bool ?? false
         batteryPercent = context["batteryPercent"] as? Int
-        log.info("applyContext: enabled=\(self.enabledCount) connected=\(self.connectedCount) mode=\(self.currentMode ?? "nil", privacy: .public) modes=\(self.availableModes.count) recording=\(self.isRecording)")
+        gpsFix = context["gpsFix"] as? String ?? "off"
+        log.info("applyContext: enabled=\(self.enabledCount) connected=\(self.connectedCount) mode=\(self.currentMode ?? "nil", privacy: .public) modes=\(self.availableModes.count) recording=\(self.isRecording) gps=\(self.gpsFix, privacy: .public)")
     }
 }
 
