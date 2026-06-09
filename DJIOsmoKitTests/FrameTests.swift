@@ -1,5 +1,6 @@
 import XCTest
 @testable import DJIOsmoKit
+import CoreLocation
 
 final class FrameTests: XCTestCase {
 
@@ -183,5 +184,80 @@ final class FrameTests: XCTestCase {
         XCTAssertEqual(prepared.responseMode, 0x00)
         XCTAssertEqual(prepared.parsedFrame.cmdSet, 0x00)
         XCTAssertEqual(prepared.parsedFrame.cmdID, 0x17)
+    }
+
+    // MARK: - GPSPushCommand two-phase build
+
+    private func makeValidLocation() -> CLLocation {
+        CLLocation(
+            coordinate: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
+            altitude: 12, horizontalAccuracy: 5, verticalAccuracy: 5,
+            course: -1, speed: -1,
+            timestamp: Date(timeIntervalSince1970: 1_700_000_000)
+        )
+    }
+
+    private func makeInvalidLocation() -> CLLocation {
+        CLLocation(
+            coordinate: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+            altitude: 0, horizontalAccuracy: -1, verticalAccuracy: -1,
+            course: -1, speed: -1,
+            timestamp: Date(timeIntervalSince1970: 1_700_000_000)
+        )
+    }
+
+    /// CRITICAL: two distinct seqs must differ ONLY in the SEQ bytes (8-9),
+    /// CRC16 (10-11), and CRC32 (last 4) — payload + cmd bytes identical —
+    /// AND each two-phase frame must equal the legacy build() byte-for-byte.
+    /// This guards against the CRC-sharing trap (reusing a cached frame and
+    /// patching seq bytes would ship corrupt CRCs).
+    func testTwoPhaseFramesDifferOnlyInSeqAndCRCs() throws {
+        let loc = makeValidLocation()
+        let payload = GPSPushCommand.encodePayload(location: loc)
+
+        let frameA = GPSPushCommand.frame(payload: payload, seq: 100)
+        let frameB = GPSPushCommand.frame(payload: payload, seq: 200)
+
+        XCTAssertEqual(frameA.count, frameB.count)
+        let n = frameA.count
+        let a = [UInt8](frameA)
+        let b = [UInt8](frameB)
+
+        // Indices that are allowed to differ: SEQ (8,9), CRC16 (10,11),
+        // and CRC32 (last four bytes).
+        let allowedToDiffer: Set<Int> = [8, 9, 10, 11, n - 4, n - 3, n - 2, n - 1]
+        for i in 0..<n {
+            if allowedToDiffer.contains(i) { continue }
+            XCTAssertEqual(a[i], b[i],
+                "Byte \(i) must be identical across seqs (only seq + both CRCs may differ)")
+        }
+        // And the SEQ bytes themselves must actually differ (sanity).
+        XCTAssertNotEqual(Data(a[8...9]), Data(b[8...9]), "SEQ bytes must differ")
+    }
+
+    func testTwoPhaseEqualsLegacyBuildByteForByte() {
+        let loc = makeValidLocation()
+        let payload = GPSPushCommand.encodePayload(location: loc)
+
+        for seq: UInt16 in [0, 1, 7, 100, 65535] {
+            let twoPhase = GPSPushCommand.frame(payload: payload, seq: seq)
+            let legacy = GPSPushCommand.build(location: loc, seq: seq)
+            XCTAssertEqual(twoPhase, legacy,
+                "Two-phase frame must equal legacy build() for seq \(seq)")
+        }
+    }
+
+    func testSatelliteByteGatedOnValidFix() {
+        // Payload satellite_number lives at payload offset 44.
+        let valid = GPSPushCommand.encodePayload(location: makeValidLocation())
+        let invalid = GPSPushCommand.encodePayload(location: makeInvalidLocation())
+
+        // Field is a little-endian UInt32 at offset 44.
+        XCTAssertEqual(valid[44], UInt8(GPSPushCommand.nominalSatelliteCount),
+                       "Valid fix → nominal satellite count")
+        XCTAssertEqual(valid[45], 0); XCTAssertEqual(valid[46], 0); XCTAssertEqual(valid[47], 0)
+
+        XCTAssertEqual(invalid[44], 0, "Invalid fix → satellite count 0")
+        XCTAssertEqual(invalid[45], 0); XCTAssertEqual(invalid[46], 0); XCTAssertEqual(invalid[47], 0)
     }
 }

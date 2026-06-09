@@ -13,13 +13,16 @@ enum GPSPushCommand {
     static let cmdSet: UInt8 = 0x00
     static let cmdID: UInt8  = 0x17
 
-    /// Build a complete GPS push frame from a `CLLocation`.
-    ///
-    /// - Parameters:
-    ///   - location: The current device location from Core Location.
-    ///   - seq: The sequence number for this frame.
-    /// - Returns: The fully built DJI protocol frame ready to write to BLE.
-    static func build(location: CLLocation, seq: UInt16) -> Data {
+    /// Nominal satellite count reported when a valid fix is present.
+    /// CLLocation does not expose true satellite count; this is a sentinel the
+    /// camera firmware accepts as "GPS healthy". Gated to 0 on invalid fix.
+    static let nominalSatelliteCount: UInt32 = 8
+
+    /// Phase 1 (per tick, shared across cameras): encode the 48-byte data
+    /// payload from a `CLLocation`. This is the expensive part — notably the
+    /// `Calendar.dateComponents` timestamp decomposition — and is identical
+    /// for every camera in a push tick.
+    static func encodePayload(location: CLLocation) -> Data {
         var payload = Data(count: 48)
 
         // -- Timestamp in DJI format (UTC) --
@@ -66,14 +69,30 @@ enum GPSPushCommand {
         payload.writeLE(vAcc, at: 32)
         payload.writeLE(hAcc, at: 36)
         payload.writeLE(sAcc, at: 40)
-        payload.writeLE(UInt32(8), at: 44)  // fake satellite_number; CLLocation does not provide this
+        // satellite_number: gated on fix validity (shared predicate).
+        payload.writeLE(location.hasValidGPSFix ? nominalSatelliteCount : 0, at: 44)
 
-        return FrameBuilder.build(OutgoingFrame(
+        return payload
+    }
+
+    /// Phase 2 (per camera): wrap a pre-encoded payload in a frame with this
+    /// camera's `seq`. SEQ sits in the header (bytes 8-9), so CRC16 (SOF→SEQ)
+    /// and CRC32 (whole frame) both recompute here — they CANNOT be shared
+    /// across cameras.
+    static func frame(payload: Data, seq: UInt16) -> Data {
+        FrameBuilder.build(OutgoingFrame(
             cmdType: 0x00,  // fire-and-forget, no response expected
             seq: seq,
             cmdSet: cmdSet,
             cmdID: cmdID,
             payload: payload
         ))
+    }
+
+    /// Convenience wrapper preserving the original single-call API.
+    /// `frame(encodePayload(location), seq)`. Output is byte-identical to the
+    /// pre-refactor implementation.
+    static func build(location: CLLocation, seq: UInt16) -> Data {
+        frame(payload: encodePayload(location: location), seq: seq)
     }
 }
