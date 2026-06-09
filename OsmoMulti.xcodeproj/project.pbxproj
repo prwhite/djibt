@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		05299D56957A330EC4DAF748 /* CLLocation+Fix.swift in Sources */ = {isa = PBXBuildFile; fileRef = 962E9FA7F63BC494BA990B32 /* CLLocation+Fix.swift */; };
 		08489E83436311DEBA811A49 /* djibt-watch.icon in Resources */ = {isa = PBXBuildFile; fileRef = 3645B389DAB08594CA9C4BE1 /* djibt-watch.icon */; };
 		0B7AF48C07F6BDE05D611936 /* Logging.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6D85868F51A7E9700410B94 /* Logging.swift */; };
 		0DC17D3D7DE301783BB10F3D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 4068EC99D53D899A6F2CCDFF /* PrivacyInfo.xcprivacy */; };
@@ -38,6 +39,7 @@
 		82C8FF2D45FF8943E4B56C5F /* CameraRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05935ED1F892FD40924DF4D2 /* CameraRowView.swift */; };
 		8706D5083E5862825CAFE781 /* GPSStatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = B505EB3D1A029831A83D5C12 /* GPSStatusBadge.swift */; };
 		92F93588A7010BE257D769CA /* djibt-ios.icon in Resources */ = {isa = PBXBuildFile; fileRef = DDAED9B4AB672CB7FA28552F /* djibt-ios.icon */; };
+		965779F6C3FFAAF09E1C28E8 /* GPSFixTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E8263B15ABB871DCD551183 /* GPSFixTests.swift */; };
 		9FACCC12CE8DB4D45EB00575 /* CameraListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E9838660BDF128E730E1C78 /* CameraListViewModel.swift */; };
 		A24A222A21DFD4C5AABEF43F /* CameraListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA154D155C699D1747CC716A /* CameraListView.swift */; };
 		A78F130A1B57187EA3E2BD18 /* RawFrameCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 882B71AD36860EA8FED4A351 /* RawFrameCommand.swift */; };
@@ -136,6 +138,7 @@
 		4517D2ECD87BC34C38F77BF6 /* KeyReportCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyReportCommand.swift; sourceTree = "<group>"; };
 		455E2513988A17A0F2CC1588 /* OsmoWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OsmoWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4B0A99BDBAF28DB315FE2AA8 /* OsmoCameraManager+Preview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "OsmoCameraManager+Preview.swift"; sourceTree = "<group>"; };
+		4E8263B15ABB871DCD551183 /* GPSFixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPSFixTests.swift; sourceTree = "<group>"; };
 		5154755099B80CB654708951 /* CameraDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraDetailView.swift; sourceTree = "<group>"; };
 		54EA7058CEAC7390F6A85784 /* FirstSeenLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstSeenLogger.swift; sourceTree = "<group>"; };
 		5748F9425ECD83D3EE0F0C6B /* ModeDetailsPushCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModeDetailsPushCommand.swift; sourceTree = "<group>"; };
@@ -153,6 +156,7 @@
 		8819AE63F91CAD2817D9CD63 /* CameraShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraShortcuts.swift; sourceTree = "<group>"; };
 		882B71AD36860EA8FED4A351 /* RawFrameCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawFrameCommand.swift; sourceTree = "<group>"; };
 		8D82B5852DB15814F0429594 /* GPSPushCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPSPushCommand.swift; sourceTree = "<group>"; };
+		962E9FA7F63BC494BA990B32 /* CLLocation+Fix.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CLLocation+Fix.swift"; sourceTree = "<group>"; };
 		97A0C3C5D3CC6AC613EBFCAA /* ConnectionCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionCommand.swift; sourceTree = "<group>"; };
 		9853A33FE02BF25B8BBEA860 /* SignalStrengthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignalStrengthView.swift; sourceTree = "<group>"; };
 		AE44255BF0B5BFC256A3CE67 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -222,6 +226,7 @@
 			children = (
 				E3EC743303679BC8DF0EFC38 /* CRCTests.swift */,
 				68D8C8ADE10B30ADA4DE66C3 /* FrameTests.swift */,
+				4E8263B15ABB871DCD551183 /* GPSFixTests.swift */,
 			);
 			path = DJIOsmoKitTests;
 			sourceTree = "<group>";
@@ -261,6 +266,7 @@
 		71E680107B687A82BBFA5266 /* Location */ = {
 			isa = PBXGroup;
 			children = (
+				962E9FA7F63BC494BA990B32 /* CLLocation+Fix.swift */,
 				EDCA5C70829E8EA39D4F8928 /* OsmoLocationManager.swift */,
 			);
 			path = Location;
@@ -576,6 +582,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				05299D56957A330EC4DAF748 /* CLLocation+Fix.swift in Sources */,
 				2A061DFDF05CD66C67452F25 /* CRC.swift in Sources */,
 				FF43A991CDBDB4C362519699 /* CameraMode.swift in Sources */,
 				ADBA3C21DF0DABF9AFF7BF31 /* CameraStatus.swift in Sources */,
@@ -640,6 +647,7 @@
 			files = (
 				4997EBDBA4DB8FA26BC9A8C9 /* CRCTests.swift in Sources */,
 				2492B25AAEDEB87B14CE3DB8 /* FrameTests.swift in Sources */,
+				965779F6C3FFAAF09E1C28E8 /* GPSFixTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
