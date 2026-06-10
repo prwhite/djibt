@@ -28,6 +28,15 @@ public final class OsmoCamera: Identifiable {
         didSet {
             previousConnectionState = oldValue
             reconnectingSince = (connectionState == .reconnecting) ? Date() : nil
+            // Cumulative "walkabout" clock: stamp when we LOSE a live connection,
+            // clear when we regain one. Survives the active/passive reconnect
+            // cycling so the UI can show total time-since-dropped. Stays nil for a
+            // never-yet-connected camera (it hasn't gone anywhere).
+            if connectionState == .connected {
+                disconnectedSince = nil
+            } else if oldValue == .connected {
+                disconnectedSince = Date()
+            }
         }
     }
     /// The state before the most recent transition. Used to distinguish sleeping
@@ -35,6 +44,10 @@ public final class OsmoCamera: Identifiable {
     public internal(set) var previousConnectionState: ConnectionState = .disconnected
     /// When the camera entered `.reconnecting` state. `nil` when in any other state.
     public internal(set) var reconnectingSince: Date?
+    /// When the camera dropped from a live (`.connected`) connection — the start of
+    /// its "walkabout". `nil` while connected or never-yet-connected. Drives the
+    /// cumulative time-since-dropped shown during reconnect/waiting in the UI.
+    public internal(set) var disconnectedSince: Date?
     /// Most recently received camera status. `.unknown` until first notification arrives.
     public internal(set) var status: CameraStatus = .unknown
     /// When the last valid status notification was received from this camera.

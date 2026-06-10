@@ -7,6 +7,7 @@ struct CameraRowView: View {
     let camera: OsmoCamera
 
     @Environment(OsmoLocationManager.self) private var locationManager
+    @Environment(OsmoCameraManager.self) private var manager
 
     var body: some View {
         // Left: three text lines (name, mode/subtitle, params). Right: the three
@@ -72,9 +73,9 @@ struct CameraRowView: View {
                             .scaledToFit()
                             .frame(width: 14, height: 14)
                             .foregroundStyle(.secondary)
-                            .opacity(hasLiveStatus ? 1 : 0.45)
+                            .opacity(gpsIsLive ? 1 : 0.45)
                         GPSSendHealthView(history: camera.gpsSendHistory,
-                                          isStale: !hasLiveStatus, capacity: 10)
+                                          isStale: !gpsIsLive, capacity: 10)
                     }
                     .opacity(locationManager.isActive ? 1 : 0)
                 }
@@ -95,8 +96,10 @@ struct CameraRowView: View {
         switch camera.connectionState {
         case .connected:     return .green
         case .sleeping:      return .orange
-        case .reconnecting,
-             .handshaking,
+        case .reconnecting:
+            // Passive wait (retries exhausted) is idle → gray; active retry → yellow.
+            return isPassiveReconnect ? .gray : .yellow
+        case .handshaking,
              .connecting,
              .scanning:      return .yellow
         case .disconnected,
@@ -123,6 +126,14 @@ struct CameraRowView: View {
 
     private var hasLiveStatus: Bool {
         camera.connectionState.showsLiveStatus
+    }
+
+    /// GPS is pushed ONLY to a connected camera — a sleeping camera keeps its BLE
+    /// link (so RSSI still updates, stays un-dimmed) but receives no GPS, so its
+    /// send-health graph freezes. Thus the GPS row dims for anything but .connected,
+    /// unlike RSSI which stays live through .sleeping.
+    private var gpsIsLive: Bool {
+        camera.connectionState == .connected
     }
 
     private var statusSegments: [String] {
@@ -226,9 +237,48 @@ struct CameraRowView: View {
             return mode
         case .failed:
             return "Connection Failed · Tap to retry"
+        case .connecting, .handshaking, .reconnecting:
+            return reconnectStatusText
         default:
             return camera.connectionState.displayLabel
         }
+    }
+
+    /// One stable label for the whole reconnect process (no Connecting↔Reconnecting
+    /// word-flip): attempt count while actively retrying, "Waiting…" once active
+    /// retries are exhausted and we rest in passive CB reconnect, plus the
+    /// cumulative time-since-dropped ("walkabout"). Re-renders each second via the
+    /// enclosing TimelineView.
+    private var reconnectStatusText: String {
+        let attempts = camera.retryCount
+        let maxR = manager.maxRetries
+        let label: String
+        if camera.disconnectedSince == nil && attempts == 0 {
+            label = "Connecting…"                                   // genuine first connect
+        } else if isPassiveReconnect {
+            label = "Waiting…"                                      // retries exhausted → passive
+        } else if maxR > 0 {
+            label = "Reconnecting… (\(max(attempts, 1))/\(maxR))"   // active, bounded
+        } else {
+            label = "Reconnecting… (\(max(attempts, 1)))"          // Unlimited: no denominator
+        }
+        if let since = camera.disconnectedSince {
+            return "\(label) · \(formatWalkabout(-since.timeIntervalSinceNow))"
+        }
+        return label
+    }
+
+    /// True once active retries are exhausted and we're resting in passive
+    /// CoreBluetooth reconnect ("Waiting…"). Unlimited retries never reach this.
+    private var isPassiveReconnect: Bool {
+        manager.maxRetries > 0 && camera.retryCount > manager.maxRetries
+    }
+
+    /// Compact cumulative time-since-dropped: seconds under a minute, else m / h m.
+    private func formatWalkabout(_ seconds: TimeInterval) -> String {
+        let s = max(0, Int(seconds))
+        if s < 60 { return "\(s)s" }
+        return formatCompactDuration(s)
     }
 }
 
