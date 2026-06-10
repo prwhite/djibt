@@ -9,62 +9,82 @@ struct CameraRowView: View {
     @Environment(OsmoLocationManager.self) private var locationManager
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 12) {
-                // Status indicator dot
-                Circle()
-                    .fill(statusColor)
-                    .frame(width: 10, height: 10)
+        // Left: three text lines (name, mode/subtitle, params). Right: the three
+        // data elements stacked vertically (battery / RSSI / GPS), right-justified,
+        // with the recording indicator centered against them. Stacking vertically
+        // (vs the old horizontal cluster) frees horizontal room for the name on
+        // narrow devices, and makes toggling GPS add/remove a ROW — zero horizontal
+        // shift. Top-aligned so the data rows track the text lines.
+        HStack(alignment: .top, spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(statusColor)
+                        .frame(width: 10, height: 10)
+                    Text(camera.name)
+                        .font(.body)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)   // shrink rather than wrap when tight
+                }
 
-                Text(camera.name)
-                    .font(.body)
-                    .lineLimit(1)
+                // TimelineView ticks every second so the "Xs ago" counter increments
+                // even when the camera has gone silent and lastSeenDate stops updating.
+                TimelineView(.periodic(from: .now, by: 1.0)) { _ in
+                    Text(subtitleText)
+                        .font(.caption)
+                        .lineLimit(1)
+                        .foregroundStyle(subtitleColor)
+                }
 
-                Spacer()
+                compactStatusBar
+            }
 
-                // Signal + battery (show for connected and sleeping)
-                if camera.connectionState == .connected || camera.connectionState == .sleeping {
-                    if !camera.rssiHistory.isEmpty {
-                        // Antenna/radiowaves stands in for "BLE link" — there is no
-                        // literal bluetooth SF Symbol.
+            Spacer(minLength: 8)
+
+            // Data column + recording indicator (centered against the column).
+            HStack(alignment: .center, spacing: 6) {
+                // Looser vertical spacing so the 3 telemetry items breathe and
+                // roughly track the 3 taller text lines on the left.
+                VStack(alignment: .trailing, spacing: 7) {
+                    // Battery — reserve the slot (opacity-hidden when no live status).
+                    BatteryView(percentage: camera.status.batteryPercentage)
+                        .opacity(hasLiveStatus ? 1 : 0)
+
+                    // RSSI — always present. Antenna stands in for "BLE link" (no
+                    // literal bluetooth SF Symbol). Frozen+dimmed when not connected.
+                    HStack(spacing: 3) {
                         Image(systemName: "antenna.radiowaves.left.and.right")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        SignalStrengthView(history: camera.rssiHistory)
+                            .opacity(hasLiveStatus ? 1 : 0.45)
+                        SignalStrengthView(history: camera.rssiHistory,
+                                           isStale: !hasLiveStatus, capacity: 10)
                     }
-                    BatteryView(percentage: camera.status.batteryPercentage)
+
+                    // GPS send-health — always LAID OUT (reserves its row height so
+                    // toggling GPS push doesn't change the row's vertical size), but
+                    // only VISIBLE when GPS push is globally active. "Not visible but
+                    // still there" keeps the layout stable without GPS clutter.
+                    HStack(spacing: 3) {
+                        Image("Satellite")
+                            .renderingMode(.template)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 14, height: 14)
+                            .foregroundStyle(.secondary)
+                            .opacity(hasLiveStatus ? 1 : 0.45)
+                        GPSSendHealthView(history: camera.gpsSendHistory,
+                                          isStale: !hasLiveStatus, capacity: 10)
+                    }
+                    .opacity(locationManager.isActive ? 1 : 0)
                 }
 
-                // GPS send-health (rule A): present on EVERY row whenever GPS push
-                // is active, hidden entirely when off — independent of per-camera
-                // connection. Just-connected/no-history shows the icon + a 1-bar
-                // empty track (mirroring RSSI's isEmpty handling) so the row does
-                // not reflow when the first second's bucket arrives.
-                if locationManager.isActive {
-                    Image(systemName: "globe.americas.fill")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    GPSSendHealthView(history: gpsHistoryForDisplay)
-                }
-
-                // Recording indicator — always occupies space so layout doesn't shift.
-                // Opacity hides it when not recording; isActive stops the pulse animation too.
+                // Recording — always occupies space so layout doesn't shift.
                 Image(systemName: "record.circle.fill")
                     .foregroundStyle(.red)
                     .symbolEffect(.pulse, isActive: camera.status.recordingStatus.isRecording)
                     .opacity(camera.status.recordingStatus.isRecording ? 1 : 0)
             }
-
-            // TimelineView ticks every second so the "Xs ago" counter increments
-            // even when the camera has gone silent and lastSeenDate stops updating.
-            TimelineView(.periodic(from: .now, by: 1.0)) { _ in
-                Text(subtitleText)
-                    .font(.caption)
-                    .lineLimit(1)
-                    .foregroundStyle(subtitleColor)
-            }
-
-            compactStatusBar
         }
         .padding(.vertical, 2)
     }
@@ -84,15 +104,6 @@ struct CameraRowView: View {
         }
     }
 
-    /// Keeps the GPS sparkline a fixed minimum width before the first 1 Hz bucket
-    /// arrives, so turning GPS on doesn't make the row reflow when bar #1 lands.
-    /// `GPSSendHealthView` renders an empty Canvas for `[]`, so we feed a single
-    /// placeholder `nil` bucket (gray/empty) until real history exists — same
-    /// spirit as RSSI's `isEmpty` guard, applied here so the icon + track are
-    /// stable from the moment GPS is active.
-    private var gpsHistoryForDisplay: [Double?] {
-        camera.gpsSendHistory.isEmpty ? [nil] : camera.gpsSendHistory
-    }
 
     /// Seconds since last frame, or nil if not connected / no frame yet received.
     private var elapsedSeconds: Int? {
@@ -111,7 +122,7 @@ struct CameraRowView: View {
     }
 
     private var hasLiveStatus: Bool {
-        camera.connectionState == .connected || camera.connectionState == .sleeping
+        camera.connectionState.showsLiveStatus
     }
 
     private var statusSegments: [String] {
@@ -227,9 +238,19 @@ private struct BatteryView: View {
     let percentage: Int
 
     var body: some View {
-        Label("\(percentage)%", systemImage: batterySystemImage)
-            .font(.caption)
-            .foregroundStyle(percentage < 20 ? .red : .secondary)
+        // Label on the LEFT, battery glyph on the RIGHT (flipped). The glyph is
+        // tinted green so its fill harmonizes with the green signal/send graphs
+        // (red when low). fixedSize + lineLimit(1) keep the "%" from wrapping and
+        // growing the row.
+        HStack(spacing: 3) {
+            Text("\(percentage)%")
+                .foregroundStyle(.secondary)
+            Image(systemName: batterySystemImage)
+                .foregroundStyle(percentage < 20 ? .red : .green)
+        }
+        .font(.caption)
+        .lineLimit(1)
+        .fixedSize()
     }
 
     private var batterySystemImage: String {

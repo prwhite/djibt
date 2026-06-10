@@ -88,8 +88,11 @@ struct WatchControlView: View {
     @ViewBuilder
     private var gpsIndicator: some View {
         if let color = gpsColor(for: viewModel.gpsFix) {
-            Image(systemName: "location.fill")
-                .font(.subheadline)
+            Image("Satellite")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 16, height: 16)
                 .foregroundStyle(color)
                 .accessibilityLabel(viewModel.gpsFix == "good" ? "GPS fix" : "No GPS fix")
         }

@@ -62,7 +62,11 @@ struct CameraListView: View {
                 }
             }
             ToolbarItem(placement: .topBarLeading) {
-                GPSTopBarIndicator(fixState: locationManager.fixState)
+                Button {
+                    locationManager.toggle()
+                } label: {
+                    GPSTopBarIndicator(fixState: locationManager.fixState)
+                }
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -171,16 +175,13 @@ private struct GPSTopBarIndicator: View {
     let fixState: GPSFixState
 
     var body: some View {
-        VStack(spacing: 1) {
-            Image(systemName: "globe.americas.fill")
-                .font(.title3)
-                .foregroundStyle(tint)
-            Text("GPS")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("GPS \(stateLabel)")
+        Image("Satellite")
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(width: 22, height: 22)
+            .foregroundStyle(tint)
+            .accessibilityLabel("GPS \(stateLabel)")
     }
 
     private var tint: Color {

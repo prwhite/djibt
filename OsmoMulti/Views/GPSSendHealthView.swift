@@ -18,23 +18,41 @@ import SwiftUI
 struct GPSSendHealthView: View {
 
     let history: [Double?]
+    /// When true (camera not currently connected), the sparkline freezes: existing
+    /// bars are preserved but rendered desaturated + dimmed so the last-seen send
+    /// pattern stays visible for troubleshooting without implying live data.
+    var isStale: Bool = false
+    /// Number of bar-slots reserved and displayed (most-recent N buckets). The list
+    /// uses a small square count (~7); the detail view uses the full 16. The frame
+    /// width is fixed by this so the graph is stable from the first bucket. Matches
+    /// SignalStrengthView so the two sparklines stay the same width.
+    var capacity: Int = 16
 
     private static let trackColor = Color.gray.opacity(0.25)
+    /// Faint baseline shown when there are no buckets yet (never-connected / empty).
+    private static let baselineColor = Color.gray.opacity(0.18)
+    private static let barWidth: CGFloat = 1.5
+    private static let gap: CGFloat = 0.5
+    private static var step: CGFloat { barWidth + gap }
 
     var body: some View {
         Canvas { context, size in
-            guard !history.isEmpty else { return }
+            // Faint full-width baseline so the slot reads as "present" with no bars,
+            // keeping the frame stable (matches SignalStrengthView).
+            let baseline = CGRect(x: 0, y: size.height - 1, width: size.width, height: 1)
+            context.fill(Path(baseline), with: .color(Self.baselineColor))
 
-            let barWidth: CGFloat = 1.5
-            let gap: CGFloat = 0.5
-            let step = barWidth + gap
-
-            for (i, fraction) in history.enumerated() {
-                let x = CGFloat(i) * step
+            // Show the most-recent `capacity` buckets, RIGHT-aligned: new data
+            // always lands in the rightmost slot and shifts left, with empty slots
+            // on the left until full — one consistent fill mode.
+            let shown = history.suffix(capacity)
+            let leading = capacity - shown.count
+            for (i, fraction) in shown.enumerated() {
+                let x = CGFloat(leading + i) * Self.step
 
                 guard let fraction else {
                     // No attempts that second — faint empty track, not red.
-                    let rect = CGRect(x: x, y: 0, width: barWidth, height: size.height)
+                    let rect = CGRect(x: x, y: 0, width: Self.barWidth, height: size.height)
                     context.fill(Path(rect), with: .color(Self.trackColor))
                     continue
                 }
@@ -45,17 +63,20 @@ struct GPSSendHealthView: View {
 
                 // Red (skipped) on top.
                 if redHeight > 0 {
-                    let redRect = CGRect(x: x, y: 0, width: barWidth, height: redHeight)
+                    let redRect = CGRect(x: x, y: 0, width: Self.barWidth, height: redHeight)
                     context.fill(Path(redRect), with: .color(.red))
                 }
                 // Green (sent) on the bottom.
                 if greenHeight > 0 {
-                    let greenRect = CGRect(x: x, y: redHeight, width: barWidth, height: greenHeight)
+                    let greenRect = CGRect(x: x, y: redHeight, width: Self.barWidth, height: greenHeight)
                     context.fill(Path(greenRect), with: .color(.green))
                 }
             }
         }
-        .frame(width: CGFloat(max(history.count, 1)) * 2.0 - 0.5, height: 13)
+        .frame(width: CGFloat(capacity) * Self.step - Self.gap, height: 13)
+        // Dim (not desaturate) when stale — keeps the red/green send-coding readable
+        // while signalling the data is frozen / not live.
+        .opacity(isStale ? 0.45 : 1)
     }
 }
 

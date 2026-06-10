@@ -7,7 +7,6 @@ struct SettingsView: View {
     @Environment(OsmoLocationManager.self) var locationManager
     @Environment(\.dismiss) private var dismiss
 
-    @AppStorage("gps_push_enabled") private var gpsPushEnabled = false
     @State private var showClearConfirmation = false
 
     private let timeoutOptions: [(label: String, seconds: TimeInterval)] = [
@@ -76,18 +75,11 @@ struct SettingsView: View {
 
                 Section {
                     Toggle("Push GPS to Cameras", isOn: Binding(
-                        get: { gpsPushEnabled },
-                        set: { newValue in
-                            gpsPushEnabled = newValue
-                            if newValue {
-                                locationManager.start()
-                            } else {
-                                locationManager.stop()
-                            }
-                        }
+                        get: { locationManager.isActive },
+                        set: { locationManager.setEnabled($0) }
                     ))
 
-                    if gpsPushEnabled {
+                    if locationManager.isActive {
                         Picker("Update Rate", selection: Binding(
                             get: { locationManager.rateHz },
                             set: { locationManager.rateHz = $0 }
@@ -111,7 +103,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Location")
                 } footer: {
-                    Text(gpsPushEnabled
+                    Text(locationManager.isActive
                         ? "Feeds iPhone GPS coordinates to connected cameras for video geotagging. 10 Hz uses more battery and BLE bandwidth, especially with many cameras."
                         : "Feeds iPhone GPS coordinates to connected cameras for video geotagging.")
                 }
