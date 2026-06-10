@@ -130,6 +130,11 @@ public final class OsmoCameraManager: NSObject {
     public func toggleEnabled(_ camera: OsmoCamera) {
         camera.isEnabled.toggle()
         OsmoLog.manager.info("Camera \(camera.name, privacy: .public) \(camera.isEnabled ? "enabled" : "disabled")")
+        if !camera.isEnabled {
+            // Disabling is a clean stop — wipe the frozen sparkline history so a
+            // later re-enable starts fresh rather than showing stale bars.
+            camera.clearHistory()
+        }
         persistCameras()
     }
 

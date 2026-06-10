@@ -101,7 +101,10 @@ public final class OsmoLocationManager: NSObject {
         locationManager.requestWhenInUseAuthorization()
         locationManager.startUpdatingLocation()
         isActive = true
-        cameraManager?.enabledCameras.forEach { $0.resetGPSSendHealth() }
+        // New GPS session → wipe each camera's GPS send-health so the readout
+        // reflects this run, not a prior session's leftover (frozen) bars. RSSI
+        // history is independent of GPS push and is intentionally left intact.
+        cameraManager?.enabledCameras.forEach { $0.clearGPSSendHistory() }
         restartTimer()
         // Aggregation runs at a fixed 1 Hz regardless of rateHz, so it gets its
         // own timer that start()/stop() own — it must NOT be rescheduled when
@@ -124,6 +127,20 @@ public final class OsmoLocationManager: NSObject {
         aggregateTimer = nil
         isActive = false
         OsmoLog.location.info("GPS push stopped")
+    }
+
+    /// Single owner of the GPS-push enabled state: starts/stops pushing AND
+    /// persists `gps_push_enabled` so the top-bar button and the Settings toggle
+    /// can't disagree. Both call this; both read `isActive`. Auto-start on launch
+    /// (`OsmoMultiApp.init`) reads the same `gps_push_enabled` key.
+    public func setEnabled(_ enabled: Bool) {
+        UserDefaults.standard.set(enabled, forKey: "gps_push_enabled")
+        if enabled { start() } else { stop() }
+    }
+
+    /// Toggle GPS push on/off (top-bar button action).
+    public func toggle() {
+        setEnabled(!isActive)
     }
 
     /// (Re)schedule the push timer at the current rate. Safe to call repeatedly.
@@ -195,7 +212,11 @@ public final class OsmoLocationManager: NSObject {
     /// gpsSendHistory; a stall appends nil (gray) and the sparkline advances.
     private func aggregateGPSSecond() {
         guard isActive, let manager = cameraManager else { return }
-        for camera in manager.enabledCameras {
+        // Snapshot ONLY connected cameras. A disconnected camera makes no GPS
+        // attempts, so skipping it freezes its sparkline at the last-seen bars
+        // (dimmed in the UI) rather than scrolling real history off as nil buckets
+        // within 16s — preserving the pre-disconnect pattern for troubleshooting.
+        for camera in manager.enabledConnectedCameras {
             camera.snapshotGPSSecond()
         }
     }

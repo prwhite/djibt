@@ -119,14 +119,32 @@ public final class OsmoCamera: Identifiable {
         gpsSecondSent = 0
     }
 
-    /// Reset all send-health state. Called on each GPS start() so the readout
-    /// reflects the current run, not lifetime.
+    /// Reset the live GPS send-health counters (but NOT the sparkline history).
+    /// Called from `clearStatus()` on disconnect so the open-second bucket doesn't
+    /// carry stale counts across a reconnect — the `gpsSendHistory` itself is
+    /// preserved (frozen) for troubleshooting and only wiped by `clearHistory()`.
     func resetGPSSendHealth() {
         gpsAttempted = 0
         gpsSkipped = 0
         gpsSecondAttempts = 0
         gpsSecondSent = 0
+    }
+
+    /// Wipe ONLY the GPS send-health (counters + sparkline history), leaving the
+    /// RSSI history untouched. Called when a new GPS session starts — RSSI is
+    /// independent of GPS and must not be cleared by toggling GPS push.
+    func clearGPSSendHistory() {
+        resetGPSSendHealth()
         gpsSendHistory.removeAll()
+    }
+
+    /// Wipe ALL per-camera sparkline history (GPS send + RSSI) and live counters.
+    /// Called ONLY on clean transitions — camera disable/remove or clear-all —
+    /// NEVER on a disconnect/reconnect flap (history freezes + dims instead) and
+    /// NEVER on a GPS toggle (that uses `clearGPSSendHistory()`).
+    func clearHistory() {
+        clearGPSSendHistory()
+        rssiHistory.removeAll()
     }
 
     // MARK: - BLE
@@ -160,8 +178,10 @@ public final class OsmoCamera: Identifiable {
         modeConfirmationTask?.cancel()
         modeConfirmationTask = nil
         rssi = nil
-        rssiHistory.removeAll()
-        resetGPSSendHealth()
+        // NOTE: rssiHistory + gpsSendHistory are intentionally PRESERVED here so a
+        // disconnect/reconnect flap doesn't wipe troubleshooting data — they freeze
+        // (dimmed in the UI) and are only cleared by clearHistory() on clean actions.
+        resetGPSSendHealth()  // live counters only; not the sparkline history
         modeLogger.reset()
     }
     /// Logs full hex dump once per unique raw mode byte — avoids flooding the log at 1 Hz.
