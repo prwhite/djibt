@@ -9,32 +9,64 @@ struct CameraRowView: View {
     @Environment(OsmoLocationManager.self) private var locationManager
     @Environment(OsmoCameraManager.self) private var manager
 
+    /// Bumped on each photo capture to fire a one-shot bounce on the status dot.
+    @State private var photoPulse = 0
+
     var body: some View {
         // Left: three text lines (name, mode/subtitle, params). Right: the three
-        // data elements stacked vertically (battery / RSSI / GPS), right-justified,
-        // with the recording indicator centered against them. Stacking vertically
-        // (vs the old horizontal cluster) frees horizontal room for the name on
-        // narrow devices, and makes toggling GPS add/remove a ROW — zero horizontal
-        // shift. Top-aligned so the data rows track the text lines.
+        // data elements stacked vertically (battery / RSSI / GPS), right-justified.
+        // There is no recording element on the right — recording state lives in the
+        // status dot (it animates; green still == connected, since recording implies
+        // connected) and the duration pill leads the subtitle. Removing the old
+        // right-side rec slot gives the text lines more room. Top-aligned so the
+        // data rows track the text lines.
         HStack(alignment: .top, spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 8) {
-                    Circle()
-                        .fill(statusColor)
+                    // Connection status dot — keeps its color meaning (green =
+                    // connected, etc.) AND signals recording by animating, not by
+                    // changing color: a continuous breathe while recording video, a
+                    // one-shot bounce on each photo capture.
+                    Image(systemName: "circle.fill")
+                        .resizable()
                         .frame(width: 10, height: 10)
+                        .foregroundStyle(statusColor)
+                        .symbolEffect(.breathe, isActive: isRecordingVideo)
+                        // Photo capture → a clear one-shot "bloom" (the built-in
+                        // .bounce was too subtle/fast at 10pt): spring to ~2x and back.
+                        .keyframeAnimator(initialValue: 1.0, trigger: photoPulse) { view, scale in
+                            view.scaleEffect(scale)
+                        } keyframes: { _ in
+                            SpringKeyframe(2.0, duration: 0.18)
+                            SpringKeyframe(1.0, duration: 0.42)
+                        }
+                        .onChange(of: camera.status.recordingStatus.isRecording) { _, isRec in
+                            if isRec && !isVideoMode { photoPulse += 1 }   // photo capture → 1-shot
+                        }
                     Text(camera.name)
                         .font(.body)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)   // shrink rather than wrap when tight
                 }
 
-                // TimelineView ticks every second so the "Xs ago" counter increments
-                // even when the camera has gone silent and lastSeenDate stops updating.
+                // TimelineView ticks every second so the recording duration and the
+                // "Xs ago" counter advance. While recording video, a red duration
+                // pill leads the line, then the usual mode/status text.
                 TimelineView(.periodic(from: .now, by: 1.0)) { _ in
-                    Text(subtitleText)
-                        .font(.caption)
-                        .lineLimit(1)
-                        .foregroundStyle(subtitleColor)
+                    HStack(spacing: 4) {
+                        if isRecordingVideo {
+                            Text(formatRecordingDuration(camera.status.recordingSeconds))
+                                .font(.caption2.monospacedDigit())
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1)
+                                .background(Color.red.opacity(0.85), in: .capsule)
+                        }
+                        Text(subtitleText)
+                            .font(.caption)
+                            .lineLimit(1)
+                            .foregroundStyle(subtitleColor)
+                    }
                 }
 
                 compactStatusBar
@@ -42,49 +74,40 @@ struct CameraRowView: View {
 
             Spacer(minLength: 8)
 
-            // Data column + recording indicator (centered against the column).
-            HStack(alignment: .center, spacing: 6) {
-                // Looser vertical spacing so the 3 telemetry items breathe and
-                // roughly track the 3 taller text lines on the left.
-                VStack(alignment: .trailing, spacing: 7) {
-                    // Battery — reserve the slot (opacity-hidden when no live status).
-                    BatteryView(percentage: camera.status.batteryPercentage)
-                        .opacity(hasLiveStatus ? 1 : 0)
+            // Data column (battery / RSSI / GPS), right-justified. Looser vertical
+            // spacing so the 3 items breathe and roughly track the 3 text lines.
+            VStack(alignment: .trailing, spacing: 7) {
+                // Battery — reserve the slot (opacity-hidden when no live status).
+                BatteryView(percentage: camera.status.batteryPercentage)
+                    .opacity(hasLiveStatus ? 1 : 0)
 
-                    // RSSI — always present. Antenna stands in for "BLE link" (no
-                    // literal bluetooth SF Symbol). Frozen+dimmed when not connected.
-                    HStack(spacing: 3) {
-                        Image(systemName: "antenna.radiowaves.left.and.right")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .opacity(hasLiveStatus ? 1 : 0.45)
-                        SignalStrengthView(history: camera.rssiHistory,
-                                           isStale: !hasLiveStatus, capacity: 10)
-                    }
-
-                    // GPS send-health — always LAID OUT (reserves its row height so
-                    // toggling GPS push doesn't change the row's vertical size), but
-                    // only VISIBLE when GPS push is globally active. "Not visible but
-                    // still there" keeps the layout stable without GPS clutter.
-                    HStack(spacing: 3) {
-                        Image("Satellite")
-                            .renderingMode(.template)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 14, height: 14)
-                            .foregroundStyle(.secondary)
-                            .opacity(gpsIsLive ? 1 : 0.45)
-                        GPSSendHealthView(history: camera.gpsSendHistory,
-                                          isStale: !gpsIsLive, capacity: 10)
-                    }
-                    .opacity(locationManager.isActive ? 1 : 0)
+                // RSSI — always present. Antenna stands in for "BLE link" (no
+                // literal bluetooth SF Symbol). Frozen+dimmed when not connected.
+                HStack(spacing: 3) {
+                    Image(systemName: "antenna.radiowaves.left.and.right")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .opacity(hasLiveStatus ? 1 : 0.45)
+                    SignalStrengthView(history: camera.rssiHistory,
+                                       isStale: !hasLiveStatus, capacity: 10)
                 }
 
-                // Recording — always occupies space so layout doesn't shift.
-                Image(systemName: "record.circle.fill")
-                    .foregroundStyle(.red)
-                    .symbolEffect(.pulse, isActive: camera.status.recordingStatus.isRecording)
-                    .opacity(camera.status.recordingStatus.isRecording ? 1 : 0)
+                // GPS send-health — always LAID OUT (reserves its row height so
+                // toggling GPS push doesn't change the row's vertical size), but
+                // only VISIBLE when GPS push is globally active. "Not visible but
+                // still there" keeps the layout stable without GPS clutter.
+                HStack(spacing: 3) {
+                    Image("Satellite")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 14, height: 14)
+                        .foregroundStyle(.secondary)
+                        .opacity(gpsIsLive ? 1 : 0.45)
+                    GPSSendHealthView(history: camera.gpsSendHistory,
+                                      isStale: !gpsIsLive, capacity: 10)
+                }
+                .opacity(locationManager.isActive ? 1 : 0)
             }
         }
         .padding(.vertical, 2)
@@ -136,10 +159,21 @@ struct CameraRowView: View {
         camera.connectionState == .connected
     }
 
+    /// True for video modes (which support recording), false for photo modes.
+    /// Defaults to true when the mode is unknown.
+    private var isVideoMode: Bool {
+        camera.status.mode?.supportsRecording ?? true
+    }
+
+    /// Actively recording video (drives the continuous dot breathe + the subtitle
+    /// duration pill). Photo capture is handled separately (the one-shot bounce).
+    private var isRecordingVideo: Bool {
+        camera.status.recordingStatus.isRecording && isVideoMode
+    }
+
     private var statusSegments: [String] {
         guard hasLiveStatus else { return [] }
         var segments: [String] = []
-        let isVideoMode = camera.status.mode?.supportsRecording ?? true
         if isVideoMode {
             if let res = camera.status.videoResolution?.displayName { segments.append(res) }
             if let fps = camera.status.frameRate?.displayName { segments.append(fps) }
@@ -174,29 +208,25 @@ struct CameraRowView: View {
     @ViewBuilder
     private var compactStatusBar: some View {
         let segments = statusSegments
-        if segments.isEmpty && !camera.status.recordingStatus.isRecording {
+        if segments.isEmpty {
             Text(" ").font(.caption2)
         } else {
+            // lineLimit(1) so a long mode/stabilization name truncates instead of
+            // wrapping and expanding the row height. (Recording duration moved to
+            // the far-right indicator.)
             HStack(spacing: 4) {
-                // Recording time pill (special color) — before regular pills
-                if camera.status.recordingStatus.isRecording {
-                    Text(formatRecordingDuration(camera.status.recordingSeconds))
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 1)
-                        .background(Color.red.opacity(0.5), in: .rect(cornerRadius: 3))
-                }
                 ForEach(Array(segments.enumerated()), id: \.offset) { index, label in
                     if index.isMultiple(of: 2) {
                         // Plain: system foreground on background
                         Text(label)
                             .font(.caption2)
+                            .lineLimit(1)
                             .foregroundStyle(.primary)
                     } else {
                         // Inverted: system background on foreground pill
                         Text(label)
                             .font(.caption2)
+                            .lineLimit(1)
                             .foregroundStyle(.background)
                             .padding(.horizontal, 4)
                             .padding(.vertical, 1)

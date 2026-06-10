@@ -159,9 +159,9 @@ struct CameraDetailView: View {
 
             // TimelineView isolates lastSeenDate observation from the parent body,
             // Prevents full-detail-view re-renders every 2 seconds.
-            TimelineView(.periodic(from: .now, by: 2)) { _ in
+            TimelineView(.periodic(from: .now, by: 2)) { context in
                 if let lastSeen = camera.lastSeenDate {
-                    LabeledContent("Last Seen", value: lastSeen.formatted(.relative(presentation: .named)))
+                    LabeledContent("Last Seen", value: lastSeenText(lastSeen, at: context.date))
                 }
             }
         }
@@ -272,6 +272,15 @@ struct CameraDetailView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
+    }
+
+    /// "Last Seen" text with a 2s floor → "now", so a connected camera (status
+    /// arrives ~1 Hz, sampled every 2s) doesn't flip between "now" and "1 second
+    /// ago". Past 2s it shows the climbing relative string.
+    private func lastSeenText(_ lastSeen: Date, at now: Date) -> String {
+        now.timeIntervalSince(lastSeen) < 2
+            ? "now"
+            : lastSeen.formatted(.relative(presentation: .named))
     }
 
     /// Session GPS send-health summary: "sent / total (%)", or "—" before any
