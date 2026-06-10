@@ -34,6 +34,7 @@
 		6881F981E6E4A493D32FAB12 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE44255BF0B5BFC256A3CE67 /* SettingsView.swift */; };
 		68A7E0BA84FA5A23A43D0492 /* ConnectionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6916C08A1CE408C53DBDED99 /* ConnectionState.swift */; };
 		6AEB2ADA5443DA78118ADB7F /* GPSFixState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97608A344AA044814077E8B0 /* GPSFixState.swift */; };
+		75D8564A4B679C52E486A6FD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A24900A3DB6D0559F8B8117F /* Assets.xcassets */; };
 		7A935FF533D0028D8B448FA2 /* SignalStrengthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9853A33FE02BF25B8BBEA860 /* SignalStrengthView.swift */; };
 		806E9765F2035B4A52DB44B8 /* CameraIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2430493209B0B966F9D0D5F0 /* CameraIntents.swift */; };
 		80D238E6F1ED98E9687704F5 /* WatchControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77BA1CD115E78338BCBFACC5 /* WatchControlView.swift */; };
@@ -47,6 +48,7 @@
 		A7BBE9C186384A3632127535 /* StatusSubscribeCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40400697BA320D8E1824DF73 /* StatusSubscribeCommand.swift */; };
 		ADBA3C21DF0DABF9AFF7BF31 /* CameraStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3312CE9941F41DB906D52CB1 /* CameraStatus.swift */; };
 		AFB1DE62757C2A143DF603B5 /* OsmoCameraManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28D7898C577133FE6DDDAB86 /* OsmoCameraManager.swift */; };
+		B170FCA659C4B5902088477C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2CB2376AF5AFBA23A8D7E5F6 /* Assets.xcassets */; };
 		BBFED5FDB3C21C96D3A0A9CD /* ConnectionCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97A0C3C5D3CC6AC613EBFCAA /* ConnectionCommand.swift */; };
 		CACC83F5E3367323F06DD518 /* GPSPushCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D82B5852DB15814F0429594 /* GPSPushCommand.swift */; };
 		D28B1B70A771347BEE54C437 /* OsmoWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB86E24EE94AF69E7E4E57A2 /* OsmoWatchApp.swift */; };
@@ -131,6 +133,7 @@
 		2430493209B0B966F9D0D5F0 /* CameraIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraIntents.swift; sourceTree = "<group>"; };
 		2801D329D80770AF5B55B9FE /* OsmoCamera.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OsmoCamera.swift; sourceTree = "<group>"; };
 		28D7898C577133FE6DDDAB86 /* OsmoCameraManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OsmoCameraManager.swift; sourceTree = "<group>"; };
+		2CB2376AF5AFBA23A8D7E5F6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		3312CE9941F41DB906D52CB1 /* CameraStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraStatus.swift; sourceTree = "<group>"; };
 		353451F0F10BCADDAA438278 /* DJIOsmoKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = DJIOsmoKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		3645B389DAB08594CA9C4BE1 /* djibt-watch.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = "djibt-watch.icon"; sourceTree = "<group>"; };
@@ -161,6 +164,7 @@
 		97608A344AA044814077E8B0 /* GPSFixState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPSFixState.swift; sourceTree = "<group>"; };
 		97A0C3C5D3CC6AC613EBFCAA /* ConnectionCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionCommand.swift; sourceTree = "<group>"; };
 		9853A33FE02BF25B8BBEA860 /* SignalStrengthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignalStrengthView.swift; sourceTree = "<group>"; };
+		A24900A3DB6D0559F8B8117F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AE44255BF0B5BFC256A3CE67 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		BA300F201CB3C612E0FF92C3 /* OsmoMultiApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OsmoMultiApp.swift; sourceTree = "<group>"; };
 		BF5E9ED9B3C9E0CA998698BC /* OsmoBLEScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OsmoBLEScanner.swift; sourceTree = "<group>"; };
@@ -204,6 +208,7 @@
 		02A619DD4815D98641C505B1 /* OsmoMulti */ = {
 			isa = PBXGroup;
 			children = (
+				2CB2376AF5AFBA23A8D7E5F6 /* Assets.xcassets */,
 				D7ABD97AE06CB76A157B15ED /* Info.plist */,
 				4068EC99D53D899A6F2CCDFF /* PrivacyInfo.xcprivacy */,
 				871F0137BC2320159A6FF64A /* App */,
@@ -384,6 +389,7 @@
 		C022EEA0E7DF39C7859B846C /* OsmoWatch */ = {
 			isa = PBXGroup;
 			children = (
+				A24900A3DB6D0559F8B8117F /* Assets.xcassets */,
 				C33C4E7D069DEED77A17F192 /* App */,
 				94D54505D75249CBE03C1BC8 /* ViewModels */,
 				5AA6E2066E073C7A3C985A36 /* Views */,
@@ -565,6 +571,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				75D8564A4B679C52E486A6FD /* Assets.xcassets in Resources */,
 				08489E83436311DEBA811A49 /* djibt-watch.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -573,6 +580,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B170FCA659C4B5902088477C /* Assets.xcassets in Resources */,
 				0DC17D3D7DE301783BB10F3D /* PrivacyInfo.xcprivacy in Resources */,
 				92F93588A7010BE257D769CA /* djibt-ios.icon in Resources */,
 			);
