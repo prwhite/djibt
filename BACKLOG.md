@@ -16,6 +16,22 @@ Notes / constraints:
 - Only worth it if 10 Hz multi-cam is a real usage pattern. At the 1 Hz default
   the idle cost is negligible (one 48-byte frame/sec/camera).
 
+## GPS send-health: 3-region sparkline (show Void)
+Today Void frames (sent when the fix is stale/off) still record as *sent* → the
+per-camera GPS send-health sparkline reads **green** during a stale state, which is
+mildly misleading (the top-bar dot is honest, so it's low-impact). Make the bar a
+3-region stacked column: **green** = real fix delivered, **red** = real fix the BLE
+link dropped, **gray** = Void / no real GPS. Two sizings:
+- **Cheap:** stop counting Void frames as sends → a fully-Void second falls to the
+  existing nil/gray bucket. Gets green/red/gray for the common case (a second is
+  ~always all-real or all-void) with no model change. Misses the 3-way split in the
+  rare transition second.
+- **Full:** track a per-second `{sent, skipped, void}` breakdown (replaces the
+  `[Double?]` sent-fraction history) so a 10 Hz column can show all three regions at
+  once. Keep one shared implementation for the row + detail views.
+A per-sample GitHub-activity grid was considered and dropped (rate-dependent column
+height fights the fixed-capacity layout; per-sample detail is illegible in the row).
+
 ## Other deferred polish
 - **Sparkline accessibility:** the RSSI + GPS send-health Canvas sparklines have
   no VoiceOver labels.

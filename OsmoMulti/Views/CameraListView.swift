@@ -64,6 +64,7 @@ struct CameraListView: View {
             ToolbarItem(placement: .topBarLeading) {
                 Button {
                     locationManager.toggle()
+                    viewModel.showToast(locationManager.isActive ? "GPS push on" : "GPS push off")
                 } label: {
                     GPSTopBarIndicator(fixState: locationManager.fixState)
                 }

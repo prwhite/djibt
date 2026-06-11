@@ -31,11 +31,15 @@ struct SettingsView: View {
         guard locationManager.fixState != .noFix else { return "No fix" }
         guard let accuracy = locationManager.accuracy else { return "No fix" }
         let meters = Int(accuracy.rounded())
-        guard let last = locationManager.lastPushAt else {
+        // Age of the fix itself (not the last camera push) — always available and
+        // the meaningful signal: with the freshness cap (OsmoLocationManager
+        // .maxFixAge) it reads low while live, and you can watch it climb toward
+        // stale before it flips to "No fix".
+        guard let ts = locationManager.lastLocation?.timestamp else {
             return "±\(meters) m"
         }
-        let age = max(0, Int(now.timeIntervalSince(last)))
-        return "±\(meters) m, last update \(age)s ago"
+        let age = max(0, Int(now.timeIntervalSince(ts)))
+        return "±\(meters) m · \(age)s old"
     }
 
     var body: some View {
