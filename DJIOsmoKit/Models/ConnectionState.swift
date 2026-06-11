@@ -23,6 +23,14 @@ public enum ConnectionState: Equatable {
         self == .connected
     }
 
+    /// Whether the camera has live, displayable status (signal/battery/sparklines
+    /// shown un-dimmed). True for connected and sleeping (a known, recoverable
+    /// state); false for reconnecting/disconnected/failed, where the UI freezes
+    /// and dims the last-seen values.
+    public var showsLiveStatus: Bool {
+        self == .connected || self == .sleeping
+    }
+
     public var displayLabel: String {
         switch self {
         case .disconnected:  return "Disconnected"

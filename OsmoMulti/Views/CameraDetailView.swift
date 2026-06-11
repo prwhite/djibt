@@ -10,9 +10,13 @@ struct CameraDetailView: View {
 
     @Environment(OsmoLocationManager.self) private var locationManager
 
+    #if DEBUG
+    // Raw-frame diagnostics (debug builds only — must NOT ship; lets a user inject
+    // arbitrary BLE protocol frames). Gated out of Release/TestFlight/App Store.
     @State private var rawFrameText = ""
     @State private var rawFrameResult: String?
     @State private var isSendingRawFrame = false
+    #endif
     @State private var pendingMode: CameraMode?
 
     var body: some View {
@@ -78,11 +82,6 @@ struct CameraDetailView: View {
         camera.connectionState == .connected || camera.connectionState == .sleeping
     }
 
-    private var validGPSAccuracy: Double? {
-        guard let accuracy = locationManager.lastLocation?.horizontalAccuracy, accuracy >= 0 else { return nil }
-        return accuracy
-    }
-
     private var modeDisplayName: String {
         camera.modeName ?? camera.status.mode?.displayName ?? "Unknown"
     }
@@ -102,10 +101,26 @@ struct CameraDetailView: View {
             LabeledContent("Connection", value: camera.connectionState.displayLabel)
             if let rssi = camera.rssi {
                 LabeledContent("Signal") {
+                    // Text LEFT, graph RIGHT so the graph pins to the trailing edge
+                    // and doesn't jitter as the dBm value changes width.
                     HStack(spacing: 6) {
-                        SignalStrengthView(history: camera.rssiHistory)
                         Text("\(rssi) dBm")
                             .foregroundStyle(.secondary)
+                        SignalStrengthView(history: camera.rssiHistory)
+                    }
+                }
+            }
+            // GPS send-health row — sibling to Signal, shown while GPS push is on.
+            // Full 16-sample graph (default capacity) + "sent / total (%)" stats.
+            // Text LEFT, graph RIGHT (pinned) so the graph doesn't move as the
+            // summary text changes width.
+            if locationManager.isActive {
+                LabeledContent("GPS") {
+                    HStack(spacing: 6) {
+                        Text(gpsSendSummary)
+                            .foregroundStyle(.secondary)
+                        GPSSendHealthView(history: camera.gpsSendHistory,
+                                          isStale: !camera.connectionState.showsLiveStatus)
                     }
                 }
             }
@@ -140,20 +155,13 @@ struct CameraDetailView: View {
                         Text("Temperature Warning")
                     }
                 }
-                LabeledContent("GPS") {
-                    GPSStatusBadge(
-                        isPushing: locationManager.isActive && camera.connectionState == .connected,
-                        accuracy: validGPSAccuracy,
-                        lastPushAt: locationManager.lastPushAt
-                    )
-                }
             }
 
             // TimelineView isolates lastSeenDate observation from the parent body,
             // Prevents full-detail-view re-renders every 2 seconds.
-            TimelineView(.periodic(from: .now, by: 2)) { _ in
+            TimelineView(.periodic(from: .now, by: 2)) { context in
                 if let lastSeen = camera.lastSeenDate {
-                    LabeledContent("Last Seen", value: lastSeen.formatted(.relative(presentation: .named)))
+                    LabeledContent("Last Seen", value: lastSeenText(lastSeen, at: context.date))
                 }
             }
         }
@@ -266,6 +274,24 @@ struct CameraDetailView: View {
         }
     }
 
+    /// "Last Seen" text with a 2s floor → "now", so a connected camera (status
+    /// arrives ~1 Hz, sampled every 2s) doesn't flip between "now" and "1 second
+    /// ago". Past 2s it shows the climbing relative string.
+    private func lastSeenText(_ lastSeen: Date, at now: Date) -> String {
+        now.timeIntervalSince(lastSeen) < 2
+            ? "now"
+            : lastSeen.formatted(.relative(presentation: .named))
+    }
+
+    /// Session GPS send-health summary: "sent / total (%)", or "—" before any
+    /// attempts. Shown next to the GPS sparkline in the Status table.
+    private var gpsSendSummary: String {
+        guard camera.gpsAttempted > 0 else { return "—" }
+        let sent = camera.gpsAttempted - camera.gpsSkipped
+        let pct = Int((Double(sent) / Double(camera.gpsAttempted) * 100).rounded())
+        return "\(sent)/\(camera.gpsAttempted) (\(pct)%)"
+    }
+
     // MARK: - Diagnostics
 
     private var diagnosticsSection: some View {
@@ -292,7 +318,9 @@ struct CameraDetailView: View {
                    || camera.connectionState == .handshaking
                    || camera.connectionState == .reconnecting)
 
+            #if DEBUG
             rawCommandControls
+            #endif
 
             Toggle("Enabled", isOn: Binding(
                 get: { camera.isEnabled },
@@ -301,6 +329,7 @@ struct CameraDetailView: View {
         }
     }
 
+    #if DEBUG
     private var rawCommandControls: some View {
         VStack(alignment: .leading, spacing: 8) {
             TextField("Raw DJI frame (AA...)", text: $rawFrameText)
@@ -325,6 +354,7 @@ struct CameraDetailView: View {
             }
         }
     }
+    #endif
 
     // MARK: - Helpers
 
@@ -348,6 +378,7 @@ struct CameraDetailView: View {
         await viewModel.retryCameraAsync(camera)
     }
 
+    #if DEBUG
     private func sendRawFrame() async {
         isSendingRawFrame = true
         defer { isSendingRawFrame = false }
@@ -360,6 +391,7 @@ struct CameraDetailView: View {
             viewModel.showToast("Raw command failed")
         }
     }
+    #endif
 
     private func formatDuration(_ seconds: Int) -> String {
         let m = seconds / 60

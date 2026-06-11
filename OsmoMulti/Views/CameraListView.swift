@@ -7,7 +7,8 @@ import SwiftUI
     NavigationStack {
         CameraListView(manager: manager)
     }
-    .environment(manager)   // child views (SettingsView etc.) read from environment
+    .environment(manager)
+    .environment(OsmoLocationManager(cameraManager: manager))   // top-bar + row GPS reads this
 }
 #endif
 
@@ -16,6 +17,7 @@ import SwiftUI
 struct CameraListView: View {
 
     @State private var viewModel: CameraListViewModel
+    @Environment(OsmoLocationManager.self) private var locationManager
     @State private var showSettings = false
     @State private var contentWidth: CGFloat = 0
 
@@ -57,6 +59,13 @@ struct CameraListView: View {
                 } label: {
                     Image(systemName: viewModel.screenLockDisabled ? "lock.open.display" : "lock.display")
                         .foregroundStyle(viewModel.screenLockDisabled ? .yellow : .secondary)
+                }
+            }
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    locationManager.toggle()
+                } label: {
+                    GPSTopBarIndicator(fixState: locationManager.fixState)
                 }
             }
         }
@@ -152,6 +161,42 @@ struct CameraListView: View {
         } actions: {
             Button("Add Camera") { viewModel.showAddCamera() }
                 .buttonStyle(.borderedProminent)
+        }
+    }
+}
+
+// MARK: - GPSTopBarIndicator
+
+/// Phone-global GPS fix at-a-glance indicator for the toolbar.
+/// Mirrors GlobalControlsView's ControlButton icon-over-caption idiom, but is
+/// a passive status display (no action). Color is the single source of truth
+/// from OsmoLocationManager.fixState: gray = off, red = noFix, green = good.
+private struct GPSTopBarIndicator: View {
+    let fixState: GPSFixState
+
+    var body: some View {
+        Image("Satellite")
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(width: 22, height: 22)
+            .foregroundStyle(tint)
+            .accessibilityLabel("GPS \(stateLabel)")
+    }
+
+    private var tint: Color {
+        switch fixState {
+        case .off:   return .gray
+        case .noFix: return .red
+        case .good:  return .green
+        }
+    }
+
+    private var stateLabel: String {
+        switch fixState {
+        case .off:   return "off"
+        case .noFix: return "no fix"
+        case .good:  return "good"
         }
     }
 }

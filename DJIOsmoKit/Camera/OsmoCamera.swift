@@ -28,6 +28,15 @@ public final class OsmoCamera: Identifiable {
         didSet {
             previousConnectionState = oldValue
             reconnectingSince = (connectionState == .reconnecting) ? Date() : nil
+            // Cumulative "walkabout" clock: stamp when we LOSE a live connection,
+            // clear when we regain one. Survives the active/passive reconnect
+            // cycling so the UI can show total time-since-dropped. Stays nil for a
+            // never-yet-connected camera (it hasn't gone anywhere).
+            if connectionState == .connected {
+                disconnectedSince = nil
+            } else if oldValue == .connected {
+                disconnectedSince = Date()
+            }
         }
     }
     /// The state before the most recent transition. Used to distinguish sleeping
@@ -35,6 +44,10 @@ public final class OsmoCamera: Identifiable {
     public internal(set) var previousConnectionState: ConnectionState = .disconnected
     /// When the camera entered `.reconnecting` state. `nil` when in any other state.
     public internal(set) var reconnectingSince: Date?
+    /// When the camera dropped from a live (`.connected`) connection — the start of
+    /// its "walkabout". `nil` while connected or never-yet-connected. Drives the
+    /// cumulative time-since-dropped shown during reconnect/waiting in the UI.
+    public internal(set) var disconnectedSince: Date?
     /// Most recently received camera status. `.unknown` until first notification arrives.
     public internal(set) var status: CameraStatus = .unknown
     /// When the last valid status notification was received from this camera.
@@ -80,6 +93,73 @@ public final class OsmoCamera: Identifiable {
     /// Recent RSSI samples for sparkline display (max 16, newest last).
     public internal(set) var rssiHistory: [Int] = []
 
+    // MARK: - GPS Send Health (per-camera)
+
+    /// Session total GPS frames attempted (reset on each GPS start()).
+    public internal(set) var gpsAttempted: Int = 0
+    /// Session total GPS frames skipped because the BLE link wasn't ready.
+    public internal(set) var gpsSkipped: Int = 0
+    /// Attempts in the current open 1-second bucket (snapshotted + reset by the tick).
+    public internal(set) var gpsSecondAttempts: Int = 0
+    /// Sends in the current open 1-second bucket.
+    public internal(set) var gpsSecondSent: Int = 0
+    /// Per-second sent fraction for the sparkline (max 16, newest last).
+    /// nil = no attempts that second (gray), 0.0 = all skipped (red),
+    /// 1.0 = all sent (green), 0.x = partial split bar.
+    public internal(set) var gpsSendHistory: [Double?] = []
+
+    /// Record one GPS send attempt. `sent` = the local CoreBluetooth stack
+    /// accepted the write (canSendWriteWithoutResponse was true).
+    func recordGPSSend(sent: Bool) {
+        gpsAttempted += 1
+        gpsSecondAttempts += 1
+        if sent {
+            gpsSecondSent += 1
+        } else {
+            gpsSkipped += 1
+        }
+    }
+
+    /// Snapshot the current second into `gpsSendHistory` and reset the bucket.
+    /// Called by the 1 Hz aggregation tick on OsmoLocationManager.
+    func snapshotGPSSecond() {
+        let fraction: Double? = gpsSecondAttempts > 0
+            ? Double(gpsSecondSent) / Double(gpsSecondAttempts)
+            : nil
+        gpsSendHistory.append(fraction)
+        if gpsSendHistory.count > 16 { gpsSendHistory.removeFirst() }
+        gpsSecondAttempts = 0
+        gpsSecondSent = 0
+    }
+
+    /// Reset the live GPS send-health counters (but NOT the sparkline history).
+    /// Called from `clearStatus()` on disconnect so the open-second bucket doesn't
+    /// carry stale counts across a reconnect — the `gpsSendHistory` itself is
+    /// preserved (frozen) for troubleshooting and only wiped by `clearHistory()`.
+    func resetGPSSendHealth() {
+        gpsAttempted = 0
+        gpsSkipped = 0
+        gpsSecondAttempts = 0
+        gpsSecondSent = 0
+    }
+
+    /// Wipe ONLY the GPS send-health (counters + sparkline history), leaving the
+    /// RSSI history untouched. Called when a new GPS session starts — RSSI is
+    /// independent of GPS and must not be cleared by toggling GPS push.
+    func clearGPSSendHistory() {
+        resetGPSSendHealth()
+        gpsSendHistory.removeAll()
+    }
+
+    /// Wipe ALL per-camera sparkline history (GPS send + RSSI) and live counters.
+    /// Called ONLY on clean transitions — camera disable/remove or clear-all —
+    /// NEVER on a disconnect/reconnect flap (history freezes + dims instead) and
+    /// NEVER on a GPS toggle (that uses `clearGPSSendHistory()`).
+    func clearHistory() {
+        clearGPSSendHistory()
+        rssiHistory.removeAll()
+    }
+
     // MARK: - BLE
 
     /// The CoreBluetooth peripheral. Nil when not yet discovered or after forgetting.
@@ -111,7 +191,10 @@ public final class OsmoCamera: Identifiable {
         modeConfirmationTask?.cancel()
         modeConfirmationTask = nil
         rssi = nil
-        rssiHistory.removeAll()
+        // NOTE: rssiHistory + gpsSendHistory are intentionally PRESERVED here so a
+        // disconnect/reconnect flap doesn't wipe troubleshooting data — they freeze
+        // (dimmed in the UI) and are only cleared by clearHistory() on clean actions.
+        resetGPSSendHealth()  // live counters only; not the sparkline history
         modeLogger.reset()
     }
     /// Logs full hex dump once per unique raw mode byte — avoids flooding the log at 1 Hz.
@@ -563,12 +646,29 @@ public final class OsmoCamera: Identifiable {
         }
     }
 
-    /// Send GPS data to this camera (fire-and-forget, no response expected).
-    /// Called periodically by `OsmoLocationManager` at 1 Hz.
-    public func sendGPSData(_ location: CLLocation) {
-        guard connectionState == .connected else { return }
+    /// Send a pre-encoded GPS payload to this camera (fire-and-forget).
+    /// Consults BLE readiness and records send-health. Per-camera seq means
+    /// the frame (with both CRCs) is built here, not shared across cameras.
+    public func sendGPSData(payload: Data) {
+        guard connectionState == .connected else { return }  // no attempt; tick appends nil
+        let ready = bleConnection?.canSendGPSWrite ?? false
+        guard ready else {
+            recordGPSSend(sent: false)   // link not ready → skip (red)
+            return
+        }
         let seq = nextSeq()
-        let frame = GPSPushCommand.build(location: location, seq: seq)
-        try? send(frame: frame)
+        let frame = GPSPushCommand.frame(payload: payload, seq: seq)
+        do {
+            try send(frame: frame)
+            recordGPSSend(sent: true)
+        } catch {
+            recordGPSSend(sent: false)
+        }
+    }
+
+    /// Convenience overload — encodes the payload then sends. Kept for callers
+    /// that have a `CLLocation` rather than a pre-encoded payload.
+    public func sendGPSData(_ location: CLLocation) {
+        sendGPSData(payload: GPSPushCommand.encodePayload(location: location))
     }
 }

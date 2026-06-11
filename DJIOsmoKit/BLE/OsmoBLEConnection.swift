@@ -118,6 +118,15 @@ final class OsmoBLEConnection: NSObject {
         peripheral.writeValue(data, for: char, type: .withoutResponse)
     }
 
+    /// Whether the local CoreBluetooth stack will currently accept a
+    /// `.withoutResponse` write. Consulted ONLY by the GPS send path
+    /// (fire-and-forget, no ACK) to drive send-health counters — the generic
+    /// `write(_:)` above stays unconditional. False when the connection-event
+    /// scheduler is starving this link.
+    var canSendGPSWrite: Bool {
+        peripheral.canSendWriteWithoutResponse
+    }
+
     /// Trigger an RSSI read. Result arrives via `onRSSIUpdate` callback.
     func readRSSI() {
         peripheral.readRSSI()

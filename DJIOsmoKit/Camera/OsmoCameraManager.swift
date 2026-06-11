@@ -130,6 +130,11 @@ public final class OsmoCameraManager: NSObject {
     public func toggleEnabled(_ camera: OsmoCamera) {
         camera.isEnabled.toggle()
         OsmoLog.manager.info("Camera \(camera.name, privacy: .public) \(camera.isEnabled ? "enabled" : "disabled")")
+        if !camera.isEnabled {
+            // Disabling is a clean stop — wipe the frozen sparkline history so a
+            // later re-enable starts fresh rather than showing stale bars.
+            camera.clearHistory()
+        }
         persistCameras()
     }
 
@@ -537,8 +542,11 @@ public final class OsmoCameraManager: NSObject {
     /// Send GPS location data to all connected cameras (fire-and-forget).
     /// Called by `OsmoLocationManager` at 10 Hz.
     public func pushGPS(_ location: CLLocation) {
+        // Encode the 48-byte payload ONCE per tick (shared Calendar decomposition);
+        // each camera wraps it with its own seq + CRCs (which cannot be shared).
+        let payload = GPSPushCommand.encodePayload(location: location)
         for camera in enabledConnectedCameras {
-            camera.sendGPSData(location)
+            camera.sendGPSData(payload: payload)
         }
     }
 
