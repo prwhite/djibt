@@ -265,4 +265,96 @@ final class GPSFixTests: XCTestCase {
         XCTAssertTrue(cam.gpsSendHistory.isEmpty,
             "Aggregation only runs while GPS is active")
     }
+
+    // MARK: - ConnectionState.showsLiveStatus
+
+    func testShowsLiveStatusTrueForConnectedAndSleeping() {
+        XCTAssertTrue(ConnectionState.connected.showsLiveStatus)
+        XCTAssertTrue(ConnectionState.sleeping.showsLiveStatus,
+            "Sleeping keeps a live BLE link (RSSI updates) → live status")
+    }
+
+    func testShowsLiveStatusFalseForNonLiveStates() {
+        let nonLive: [ConnectionState] = [.disconnected, .scanning, .connecting,
+                                          .handshaking, .reconnecting, .failed]
+        for state in nonLive {
+            XCTAssertFalse(state.showsLiveStatus, "\(state) should not show live status")
+        }
+    }
+
+    // MARK: - History clearing semantics (freeze-on-disconnect)
+
+    /// The bug this locks: a GPS session start must NOT wipe RSSI history — they're
+    /// independent. clearGPSSendHistory clears GPS counters + send history only.
+    @MainActor
+    func testClearGPSSendHistoryLeavesRSSIIntact() {
+        let cam = OsmoCamera(name: "Test")
+        cam.rssiHistory.append(-55)
+        cam.recordGPSSend(sent: true)
+        cam.snapshotGPSSecond()
+        XCTAssertFalse(cam.gpsSendHistory.isEmpty)
+        XCTAssertFalse(cam.rssiHistory.isEmpty)
+
+        cam.clearGPSSendHistory()
+
+        XCTAssertTrue(cam.gpsSendHistory.isEmpty, "GPS send history cleared")
+        XCTAssertEqual(cam.gpsAttempted, 0, "GPS counters reset")
+        XCTAssertFalse(cam.rssiHistory.isEmpty, "RSSI history MUST be preserved (independent of GPS)")
+    }
+
+    @MainActor
+    func testClearHistoryClearsBothGPSAndRSSI() {
+        let cam = OsmoCamera(name: "Test")
+        cam.rssiHistory.append(-55)
+        cam.recordGPSSend(sent: true)
+        cam.snapshotGPSSecond()
+
+        cam.clearHistory()
+
+        XCTAssertTrue(cam.gpsSendHistory.isEmpty, "clearHistory clears GPS history")
+        XCTAssertTrue(cam.rssiHistory.isEmpty, "clearHistory clears RSSI history too")
+        XCTAssertEqual(cam.gpsAttempted, 0)
+    }
+
+    /// Disconnect (clearStatus) must FREEZE the sparklines, not wipe them — the
+    /// last-seen history is kept for troubleshooting until a clean clear.
+    @MainActor
+    func testClearStatusPreservesHistoriesForFreeze() {
+        let cam = OsmoCamera(name: "Test")
+        cam.rssiHistory.append(-55)
+        cam.recordGPSSend(sent: true)
+        cam.snapshotGPSSecond()
+
+        cam.clearStatus()   // the disconnect path
+
+        XCTAssertFalse(cam.gpsSendHistory.isEmpty,
+            "GPS history frozen (not wiped) on disconnect")
+        XCTAssertFalse(cam.rssiHistory.isEmpty,
+            "RSSI history frozen (not wiped) on disconnect")
+    }
+
+    // MARK: - disconnectedSince "walkabout" clock
+
+    @MainActor
+    func testDisconnectedSinceLifecycle() {
+        let cam = OsmoCamera(name: "Test")
+        XCTAssertNil(cam.disconnectedSince, "never-connected camera has no walkabout clock")
+
+        cam.connectionState = .connecting
+        XCTAssertNil(cam.disconnectedSince, "still nil — never reached .connected")
+
+        cam.connectionState = .connected
+        XCTAssertNil(cam.disconnectedSince, ".connected clears it")
+
+        cam.connectionState = .reconnecting
+        let stamp = cam.disconnectedSince
+        XCTAssertNotNil(stamp, "dropping from .connected starts the clock")
+
+        cam.connectionState = .connecting   // still away (active retry)
+        XCTAssertEqual(cam.disconnectedSince, stamp,
+            "clock persists across reconnect cycling (not restamped each transition)")
+
+        cam.connectionState = .connected
+        XCTAssertNil(cam.disconnectedSince, "regaining .connected clears it")
+    }
 }
