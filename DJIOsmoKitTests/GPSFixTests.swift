@@ -357,4 +357,52 @@ final class GPSFixTests: XCTestCase {
         cam.connectionState = .connected
         XCTAssertNil(cam.disconnectedSince, "regaining .connected clears it")
     }
+
+    // MARK: - hasFreshFix (staleness) + fixState
+
+    private func makeLocation(accuracy: Double, age: TimeInterval) -> CLLocation {
+        CLLocation(
+            coordinate: CLLocationCoordinate2D(latitude: 37, longitude: -122),
+            altitude: 0, horizontalAccuracy: accuracy, verticalAccuracy: accuracy,
+            timestamp: Date(timeIntervalSinceNow: -age)
+        )
+    }
+
+    @MainActor
+    func testFreshValidFixIsFreshAndGood() {
+        let mgr = OsmoLocationManager(cameraManager: OsmoCameraManager.makePreview())
+        mgr._testSetActive(true, location: makeLocation(accuracy: 5, age: 1))   // 1s old, valid
+        XCTAssertTrue(mgr.hasFreshFix)
+        XCTAssertEqual(mgr.fixState, .good)
+        XCTAssertEqual(mgr.accuracy, 5)
+    }
+
+    @MainActor
+    func testStaleValidFixIsNotFreshAndShowsNoFix() {
+        let mgr = OsmoLocationManager(cameraManager: OsmoCameraManager.makePreview())
+        // Valid accuracy but 1 hour old — the cached/lost-signal case.
+        mgr._testSetActive(true, location: makeLocation(accuracy: 5, age: 3600))
+        XCTAssertFalse(mgr.hasFreshFix, "valid but 1h old → not fresh")
+        XCTAssertEqual(mgr.fixState, .noFix, "stale fix → noFix (dot not green)")
+        XCTAssertNil(mgr.accuracy, "no ±N m readout for a stale fix")
+    }
+
+    @MainActor
+    func testFixJustUnderThresholdIsFresh_JustOverIsStale() {
+        let mgr = OsmoLocationManager(cameraManager: OsmoCameraManager.makePreview())
+        mgr._testSetActive(true, location: makeLocation(accuracy: 5,
+            age: OsmoLocationManager.maxFixAge - 1))
+        XCTAssertTrue(mgr.hasFreshFix, "just under \(OsmoLocationManager.maxFixAge)s → fresh")
+        mgr._testSetActive(true, location: makeLocation(accuracy: 5,
+            age: OsmoLocationManager.maxFixAge + 1))
+        XCTAssertFalse(mgr.hasFreshFix, "just over the threshold → stale")
+    }
+
+    @MainActor
+    func testInvalidFixIsNotFreshRegardlessOfAge() {
+        let mgr = OsmoLocationManager(cameraManager: OsmoCameraManager.makePreview())
+        mgr._testSetActive(true, location: makeLocation(accuracy: -1, age: 0))  // invalid, recent
+        XCTAssertFalse(mgr.hasFreshFix)
+        XCTAssertEqual(mgr.fixState, .noFix)
+    }
 }

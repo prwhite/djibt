@@ -49,16 +49,32 @@ public final class OsmoLocationManager: NSObject {
         }
     }
 
+    /// A fix older than this is treated as no-fix. Catches the stale cached
+    /// location iOS delivers at session start, and signal loss mid-session (e.g.
+    /// riding into a tunnel). Apple's sample-code convention is ~15 s; we use 20 s
+    /// for margin, because even a healthy fix can age to ~15 s between CL
+    /// deliveries. `pausesLocationUpdatesAutomatically = false` (see init) keeps
+    /// the stream flowing so this mainly fires on real signal loss, not stillness.
+    public static let maxFixAge: TimeInterval = 20
+
+    /// True when we have a valid fix that is ALSO recent enough to trust. The
+    /// single source of truth for "do we have GPS right now" — drives both the
+    /// push decision and `fixState`. A valid-but-old fix is NOT fresh.
+    public var hasFreshFix: Bool {
+        guard let location = lastLocation, location.hasValidGPSFix else { return false }
+        return abs(location.timestamp.timeIntervalSinceNow) < Self.maxFixAge
+    }
+
     /// Phone-global fix quality — the one place "off/noFix/good" is derived.
     public var fixState: GPSFixState {
         guard isActive else { return .off }
-        return (lastLocation?.hasValidGPSFix == true) ? .good : .noFix
+        return hasFreshFix ? .good : .noFix
     }
 
     /// Horizontal accuracy in metres for the Settings "±N m" readout,
-    /// or nil when there is no valid fix.
+    /// or nil when there is no fresh valid fix.
     public var accuracy: Double? {
-        guard let l = lastLocation, l.hasValidGPSFix else { return nil }
+        guard hasFreshFix, let l = lastLocation else { return nil }
         return l.horizontalAccuracy
     }
 
@@ -73,6 +89,9 @@ public final class OsmoLocationManager: NSObject {
     private var pushTimer: Timer?
     private var aggregateTimer: Timer?
     private weak var cameraManager: OsmoCameraManager?
+    /// When we last sent a "void" (invalid-fix) frame, to throttle the Void
+    /// re-assertion to ~1 Hz while GPS has no fresh fix.
+    private var lastVoidAt: Date = .distantPast
 
     // MARK: - Init
 
@@ -84,6 +103,11 @@ public final class OsmoLocationManager: NSObject {
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.distanceFilter = kCLDistanceFilterNone
         locationManager.activityType = .other
+        // Keep the fix stream flowing even when stationary. iOS otherwise auto-
+        // pauses location updates when it thinks you're not moving, which lets the
+        // fix age climb toward the staleness threshold and false-fail a perfectly
+        // good fix (observed ageing to ~14–15 s at a desk).
+        locationManager.pausesLocationUpdatesAutomatically = false
         // Seed rateHz from the persisted value (UserDefaults.integer returns 0
         // for a missing key, so fall back to 1 Hz). The didSet equality guard +
         // isActive == false make this a safe no-op for persistence/timer during
@@ -101,6 +125,7 @@ public final class OsmoLocationManager: NSObject {
         locationManager.requestWhenInUseAuthorization()
         locationManager.startUpdatingLocation()
         isActive = true
+        lastVoidAt = .distantPast   // allow an immediate Void if the session starts with no fresh fix
         // New GPS session → wipe each camera's GPS send-health so the readout
         // reflects this run, not a prior session's leftover (frozen) bars. RSSI
         // history is independent of GPS push and is intentionally left intact.
@@ -135,7 +160,15 @@ public final class OsmoLocationManager: NSObject {
     /// (`OsmoMultiApp.init`) reads the same `gps_push_enabled` key.
     public func setEnabled(_ enabled: Bool) {
         UserDefaults.standard.set(enabled, forKey: "gps_push_enabled")
-        if enabled { start() } else { stop() }
+        if enabled {
+            start()
+        } else {
+            // Invalidate the cameras' cached fix before we go silent, so GPS-off
+            // means "no fix" rather than a lingering stale geotag. The burst sends
+            // over the still-open BLE connection after stop() tears down the timer.
+            if let manager = cameraManager { sendVoidBurst(via: manager) }
+            stop()
+        }
     }
 
     /// Toggle GPS push on/off (top-bar button action).
@@ -185,26 +218,46 @@ public final class OsmoLocationManager: NSObject {
     #endif
 
     private func pushGPSToAllCameras() {
-        guard let manager = cameraManager else {
-            OsmoLog.location.debug("GPS push skipped: no camera manager")
-            return
+        guard let manager = cameraManager else { return }
+        guard !manager.enabledConnectedCameras.isEmpty else { return }
+
+        if hasFreshFix, let location = lastLocation {
+            OsmoLog.location.debug("GPS push @ \(String(format: "%.6f", location.coordinate.latitude), privacy: .private),\(String(format: "%.6f", location.coordinate.longitude), privacy: .private)")
+            manager.pushGPS(location)
+            lastPushAt = Date()
+        } else {
+            // No fresh fix — cold start before the first fix, signal lost (tunnel),
+            // or a stale cached fix. Keep the cameras marked Void (satellite_number
+            // = 0, coords 0,0) so they stop embedding a stale position. Throttled to
+            // ~1 Hz: the camera latches Void, so this is a cheap, drop-robust
+            // re-assertion (covers cold-start, where there's no Live→Lost edge).
+            let now = Date()
+            if now.timeIntervalSince(lastVoidAt) >= 1.0 {
+                lastVoidAt = now
+                manager.pushGPS(voidLocation())
+            }
         }
-        guard let location = lastLocation else {
-            OsmoLog.location.debug("GPS push skipped: no location yet")
-            return
+    }
+
+    /// A throwaway "invalid fix" location (accuracy < 0 → `satellite_number = 0`,
+    /// coords 0,0) used to mark the cameras' GPS as Void.
+    private func voidLocation() -> CLLocation {
+        CLLocation(
+            coordinate: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+            altitude: 0, horizontalAccuracy: -1, verticalAccuracy: -1, timestamp: Date()
+        )
+    }
+
+    /// Burst of Void frames for the GPS-OFF transition: `stop()` halts the push
+    /// timer, so unlike the continuous 1 Hz Void above we send a few frames here to
+    /// make sure the camera clears its cached fix before we go silent.
+    private func sendVoidBurst(via manager: OsmoCameraManager) {
+        Task { @MainActor in
+            for _ in 0..<8 {
+                manager.pushGPS(voidLocation())
+                try? await Task.sleep(for: .milliseconds(150))
+            }
         }
-        guard location.hasValidGPSFix else {
-            OsmoLog.location.debug("GPS push skipped: invalid fix (no satellites / indoors)")
-            return
-        }
-        let targets = manager.enabledConnectedCameras.count
-        guard targets > 0 else {
-            OsmoLog.location.debug("GPS push skipped: no connected cameras")
-            return
-        }
-        OsmoLog.location.debug("GPS push → \(targets) camera(s) @ \(String(format: "%.6f", location.coordinate.latitude), privacy: .private),\(String(format: "%.6f", location.coordinate.longitude), privacy: .private)")
-        manager.pushGPS(location)
-        lastPushAt = Date()
     }
 
     /// 1 Hz aggregation tick (owned here — single timer, no per-view timers).
