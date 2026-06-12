@@ -30,6 +30,8 @@ struct SettingsView: View {
     /// "±N m, last update Xs ago" when we have a usable fix, otherwise "No fix".
     /// `now` comes from the enclosing TimelineView so the age advances each second.
     private func fixReadout(at now: Date) -> String {
+        // Armed but idled (no cameras connected → CL demand-gated off).
+        guard locationManager.isUpdatingLocation else { return "Standby · no cameras" }
         guard locationManager.fixState != .noFix else { return "No fix" }
         guard let accuracy = locationManager.accuracy else { return "No fix" }
         let meters = Int(accuracy.rounded())
@@ -110,7 +112,7 @@ struct SettingsView: View {
                     Text("Location")
                 } footer: {
                     Text(locationManager.isActive
-                        ? "Feeds iPhone GPS coordinates to connected cameras for video geotagging. 10 Hz uses more battery and BLE bandwidth, especially with many cameras."
+                        ? "Feeds iPhone GPS coordinates to connected cameras for video geotagging. GPS runs only while cameras are connected (works with the phone locked). 10 Hz uses more battery and BLE bandwidth, especially with many cameras."
                         : "Feeds iPhone GPS coordinates to connected cameras for video geotagging.")
                 }
 

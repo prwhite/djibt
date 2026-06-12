@@ -65,9 +65,42 @@ public final class OsmoLocationManager: NSObject {
         return abs(location.timestamp.timeIntervalSinceNow) < Self.maxFixAge
     }
 
+    /// True while CoreLocation is actually delivering (demand-gated): the GPS
+    /// toggle arms the feature, but CL runs only while ≥1 enabled camera is
+    /// connected — no rig, no GPS radio, no background location indicator.
+    public private(set) var isUpdatingLocation = false
+    /// Consecutive demand-check ticks (1 Hz) with no connected cameras. CL stops
+    /// after `Self.demandGraceTicks` so brief reconnect blips don't flap the fix.
+    private var noDemandTicks = 0
+    static let demandGraceTicks = 60
+
+    /// Start/stop the CL session to match camera demand. Runs on the 1 Hz
+    /// aggregate tick and at arm time.
+    private func updateLocationDemand() {
+        guard isActive else { return }
+        let demand = !(cameraManager?.enabledConnectedCameras.isEmpty ?? true)
+        if demand {
+            noDemandTicks = 0
+            if !isUpdatingLocation {
+                locationManager.startUpdatingLocation()
+                isUpdatingLocation = true
+                OsmoLog.location.info("Location demand: cameras connected → CL started")
+            }
+        } else if isUpdatingLocation {
+            noDemandTicks += 1
+            if noDemandTicks >= Self.demandGraceTicks {
+                locationManager.stopUpdatingLocation()
+                isUpdatingLocation = false
+                OsmoLog.location.info("Location demand: no cameras for \(Self.demandGraceTicks)s → CL stopped (standby)")
+            }
+        }
+    }
+
     /// Phone-global fix quality — the one place "off/noFix/good" is derived.
+    /// Standby (armed but CL idled — no cameras connected) reads as `.off`:
+    /// the radio genuinely isn't running.
     public var fixState: GPSFixState {
-        guard isActive else { return .off }
+        guard isActive, isUpdatingLocation else { return .off }
         return hasFreshFix ? .good : .noFix
     }
 
@@ -132,19 +165,23 @@ public final class OsmoLocationManager: NSObject {
     public func start() {
         guard !isActive else { return }
         locationManager.requestWhenInUseAuthorization()
-        locationManager.startUpdatingLocation()
         isActive = true
         lastVoidAt = .distantPast   // allow an immediate Void if the session starts with no fresh fix
         // New GPS session → wipe each camera's GPS send-health so the readout
         // reflects this run, not a prior session's leftover (frozen) bars. RSSI
         // history is independent of GPS push and is intentionally left intact.
         cameraManager?.enabledCameras.forEach { $0.clearGPSSendHistory() }
+        // CL itself is demand-gated (see updateLocationDemand) — arming the toggle
+        // starts it only if cameras are already connected.
+        updateLocationDemand()
         restartTimer()
         // Aggregation runs at a fixed 1 Hz regardless of rateHz, so it gets its
         // own timer that start()/stop() own — it must NOT be rescheduled when
-        // rateHz changes (only pushTimer does that in restartTimer()).
+        // rateHz changes (only pushTimer does that in restartTimer()). The same
+        // fixed tick drives the location-demand check.
         aggregateTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
+                self?.updateLocationDemand()
                 self?.aggregateGPSSecond()
             }
         }
@@ -155,6 +192,8 @@ public final class OsmoLocationManager: NSObject {
     public func stop() {
         guard isActive else { return }
         locationManager.stopUpdatingLocation()
+        isUpdatingLocation = false
+        noDemandTicks = 0
         pushTimer?.invalidate()
         pushTimer = nil
         aggregateTimer?.invalidate()
@@ -286,6 +325,9 @@ public final class OsmoLocationManager: NSObject {
     #if DEBUG
     /// Test-only: run one aggregation tick synchronously.
     func _testAggregateOnce() { aggregateGPSSecond() }
+
+    /// Test-only: run one location-demand check synchronously.
+    func _testDemandCheckOnce() { updateLocationDemand() }
     #endif
 }
 
