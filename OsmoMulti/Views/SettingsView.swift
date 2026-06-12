@@ -8,6 +8,8 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var showClearConfirmation = false
+    /// Camera-drop alert toggle; CameraDropNotifier reads the same key. Default on.
+    @AppStorage(CameraDropNotifier.enabledKey) private var dropAlertsEnabled = true
 
     private let timeoutOptions: [(label: String, seconds: TimeInterval)] = [
         ("2 seconds",  2),
@@ -110,6 +112,14 @@ struct SettingsView: View {
                     Text(locationManager.isActive
                         ? "Feeds iPhone GPS coordinates to connected cameras for video geotagging. 10 Hz uses more battery and BLE bandwidth, especially with many cameras."
                         : "Feeds iPhone GPS coordinates to connected cameras for video geotagging.")
+                }
+
+                Section {
+                    Toggle("Camera Drop Alerts", isOn: $dropAlertsEnabled)
+                } header: {
+                    Text("Notifications")
+                } footer: {
+                    Text("Notifies you when a camera unexpectedly drops out and doesn't reconnect within \(Int(manager.dropoutGracePeriod)) seconds. Going to sleep, disabling, or removing a camera won't alert.")
                 }
 
                 Section {

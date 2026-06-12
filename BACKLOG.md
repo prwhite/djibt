@@ -32,6 +32,24 @@ link dropped, **gray** = Void / no real GPS. Two sizings:
 A per-sample GitHub-activity grid was considered and dropped (rate-dependent column
 height fights the fixed-capacity layout; per-sample detail is illegible in the row).
 
+## GPS push while backgrounded (location background mode)
+`bluetooth-central` keeps connections + drop detection alive in the background,
+but it does NOT keep the GPS push running: the push timer freezes on suspend
+and CoreLocation stops delivering without the `location` background mode. So
+pocketing the phone mid-recording opens a geotag continuity gap (the camera
+holds/voids per its own timeout). If continuous geotagging while pocketed
+matters, add the `location` UIBackgroundMode + keep CL updates running — a
+separate battery/review trade from bluetooth-central. Decide after real-world
+use shows whether the gap matters.
+
+## CoreBluetooth state restoration
+With bluetooth-central, drop detection survives backgrounding — but not app
+**termination** (iOS memory pressure). CB state restoration
+(`CBCentralManagerOptionRestoreIdentifierKey` + willRestoreState) relaunches
+the app for BLE events after termination, closing that last gap. Adds real
+complexity (restoration callbacks, re-wiring connections); evaluate after
+field experience with plain bluetooth-central.
+
 ## Other deferred polish
 - **Sparkline accessibility:** the RSSI + GPS send-health Canvas sparklines have
   no VoiceOver labels.

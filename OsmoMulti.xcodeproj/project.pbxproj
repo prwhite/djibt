@@ -25,6 +25,7 @@
 		30A5D07C2038F59C751C0584 /* DJIOsmoKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 353451F0F10BCADDAA438278 /* DJIOsmoKit.framework */; };
 		36A8D280F92A8AA6F72B7F15 /* OsmoBLEScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF5E9ED9B3C9E0CA998698BC /* OsmoBLEScanner.swift */; };
 		396BA941F2DA4C6D498ECAAF /* OsmoBLEConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14CBEF2F29EDD094645BE89F /* OsmoBLEConnection.swift */; };
+		39D7C929BFD72A8F2AAB6B3C /* DropoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C724D28814A8206C2616F50 /* DropoutTests.swift */; };
 		39F347730F4082C9128378E8 /* DJIOsmoKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 353451F0F10BCADDAA438278 /* DJIOsmoKit.framework */; };
 		449D6C5951D62C23DDB5F8B1 /* DJIOsmoKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 353451F0F10BCADDAA438278 /* DJIOsmoKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		4997EBDBA4DB8FA26BC9A8C9 /* CRCTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3EC743303679BC8DF0EFC38 /* CRCTests.swift */; };
@@ -50,6 +51,7 @@
 		AFB1DE62757C2A143DF603B5 /* OsmoCameraManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28D7898C577133FE6DDDAB86 /* OsmoCameraManager.swift */; };
 		B170FCA659C4B5902088477C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2CB2376AF5AFBA23A8D7E5F6 /* Assets.xcassets */; };
 		BBFED5FDB3C21C96D3A0A9CD /* ConnectionCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97A0C3C5D3CC6AC613EBFCAA /* ConnectionCommand.swift */; };
+		BFF5DF596CFC3F8A83ED8766 /* CameraDropNotifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 007BF4B45048FBFAED6ED6AA /* CameraDropNotifier.swift */; };
 		CACC83F5E3367323F06DD518 /* GPSPushCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D82B5852DB15814F0429594 /* GPSPushCommand.swift */; };
 		D28B1B70A771347BEE54C437 /* OsmoWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB86E24EE94AF69E7E4E57A2 /* OsmoWatchApp.swift */; };
 		D3A6BF72ECFD46DCC620D7D4 /* ModeDetailsPushCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5748F9425ECD83D3EE0F0C6B /* ModeDetailsPushCommand.swift */; };
@@ -126,6 +128,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		007BF4B45048FBFAED6ED6AA /* CameraDropNotifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraDropNotifier.swift; sourceTree = "<group>"; };
 		05935ED1F892FD40924DF4D2 /* CameraRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraRowView.swift; sourceTree = "<group>"; };
 		0EA2991A288C4BAE21024128 /* WatchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchViewModel.swift; sourceTree = "<group>"; };
 		14CBEF2F29EDD094645BE89F /* OsmoBLEConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OsmoBLEConnection.swift; sourceTree = "<group>"; };
@@ -156,6 +159,7 @@
 		7232CFC18FC2C9A32DCC4141 /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
 		73574EDDD56A08059E6848F2 /* RecordingCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingCommand.swift; sourceTree = "<group>"; };
 		77BA1CD115E78338BCBFACC5 /* WatchControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchControlView.swift; sourceTree = "<group>"; };
+		7C724D28814A8206C2616F50 /* DropoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DropoutTests.swift; sourceTree = "<group>"; };
 		7E9838660BDF128E730E1C78 /* CameraListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraListViewModel.swift; sourceTree = "<group>"; };
 		8819AE63F91CAD2817D9CD63 /* CameraShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraShortcuts.swift; sourceTree = "<group>"; };
 		882B71AD36860EA8FED4A351 /* RawFrameCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawFrameCommand.swift; sourceTree = "<group>"; };
@@ -232,6 +236,7 @@
 			isa = PBXGroup;
 			children = (
 				E3EC743303679BC8DF0EFC38 /* CRCTests.swift */,
+				7C724D28814A8206C2616F50 /* DropoutTests.swift */,
 				68D8C8ADE10B30ADA4DE66C3 /* FrameTests.swift */,
 				4E8263B15ABB871DCD551183 /* GPSFixTests.swift */,
 			);
@@ -312,6 +317,7 @@
 		871F0137BC2320159A6FF64A /* App */ = {
 			isa = PBXGroup;
 			children = (
+				007BF4B45048FBFAED6ED6AA /* CameraDropNotifier.swift */,
 				66F24A8E9D09D59C73F80E71 /* ContentView.swift */,
 				BA300F201CB3C612E0FF92C3 /* OsmoMultiApp.swift */,
 			);
@@ -628,6 +634,7 @@
 			files = (
 				2F2FDF003B3A526883CBBE97 /* AddCameraView.swift in Sources */,
 				D7458693C464FCC7949E4C69 /* CameraDetailView.swift in Sources */,
+				BFF5DF596CFC3F8A83ED8766 /* CameraDropNotifier.swift in Sources */,
 				806E9765F2035B4A52DB44B8 /* CameraIntents.swift in Sources */,
 				A24A222A21DFD4C5AABEF43F /* CameraListView.swift in Sources */,
 				9FACCC12CE8DB4D45EB00575 /* CameraListViewModel.swift in Sources */,
@@ -658,6 +665,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4997EBDBA4DB8FA26BC9A8C9 /* CRCTests.swift in Sources */,
+				39D7C929BFD72A8F2AAB6B3C /* DropoutTests.swift in Sources */,
 				2492B25AAEDEB87B14CE3DB8 /* FrameTests.swift in Sources */,
 				965779F6C3FFAAF09E1C28E8 /* GPSFixTests.swift in Sources */,
 			);

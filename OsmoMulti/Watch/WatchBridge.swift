@@ -36,6 +36,24 @@ final class WatchBridge: NSObject {
         startStatePushTimer()
     }
 
+    // MARK: - Dropout Relay
+
+    /// Forward a camera-dropout event (already grace-debounced and toggle-gated by
+    /// CameraDropNotifier) to the watch as a live message → instant in-app haptic
+    /// + banner while the watch app is frontmost (the watch-as-remote case).
+    ///
+    /// Live-only by design: with the bluetooth-central background mode, drops are
+    /// detected and notified even when the phone is locked — and a locked phone is
+    /// exactly when iOS mirrors notifications to the watch with a system haptic.
+    /// No queued-transfer fallback needed.
+    func relayDropout(_ camera: OsmoCamera) {
+        guard session.activationState == .activated, session.isReachable else { return }
+        log.info("relaying dropout (live): \(camera.name, privacy: .public)")
+        session.sendMessage(["event": "cameraDropout", "name": camera.name], replyHandler: nil) { error in
+            log.error("dropout relay failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
     // MARK: - State Push
 
     private func startStatePushTimer() {

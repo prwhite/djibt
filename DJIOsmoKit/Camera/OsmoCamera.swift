@@ -51,8 +51,29 @@ public final class OsmoCamera: Identifiable {
             if oldValue == .sleeping && connectionState == .reconnecting {
                 presumedAsleep = true
             }
+            // Unexpected-drop detection: a camera that WAS stably connected left the
+            // live set without the user asking (BLE drop, watchdog reset, …). Going
+            // to .sleeping is live→live (not a drop), and a sleeping camera losing
+            // BLE is expected deep-sleep behavior (oldValue != .connected). User-
+            // initiated teardown (disable / force-reconnect) suppresses via the
+            // one-shot flag set in forceDisconnect().
+            if oldValue == .connected && !connectionState.showsLiveStatus {
+                if suppressNextDropEvent {
+                    suppressNextDropEvent = false
+                } else {
+                    onUnexpectedDrop?(self)
+                }
+            } else if connectionState == .connected {
+                suppressNextDropEvent = false   // hygiene: never carry a stale flag into a live session
+            }
         }
     }
+    /// One-shot: set by user-initiated disconnect paths so the next
+    /// connected→not-live transition does NOT fire `onUnexpectedDrop`.
+    var suppressNextDropEvent = false
+    /// Fired on an unexpected connected→not-live transition (comms failure).
+    /// Assigned by `OsmoCameraManager`, which debounces it into `onCameraDropout`.
+    var onUnexpectedDrop: ((OsmoCamera) -> Void)?
     /// The state before the most recent transition. Used to distinguish sleeping
     /// cameras (which legitimately wait in passive reconnect) from stuck retries.
     public internal(set) var previousConnectionState: ConnectionState = .disconnected
@@ -191,6 +212,9 @@ public final class OsmoCamera: Identifiable {
 
     /// Disconnect and reset the BLE connection (for force-reconnect).
     public func forceDisconnect() {
+        // User-initiated (disable toggle / force-reconnect): not a comms failure,
+        // so don't fire the unexpected-drop event for this transition.
+        suppressNextDropEvent = true
         bleConnection?.disconnect()
         bleConnection = nil
         connectionState = .disconnected

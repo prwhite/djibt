@@ -26,6 +26,10 @@
 	<string>Cam Control requires Bluetooth to connect to and control DJI Osmo cameras.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Cam Control uses your location to geotag video footage on connected DJI Osmo cameras.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>bluetooth-central</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

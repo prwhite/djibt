@@ -2,6 +2,7 @@ import Foundation
 import Observation
 import OSLog
 import WatchConnectivity
+import WatchKit
 
 private let log = Logger(subsystem: "net.prehiti.payton.CamControl.watchkitapp", category: "WatchVM")
 
@@ -20,8 +21,12 @@ final class WatchViewModel: NSObject {
     /// because OsmoWatch does not link DJIOsmoKit and never sees GPSFixState.
     var gpsFix: String = "off"
     var isReachable: Bool = false
+    /// Transient "<name> disconnected" banner after a relayed camera dropout.
+    /// Set alongside the wrist haptic; auto-clears after a few seconds.
+    var dropoutAlert: String?
 
     private let session: WCSession
+    private var dropoutClearTask: Task<Void, Never>?
 
     override init() {
         self.session = WCSession.default
@@ -69,6 +74,25 @@ final class WatchViewModel: NSObject {
         gpsFix = context["gpsFix"] as? String ?? "off"
         log.info("applyContext: enabled=\(self.enabledCount) connected=\(self.connectedCount) mode=\(self.currentMode ?? "nil", privacy: .public) modes=\(self.availableModes.count) recording=\(self.isRecording) gps=\(self.gpsFix, privacy: .public)")
     }
+
+    // MARK: - Dropout Alert
+
+    /// A camera dropped out (already grace-debounced + toggle-gated on the phone):
+    /// buzz the wrist and flash a transient banner. Live-message delivery — only
+    /// arrives while the watch app is active (the watch-as-remote case). With the
+    /// phone locked, wrist delivery rides the system's notification mirroring.
+    private func handleDropout(name: String) {
+        log.info("camera dropout relayed: \(name, privacy: .public)")
+        WKInterfaceDevice.current().play(.failure)
+        dropoutAlert = "\(name) disconnected"
+        dropoutClearTask?.cancel()
+        dropoutClearTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(6))
+            guard !Task.isCancelled else { return }
+            self?.dropoutAlert = nil
+        }
+    }
+
 }
 
 struct WatchMode: Identifiable, Equatable {
@@ -123,6 +147,15 @@ extension WatchViewModel: WCSessionDelegate {
         log.info("reachability changed: \(session.isReachable)")
         Task { @MainActor in
             self.isReachable = session.isReachable
+        }
+    }
+
+    /// Live events from the iPhone (no reply expected). Currently: cameraDropout.
+    nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
+        guard message["event"] as? String == "cameraDropout" else { return }
+        let name = message["name"] as? String ?? "Camera"
+        Task { @MainActor in
+            self.handleDropout(name: name)
         }
     }
 
