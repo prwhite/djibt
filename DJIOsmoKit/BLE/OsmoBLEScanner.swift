@@ -101,10 +101,15 @@ extension OsmoBLEScanner: CBCentralManagerDelegate {
         // Dump full advertisement data for protocol analysis
         Self.logAdvertisement(advertisementData, peripheral: peripheral)
 
+        // The local-name key rides in the scan response and is often absent — iOS
+        // may not deliver it, and a camera that already holds a bond tends to
+        // advertise nameless. peripheral.name (the system's cached GAP name) still
+        // carries "OsmoAction4-1284" for any previously-seen camera, so prefer the
+        // advertisement but fall back rather than pairing as a generic "Osmo Camera".
         let discovered = DiscoveredCamera(
             peripheral: peripheral,
             rssi: rssiValue,
-            advertisedName: name
+            advertisedName: name ?? peripheral.name
         )
         discoveryContinuation?.yield(discovered)
     }

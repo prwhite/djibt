@@ -662,6 +662,14 @@ extension OsmoCameraManager: @preconcurrency CBCentralManagerDelegate {
     public func centralManager(_ central: CBCentralManager,
                                 didConnect peripheral: CBPeripheral) {
         guard let camera = cameras.first(where: { $0.peripheral?.identifier == peripheral.identifier }) else { return }
+        // Self-heal the display name: a camera paired from a nameless advertisement
+        // got stamped "Osmo Camera". Post-connect, peripheral.name is the device's
+        // real GAP name ("OsmoAction4-1284"), so refresh + persist on any change.
+        if let freshName = peripheral.name, !freshName.isEmpty, freshName != camera.name {
+            OsmoLog.manager.info("Refreshing camera name: \(camera.name, privacy: .public) → \(freshName, privacy: .public)")
+            camera.name = freshName
+            persistCameras()
+        }
         if let conn = camera.bleConnection {
             conn.handleConnected()
         } else {
