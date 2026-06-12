@@ -100,7 +100,10 @@ struct CameraDetailView: View {
 
     private var statusSection: some View {
         Section("Status") {
-            LabeledContent("Connection", value: camera.connectionState.displayLabel)
+            // Presumed-asleep reads as Sleeping (it's quietly waiting for a button
+            // press on the camera), matching the row — not "Reconnecting…".
+            LabeledContent("Connection", value: camera.presumedAsleep && camera.connectionState == .reconnecting
+                ? "Sleeping" : camera.connectionState.displayLabel)
             if let rssi = camera.rssi {
                 LabeledContent("Signal") {
                     // Text LEFT, graph RIGHT so the graph pins to the trailing edge
