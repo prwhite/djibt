@@ -60,6 +60,7 @@ targets:
     platform: iOS
     sources:
       - path: OsmoMulti
+      - path: LiveActivityShared   # ActivityAttributes + LiveActivityIntents (also compiled into OsmoWidgets)
       - path: content/djibt-ios.icon
         buildPhase: resources
     info:
@@ -69,6 +70,7 @@ targets:
         CFBundleDisplayName: "$(BUNDLE_DISPLAY_NAME)"
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        NSSupportsLiveActivities: true
         NSBluetoothAlwaysUsageDescription: "Cam Control requires Bluetooth to connect to and control DJI Osmo cameras."
         # bluetooth-central: keep camera connections + event processing alive while
         # backgrounded/locked — drop detection (and its notifications, which then
@@ -96,6 +98,7 @@ targets:
       - target: DJIOsmoKit
         embed: true
       - target: OsmoWatch
+      - target: OsmoWidgets
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(BUNDLE_ID_PREFIX).CamControl
@@ -105,6 +108,23 @@ targets:
       configs:
         Debug:
           BUNDLE_DISPLAY_NAME: "Cam Control 🛠"
+
+  OsmoWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: OsmoWidgets
+      - path: LiveActivityShared   # shared with the app — see that dir's headers
+    info:
+      path: OsmoWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: "Cam Control"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(BUNDLE_ID_PREFIX).CamControl.Widgets
+        SKIP_INSTALL: YES
 
   OsmoWatch:
     type: application
