@@ -1,4 +1,5 @@
 import SwiftUI
+import WatchKit
 
 struct WatchControlView: View {
 
@@ -63,6 +64,13 @@ struct WatchControlView: View {
             statusSection
             shutterButton
             modeSection
+            // Bottom of the list: below the fold on a watch face, so reaching it
+            // takes a deliberate scroll — first guard against spurious sleeps; the
+            // slide gesture itself is the second.
+            SlideToSleep(enabled: viewModel.connectedCount > 0) {
+                viewModel.sleepAll()
+            }
+            .listRowBackground(Color.clear)
         }
         .animation(.easeInOut, value: viewModel.dropoutAlert)
     }
@@ -185,5 +193,78 @@ struct WatchControlView: View {
         case "good":  return .green
         default:      return nil   // "off" and any unexpected value: hidden
         }
+    }
+}
+
+// MARK: - SlideToSleep
+
+/// Slide-to-confirm control for "sleep all cameras" — a deliberate horizontal
+/// gesture (the slide-to-power-off idiom) so a wrist brush or stray tap can't
+/// sleep the rig. Drag the moon thumb ≥ 85% of the track to trigger; anything
+/// less springs back.
+private struct SlideToSleep: View {
+    let enabled: Bool
+    let action: () -> Void
+
+    @State private var offsetX: CGFloat = 0
+    @State private var didTrigger = false
+
+    private static let thumbSize: CGFloat = 36
+    private static let inset: CGFloat = 3
+
+    var body: some View {
+        GeometryReader { geo in
+            let travel = max(geo.size.width - Self.thumbSize - Self.inset * 2, 1)
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(.gray.opacity(0.25))
+                Text("Slide to Sleep")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    // Fade the hint as the thumb travels over it.
+                    .opacity(max(0, 1 - Double(offsetX / travel) * 1.6))
+                Circle()
+                    .fill(.orange.opacity(didTrigger ? 1.0 : 0.85))
+                    .overlay {
+                        Image(systemName: didTrigger ? "moon.zzz.fill" : "moon.zzz")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(.black)
+                    }
+                    .frame(width: Self.thumbSize, height: Self.thumbSize)
+                    .offset(x: Self.inset + offsetX)
+                    .gesture(
+                        DragGesture()
+                            .onChanged { value in
+                                guard !didTrigger else { return }
+                                offsetX = min(max(0, value.translation.width), travel)
+                            }
+                            .onEnded { _ in
+                                guard !didTrigger else { return }
+                                if offsetX >= travel * 0.85 {
+                                    didTrigger = true
+                                    withAnimation(.spring(duration: 0.2)) { offsetX = travel }
+                                    WKInterfaceDevice.current().play(.success)
+                                    action()
+                                    // Reset after a beat so the control is reusable.
+                                    Task { @MainActor in
+                                        try? await Task.sleep(for: .seconds(1))
+                                        withAnimation(.spring(duration: 0.35)) {
+                                            offsetX = 0
+                                            didTrigger = false
+                                        }
+                                    }
+                                } else {
+                                    withAnimation(.spring(duration: 0.3)) { offsetX = 0 }
+                                }
+                            }
+                    )
+            }
+        }
+        .frame(height: Self.thumbSize + Self.inset * 2)
+        .opacity(enabled ? 1 : 0.4)
+        .disabled(!enabled)
+        .accessibilityLabel("Sleep all cameras")
+        .accessibilityHint("Slide right to confirm")
     }
 }
