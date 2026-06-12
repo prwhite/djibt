@@ -113,11 +113,8 @@ final class WatchBridge: NSObject {
     /// Wire-format string for the watch GPS indicator. OsmoWatch does not link
     /// DJIOsmoKit, so the watch never sees `GPSFixState` — only these strings.
     private func gpsFixString() -> String {
-        switch locationManager.fixState {
-        case .off:   return "off"
-        case .noFix: return "noFix"
-        case .good:  return "good"
-        }
+        // GPSFixState raw values ARE the wire format ("off"/"standby"/"noFix"/"good").
+        locationManager.fixState.rawValue
     }
 
     /// Keep the watch mode picker aligned with the iPhone global controls.

@@ -186,12 +186,14 @@ struct WatchControlView: View {
         }
     }
 
-    /// nil => indicator hidden (GPS off / unknown). red => noFix, green => good.
+    /// nil => indicator hidden (GPS off / unknown). blue => standby (armed, no
+    /// cameras — engages automatically), red => noFix, green => good.
     private func gpsColor(for fix: String) -> Color? {
         switch fix {
-        case "noFix": return .red
-        case "good":  return .green
-        default:      return nil   // "off" and any unexpected value: hidden
+        case "standby": return .blue
+        case "noFix":   return .red
+        case "good":    return .green
+        default:        return nil   // "off" and any unexpected value: hidden
         }
     }
 }

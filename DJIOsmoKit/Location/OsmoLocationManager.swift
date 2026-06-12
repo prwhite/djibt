@@ -96,11 +96,12 @@ public final class OsmoLocationManager: NSObject {
         }
     }
 
-    /// Phone-global fix quality — the one place "off/noFix/good" is derived.
-    /// Standby (armed but CL idled — no cameras connected) reads as `.off`:
-    /// the radio genuinely isn't running.
+    /// Phone-global fix quality — the one place "off/standby/noFix/good" is
+    /// derived. Standby = armed but CL idled (no cameras connected); distinct
+    /// from off so the user can see it will re-engage by itself.
     public var fixState: GPSFixState {
-        guard isActive, isUpdatingLocation else { return .off }
+        guard isActive else { return .off }
+        guard isUpdatingLocation else { return .standby }
         return hasFreshFix ? .good : .noFix
     }
 

@@ -190,7 +190,8 @@ private struct BatteryBadge: View {
     }
 }
 
-/// Tri-state GPS fix dot, mirroring the watch: hidden when off, red noFix, green good.
+/// GPS fix glyph, mirroring the watch: hidden when off, blue standby (armed,
+/// no cameras), red noFix, green good.
 private struct GPSBadge: View {
     let fix: String
 
@@ -207,9 +208,10 @@ private struct GPSBadge: View {
 
     private var color: Color? {
         switch fix {
-        case "good":  return .green
-        case "noFix": return .red
-        default:      return nil
+        case "good":    return .green
+        case "noFix":   return .red
+        case "standby": return .blue
+        default:        return nil
         }
     }
 }

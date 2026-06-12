@@ -112,11 +112,8 @@ final class CameraActivityController {
     }
 
     private func gpsFixString() -> String {
-        switch locationManager.fixState {
-        case .off:   return "off"
-        case .noFix: return "noFix"
-        case .good:  return "good"
-        }
+        // GPSFixState raw values ARE the wire format ("off"/"standby"/"noFix"/"good").
+        locationManager.fixState.rawValue
     }
 
     private func requestActivity(with state: CamActivityAttributes.ContentState) {

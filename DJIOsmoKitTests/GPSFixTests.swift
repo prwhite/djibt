@@ -521,11 +521,15 @@ final class GPSFixTests: XCTestCase {
     }
 
     @MainActor
-    func testStandbyReadsAsOff() {
-        let (loc, _) = makeDemandFixture()
+    func testStandbyIsItsOwnState() {
+        let (loc, cam) = makeDemandFixture()
         loc._testSetActive(true, location: makeLocation(accuracy: 5, age: 1))
-        // Armed, fresh fix in hand — but CL idle (no cameras) → the dot must not
-        // claim live GPS.
-        XCTAssertEqual(loc.fixState, .off, "standby renders as off (radio genuinely not running)")
+        // Armed, fresh fix in hand — but CL idle (no cameras): distinct standby
+        // state (blue), not off (gray, user-disabled) and not a live claim.
+        XCTAssertEqual(loc.fixState, .standby)
+
+        cam.connectionState = .connected
+        loc._testDemandCheckOnce()
+        XCTAssertEqual(loc.fixState, .good, "demand returns → CL runs → live state again")
     }
 }
