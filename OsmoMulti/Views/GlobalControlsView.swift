@@ -17,7 +17,6 @@ import UIKit
 struct GlobalControlsView: View {
 
     let viewModel: CameraListViewModel
-    let availableWidth: CGFloat
 
     /// Shared height for all control bar items so glass effects render uniformly.
     private static let controlHeight: CGFloat = 56
@@ -51,7 +50,13 @@ struct GlobalControlsView: View {
                     .glassEffect(.regular)
             }
             .padding(4)
-            .frame(width: max(availableWidth - 32, 0))
+            // Natural sizing: fill whatever width the window proposes, with 16 pt
+            // side margins. (This was previously an explicit width computed from a
+            // measured `contentWidth`, which self-reinforced on rotation back to
+            // portrait — the bar kept demanding the landscape width, the layout
+            // adopted it, and the measurement could never shrink: clipped UI.)
+            .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity)
         }
     }
 

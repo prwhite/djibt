@@ -53,6 +53,7 @@ struct CameraDetailView: View {
     private var retrySection: some View {
         Section {
             Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 viewModel.retryCamera(camera)
             } label: {
                 HStack {
@@ -70,6 +71,7 @@ struct CameraDetailView: View {
                         .foregroundStyle(.blue)
                 }
             }
+            .buttonStyle(PressFeedbackButtonStyle())
             .disabled(camera.connectionState == .connecting
                    || camera.connectionState == .handshaking
                    || camera.connectionState == .reconnecting)
@@ -98,7 +100,10 @@ struct CameraDetailView: View {
 
     private var statusSection: some View {
         Section("Status") {
-            LabeledContent("Connection", value: camera.connectionState.displayLabel)
+            // Presumed-asleep reads as Sleeping (it's quietly waiting for a button
+            // press on the camera), matching the row — not "Reconnecting…".
+            LabeledContent("Connection", value: camera.presumedAsleep && camera.connectionState == .reconnecting
+                ? "Sleeping" : camera.connectionState.displayLabel)
             if let rssi = camera.rssi {
                 LabeledContent("Signal") {
                     // Text LEFT, graph RIGHT so the graph pins to the trailing edge
@@ -233,6 +238,7 @@ struct CameraDetailView: View {
                     Label("Start Recording", systemImage: "record.circle")
                 }
             }
+            .buttonStyle(PressFeedbackButtonStyle())
             .disabled(!camera.connectionState.isUsable)
 
             // Explicit stop (video modes)
@@ -251,14 +257,17 @@ struct CameraDetailView: View {
                 } label: {
                     Label("Force Stop", systemImage: "stop.circle")
                 }
+                .buttonStyle(PressFeedbackButtonStyle())
                 .disabled(!camera.connectionState.isUsable || !camera.status.recordingStatus.isRecording)
             }
 
             // Sleep
             Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 Task {
                     do {
                         try await camera.sendSleep()
+                        viewModel.showToast("\(camera.name) sleeping")
                     } catch {
                         viewModel.showToast("Sleep failed")
                     }
@@ -266,6 +275,7 @@ struct CameraDetailView: View {
             } label: {
                 Label("Sleep Camera", systemImage: "moon.zzz")
             }
+            .buttonStyle(PressFeedbackButtonStyle())
             .disabled(!camera.connectionState.isUsable)
 
             Text("Wake camera by pressing any button on the device.")
@@ -309,11 +319,13 @@ struct CameraDetailView: View {
             }
 
             Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                viewModel.showToast("Reconnecting \(camera.name)…")
                 Task { await forceReconnect() }
             } label: {
                 Label("Force Reconnect", systemImage: "arrow.clockwise")
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(PressFeedbackButtonStyle())
             .disabled(camera.connectionState == .connecting
                    || camera.connectionState == .handshaking
                    || camera.connectionState == .reconnecting)
@@ -338,10 +350,12 @@ struct CameraDetailView: View {
                 .autocorrectionDisabled()
 
             Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 Task { await sendRawFrame() }
             } label: {
                 Label(isSendingRawFrame ? "Sending Raw Frame" : "Send Raw Frame", systemImage: "terminal")
             }
+            .buttonStyle(PressFeedbackButtonStyle())
             .disabled(!camera.connectionState.isUsable
                       || rawFrameText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                       || isSendingRawFrame)
@@ -411,5 +425,23 @@ struct CameraDetailView: View {
         let m = (totalSeconds % 3600) / 60
         let s = totalSeconds % 60
         return String(format: "%d:%02d:%02d", h, m, s)
+    }
+}
+
+// MARK: - PressFeedbackButtonStyle
+
+/// Visible touch-down feedback for action buttons in the detail Form — the rows
+/// otherwise give no pressed response, so taps feel dead. Keeps the standard
+/// borderless look (tint when enabled, dimmed when disabled) and dims + nudges
+/// the label while pressed.
+struct PressFeedbackButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(isEnabled ? AnyShapeStyle(.tint) : AnyShapeStyle(.tertiary))
+            .opacity(configuration.isPressed ? 0.35 : 1)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1, anchor: .leading)
+            .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
     }
 }

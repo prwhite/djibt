@@ -28,14 +28,28 @@ public final class OsmoCamera: Identifiable {
         didSet {
             previousConnectionState = oldValue
             reconnectingSince = (connectionState == .reconnecting) ? Date() : nil
-            // Cumulative "walkabout" clock: stamp when we LOSE a live connection,
-            // clear when we regain one. Survives the active/passive reconnect
-            // cycling so the UI can show total time-since-dropped. Stays nil for a
-            // never-yet-connected camera (it hasn't gone anywhere).
-            if connectionState == .connected {
+            // Cumulative "walkabout" clock: stamp when we LOSE a live connection
+            // (connected OR sleeping — sleeping is a live, recoverable state), clear
+            // when we regain one. Survives the active/passive reconnect cycling so
+            // the UI can show total time-since-dropped. Stays nil for a
+            // never-yet-connected camera (it hasn't gone anywhere). Entering sleep
+            // is live→live and must NOT stamp it.
+            if connectionState.showsLiveStatus {
                 disconnectedSince = nil
-            } else if oldValue == .connected {
+                if connectionState == .connected {
+                    presumedAsleep = false   // a real connection ends any sleep presumption
+                }
+            } else if oldValue.showsLiveStatus {
                 disconnectedSince = Date()
+            }
+            // Durable sleep provenance: .sleeping → .reconnecting is the deep-sleep
+            // BLE drop (camera radio off; passive reconnect waits for a physical
+            // button press). previousConnectionState is single-edge memory that any
+            // later blip clobbers (brief radio wake → failed handshake → retry) —
+            // this flag survives that churn so the watchdog keeps treating the
+            // camera as asleep instead of re-kicking active retries every 30 s.
+            if oldValue == .sleeping && connectionState == .reconnecting {
+                presumedAsleep = true
             }
             // Unexpected-drop detection: a camera that WAS stably connected left the
             // live set without the user asking (BLE drop, watchdog reset, …). Going
@@ -63,6 +77,11 @@ public final class OsmoCamera: Identifiable {
     /// The state before the most recent transition. Used to distinguish sleeping
     /// cameras (which legitimately wait in passive reconnect) from stuck retries.
     public internal(set) var previousConnectionState: ConnectionState = .disconnected
+    /// True while this camera is presumed asleep with its BLE link dropped (expected
+    /// deep-sleep behavior). Set on the .sleeping → .reconnecting transition; cleared
+    /// by the next real connection or an explicit user retry. Not persisted — an app
+    /// relaunch starts with no presumption.
+    public internal(set) var presumedAsleep: Bool = false
     /// When the camera entered `.reconnecting` state. `nil` when in any other state.
     public internal(set) var reconnectingSince: Date?
     /// When the camera dropped from a live (`.connected`) connection — the start of
