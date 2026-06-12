@@ -112,8 +112,8 @@ struct SettingsView: View {
                     Text("Location")
                 } footer: {
                     Text(locationManager.isActive
-                        ? "Feeds iPhone GPS coordinates to connected cameras for video geotagging. GPS runs only while cameras are connected (works with the phone locked). 10 Hz uses more battery and BLE bandwidth, especially with many cameras."
-                        : "Feeds iPhone GPS coordinates to connected cameras for video geotagging.")
+                        ? "Feeds iPhone GPS coordinates to connected cameras for video geotagging. GPS runs only while cameras are connected (works with the phone locked). 10 Hz uses more battery and BLE bandwidth, especially with many cameras.\n\nIndicator: ⚪ off · 🔵 standby, engages when a camera connects · 🔴 no fix · 🟢 good fix"
+                        : "Feeds iPhone GPS coordinates to connected cameras for video geotagging.\n\nIndicator: ⚪ off · 🔵 standby, engages when a camera connects · 🔴 no fix · 🟢 good fix")
                 }
 
                 Section {
