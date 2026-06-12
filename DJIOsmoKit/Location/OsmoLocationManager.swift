@@ -108,6 +108,15 @@ public final class OsmoLocationManager: NSObject {
         // fix age climb toward the staleness threshold and false-fail a perfectly
         // good fix (observed ageing to ~14–15 s at a desk).
         locationManager.pausesLocationUpdatesAutomatically = false
+        // Keep CL delivering while backgrounded/locked (requires the `location`
+        // UIBackgroundMode). Without this, locking the phone froze CL → the fix
+        // aged past maxFixAge → we pushed Void frames that cleared the cameras'
+        // GPS mid-recording while pocketed. When-In-Use auth suffices; iOS shows
+        // the location indicator while backgrounded (honest). Battery bound =
+        // the existing GPS toggle: start()/stop() own startUpdatingLocation, so
+        // background location only runs while the user has GPS push enabled.
+        locationManager.allowsBackgroundLocationUpdates = true
+        locationManager.showsBackgroundLocationIndicator = true
         // Seed rateHz from the persisted value (UserDefaults.integer returns 0
         // for a missing key, so fall back to 1 Hz). The didSet equality guard +
         // isActive == false make this a safe no-op for persistence/timer during
