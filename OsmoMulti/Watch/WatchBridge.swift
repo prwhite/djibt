@@ -36,12 +36,61 @@ final class WatchBridge: NSObject {
         startStatePushTimer()
     }
 
+    // MARK: - Dropout Relay
+
+    /// Forward a camera-dropout event (already grace-debounced and toggle-gated by
+    /// CameraDropNotifier) to the watch so it can alert the wrist.
+    ///
+    /// Two paths:
+    /// - Watch app **reachable** (frontmost — the watch-as-remote case): live
+    ///   `sendMessage` → instant in-app haptic + banner.
+    /// - Watch app **not active**: queued `transferUserInfo` → watchOS wakes the
+    ///   watch app in the background, which posts a **watch-local notification**
+    ///   (system banner + haptic). Delivery is opportunistic (system-budgeted), so
+    ///   the payload carries `sentAt` for the watch to discard stale arrivals, and
+    ///   still-queued transfers are cancelled if the camera rejoins first.
+    func relayDropout(_ camera: OsmoCamera) {
+        guard session.activationState == .activated else { return }
+        let payload: [String: Any] = [
+            "event": "cameraDropout",
+            "name": camera.name,
+            "cameraID": camera.id.uuidString,
+            "sentAt": Date().timeIntervalSince1970,
+        ]
+        if session.isReachable {
+            log.info("relaying dropout (live): \(camera.name, privacy: .public)")
+            session.sendMessage(payload, replyHandler: nil) { error in
+                log.error("dropout relay failed: \(error.localizedDescription, privacy: .public)")
+            }
+        } else {
+            log.info("relaying dropout (queued for background wake): \(camera.name, privacy: .public)")
+            session.transferUserInfo(payload)
+        }
+    }
+
+    /// Cancel queued dropout transfers for cameras that have come back live —
+    /// nobody should get a wrist buzz for a camera that already rejoined. Called
+    /// from the 1 s state-push tick (cheap: outstanding transfers are ~always 0).
+    private func cancelObsoleteDropoutTransfers() {
+        for transfer in session.outstandingUserInfoTransfers {
+            guard transfer.userInfo["event"] as? String == "cameraDropout",
+                  let idString = transfer.userInfo["cameraID"] as? String,
+                  let id = UUID(uuidString: idString) else { continue }
+            if let camera = manager.cameras.first(where: { $0.id == id }),
+               camera.connectionState.showsLiveStatus {
+                log.info("cancelling obsolete dropout transfer: \(camera.name, privacy: .public)")
+                transfer.cancel()
+            }
+        }
+    }
+
     // MARK: - State Push
 
     private func startStatePushTimer() {
         pushTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.pushStateIfChanged()
+                self?.cancelObsoleteDropoutTransfers()
             }
         }
     }

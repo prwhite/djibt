@@ -57,10 +57,22 @@ struct WatchControlView: View {
 
     private var controlsList: some View {
         List {
+            if let alert = viewModel.dropoutAlert {
+                dropoutBanner(alert)
+            }
             statusSection
             shutterButton
             modeSection
         }
+        .animation(.easeInOut, value: viewModel.dropoutAlert)
+    }
+
+    /// Transient camera-dropout banner (paired with the wrist haptic; auto-clears).
+    private func dropoutBanner(_ text: String) -> some View {
+        Label(text, systemImage: "antenna.radiowaves.left.and.right.slash")
+            .font(.footnote)
+            .foregroundStyle(.red)
+            .listItemTint(.red.opacity(0.2))
     }
 
     // MARK: - Status

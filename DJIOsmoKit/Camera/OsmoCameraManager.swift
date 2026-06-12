@@ -21,8 +21,57 @@ public final class OsmoCameraManager: NSObject {
 
     // MARK: - Observable State
 
-    public private(set) var cameras: [OsmoCamera] = []
+    public private(set) var cameras: [OsmoCamera] = [] {
+        didSet { wireDropDetection() }   // idempotent; covers add, persistence load, preview
+    }
     public private(set) var isScanning: Bool = false
+
+    // MARK: - Dropout Detection
+
+    /// Fired when a camera drops out of the active group due to a comms failure
+    /// (not sleep / disable / user-initiated) AND fails to recover within
+    /// `dropoutGracePeriod`. The app layer turns this into a local notification.
+    /// Rejoins fire nothing.
+    public var onCameraDropout: ((OsmoCamera) -> Void)?
+
+    /// How long a dropped camera gets to auto-reconnect before `onCameraDropout`
+    /// fires. Most BLE blips recover in 2–8 s (and the camera keeps recording on
+    /// its own meanwhile), so alerting instantly would cry wolf.
+    public var dropoutGracePeriod: TimeInterval = 10
+
+    private var dropoutTasks: [UUID: Task<Void, Never>] = [:]
+
+    /// (Re)assign every camera's unexpected-drop hook. Reassignment is idempotent,
+    /// so running it on each `cameras` mutation is safe and catches all creation
+    /// paths (addCamera, persistence load, preview fixtures).
+    private func wireDropDetection() {
+        for camera in cameras {
+            camera.onUnexpectedDrop = { [weak self] cam in
+                self?.scheduleDropoutCheck(cam)
+            }
+        }
+    }
+
+    /// Debounce an unexpected drop: wait out the grace period, then fire
+    /// `onCameraDropout` only if the camera is still present, still enabled, and
+    /// still not live. A new drop replaces any pending check (a camera can only
+    /// re-drop after having gone live again, so this also de-dupes retry churn).
+    private func scheduleDropoutCheck(_ camera: OsmoCamera) {
+        let grace = dropoutGracePeriod
+        dropoutTasks[camera.id]?.cancel()
+        dropoutTasks[camera.id] = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(grace))
+            // A cancelled task was replaced by a newer drop — it must not touch
+            // the dict (it would clobber the replacement's entry).
+            guard let self, !Task.isCancelled else { return }
+            self.dropoutTasks[camera.id] = nil
+            guard self.cameras.contains(where: { $0.id == camera.id }),
+                  camera.isEnabled,
+                  !camera.connectionState.showsLiveStatus else { return }
+            OsmoLog.manager.info("Camera dropout: \(camera.name, privacy: .public) failed to recover within \(Int(grace))s")
+            self.onCameraDropout?(camera)
+        }
+    }
 
     // MARK: - BLE
 
@@ -662,6 +711,14 @@ extension OsmoCameraManager: @preconcurrency CBCentralManagerDelegate {
     public func centralManager(_ central: CBCentralManager,
                                 didConnect peripheral: CBPeripheral) {
         guard let camera = cameras.first(where: { $0.peripheral?.identifier == peripheral.identifier }) else { return }
+        // Self-heal the display name: a camera paired from a nameless advertisement
+        // got stamped "Osmo Camera". Post-connect, peripheral.name is the device's
+        // real GAP name ("OsmoAction4-1284"), so refresh + persist on any change.
+        if let freshName = peripheral.name, !freshName.isEmpty, freshName != camera.name {
+            OsmoLog.manager.info("Refreshing camera name: \(camera.name, privacy: .public) → \(freshName, privacy: .public)")
+            camera.name = freshName
+            persistCameras()
+        }
         if let conn = camera.bleConnection {
             conn.handleConnected()
         } else {
