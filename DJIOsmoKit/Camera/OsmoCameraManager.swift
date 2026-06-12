@@ -279,6 +279,18 @@ public final class OsmoCameraManager: NSObject {
     private func scheduleReconnect(camera: OsmoCamera) {
         guard camera.isEnabled, cameras.contains(where: { $0.id == camera.id }),
               let peripheral = camera.peripheral else { return }
+        if camera.presumedAsleep {
+            // A presumed-asleep camera can briefly flicker connectable while
+            // powering down — the passive connect fires, the handshake fails, and
+            // the failure lands here. Don't start an active retry burst for that:
+            // re-queue the quiet passive wait. A real wake (button press) completes
+            // the handshake and never reaches this path; an explicit user retry
+            // clears the flag first (retryCamera).
+            OsmoLog.manager.info("Camera \(camera.name, privacy: .public) presumed asleep — re-queuing passive wait (no active retries)")
+            camera.connectionState = .reconnecting
+            centralManager.connect(peripheral, options: nil)
+            return
+        }
         camera.retryCount += 1
         if maxRetries > 0 && camera.retryCount > maxRetries {
             // Active retries exhausted — fall back to passive CoreBluetooth reconnect.
@@ -307,6 +319,7 @@ public final class OsmoCameraManager: NSObject {
             return
         }
         camera.retryCount = 0
+        camera.presumedAsleep = false   // explicit user retry: stop treating it as asleep
         // If peripheral ref is nil (e.g. BLE bond lost after OS update), try to
         // retrieve a fresh one. If that fails, start a scan to rediscover it.
         if camera.peripheral == nil, let id = camera.knownPeripheralID {
@@ -517,10 +530,13 @@ public final class OsmoCameraManager: NSObject {
             }
         }
 
-        // Kick passive reconnects that have been stuck too long. Sleeping cameras
-        // are excluded — they legitimately wait for the user to press a button.
+        // Kick passive reconnects that have been stuck too long. Presumed-asleep
+        // cameras are excluded — they legitimately wait for a button press on the
+        // camera. (Durable flag, not previousConnectionState: a brief radio wake →
+        // failed handshake → retry cycle clobbers the edge-memory and used to
+        // convert a calmly-waiting sleeping camera into a 30 s kick loop.)
         for camera in cameras where camera.connectionState == .reconnecting
-                                     && camera.previousConnectionState != .sleeping
+                                     && !camera.presumedAsleep
                                      && camera.isEnabled {
             guard let peripheral = camera.peripheral else { continue }
             guard let lastSeen = camera.reconnectingSince else { continue }

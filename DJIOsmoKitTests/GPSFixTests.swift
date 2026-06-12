@@ -358,6 +358,65 @@ final class GPSFixTests: XCTestCase {
         XCTAssertNil(cam.disconnectedSince, "regaining .connected clears it")
     }
 
+    // MARK: - presumedAsleep (durable sleep provenance)
+
+    @MainActor
+    func testSleepingBLEDropSetsPresumedAsleep() {
+        let cam = OsmoCamera(name: "Cam", isEnabled: true)
+        cam.connectionState = .connected
+        cam.connectionState = .sleeping
+        cam.connectionState = .reconnecting   // deep-sleep BLE drop → passive wait
+        XCTAssertTrue(cam.presumedAsleep)
+    }
+
+    @MainActor
+    func testNormalDropDoesNotSetPresumedAsleep() {
+        let cam = OsmoCamera(name: "Cam", isEnabled: true)
+        cam.connectionState = .connected
+        cam.connectionState = .reconnecting   // comms failure, not sleep
+        XCTAssertFalse(cam.presumedAsleep)
+    }
+
+    @MainActor
+    func testPresumedAsleepSurvivesRetryChurn() {
+        let cam = OsmoCamera(name: "Cam", isEnabled: true)
+        cam.connectionState = .connected
+        cam.connectionState = .sleeping
+        cam.connectionState = .reconnecting
+        // Brief radio wake → failed handshake → back to waiting. The edge-memory
+        // (previousConnectionState) is clobbered here; the flag must survive.
+        cam.connectionState = .connecting
+        cam.connectionState = .reconnecting
+        XCTAssertTrue(cam.presumedAsleep,
+            "retry churn must not convert a sleeping camera into watchdog-kick fodder")
+        XCTAssertNotEqual(cam.previousConnectionState, .sleeping,
+            "(sanity: the old edge-memory heuristic IS clobbered by the churn)")
+    }
+
+    @MainActor
+    func testRealConnectionClearsPresumedAsleep() {
+        let cam = OsmoCamera(name: "Cam", isEnabled: true)
+        cam.connectionState = .connected
+        cam.connectionState = .sleeping
+        cam.connectionState = .reconnecting
+        cam.connectionState = .connected      // camera actually woke + reconnected
+        XCTAssertFalse(cam.presumedAsleep)
+    }
+
+    @MainActor
+    func testWalkaboutClockTreatsSleepingAsLive() {
+        let cam = OsmoCamera(name: "Cam", isEnabled: true)
+        cam.connectionState = .connected
+        cam.connectionState = .sleeping
+        XCTAssertNil(cam.disconnectedSince,
+            "entering sleep is live→live — NOT a walkabout start")
+        cam.connectionState = .reconnecting   // deep-sleep BLE drop
+        XCTAssertNotNil(cam.disconnectedSince,
+            "losing the BLE link from sleep starts the clock (drives 'Sleeping · Xm')")
+        cam.connectionState = .connected
+        XCTAssertNil(cam.disconnectedSince, "waking + reconnecting clears it")
+    }
+
     // MARK: - hasFreshFix (staleness) + fixState
 
     private func makeLocation(accuracy: Double, age: TimeInterval) -> CLLocation {

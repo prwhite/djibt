@@ -120,7 +120,10 @@ struct CameraRowView: View {
         case .connected:     return .green
         case .sleeping:      return .orange
         case .reconnecting:
-            // Passive wait (retries exhausted) is idle → gray; active retry → yellow.
+            // Presumed-asleep (deep-sleep BLE drop, quiet passive wait) is still
+            // "sleeping" from the user's perspective → same orange as .sleeping.
+            // Otherwise: passive wait (retries exhausted) idle → gray; active → yellow.
+            if camera.presumedAsleep { return .orange }
             return isPassiveReconnect ? .gray : .yellow
         case .handshaking,
              .connecting,
@@ -268,6 +271,15 @@ struct CameraRowView: View {
         case .failed:
             return "Connection Failed · Tap to retry"
         case .connecting, .handshaking, .reconnecting:
+            // A presumed-asleep camera is quietly waiting for a button press on
+            // the camera — show it as Sleeping (with time asleep), not as a
+            // reconnect attempt (which reads like a connection problem).
+            if camera.presumedAsleep, camera.connectionState == .reconnecting {
+                if let since = camera.disconnectedSince {
+                    return "Sleeping · \(formatWalkabout(-since.timeIntervalSinceNow))"
+                }
+                return "Sleeping"
+            }
             return reconnectStatusText
         default:
             return camera.connectionState.displayLabel
