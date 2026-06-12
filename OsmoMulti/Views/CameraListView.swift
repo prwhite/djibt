@@ -19,7 +19,6 @@ struct CameraListView: View {
     @State private var viewModel: CameraListViewModel
     @Environment(OsmoLocationManager.self) private var locationManager
     @State private var showSettings = false
-    @State private var contentWidth: CGFloat = 0
 
     init(manager: OsmoCameraManager) {
         _viewModel = State(wrappedValue: CameraListViewModel(manager: manager))
@@ -27,12 +26,6 @@ struct CameraListView: View {
 
     var body: some View {
         cameraList
-        .background {
-            GeometryReader { geo in
-                Color.clear
-                    .onChange(of: geo.size.width, initial: true) { _, w in contentWidth = w }
-            }
-        }
         .navigationTitle("Cameras")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -71,7 +64,7 @@ struct CameraListView: View {
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            GlobalControlsView(viewModel: viewModel, availableWidth: contentWidth)
+            GlobalControlsView(viewModel: viewModel)
                 .padding(.top, 8)
                 .padding(.bottom, 8)
                 .frame(maxWidth: .infinity)
