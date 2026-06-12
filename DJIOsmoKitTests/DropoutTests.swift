@@ -65,6 +65,16 @@ final class DropoutTests: XCTestCase {
     }
 
     @MainActor
+    func testWatchdogStalenessResetFires() {
+        let (cam, drops) = makeCamera()
+        cam.connectionState = .connected
+        // Watchdog staleness reset (status pushes stalled → forced reconnect) is a
+        // comms failure, not user intent — it must feed the dropout event.
+        cam.forceDisconnect(suppressDropEvent: false)
+        XCTAssertEqual(drops(), 1, "stalled-then-reset is a comms failure — must alert")
+    }
+
+    @MainActor
     func testStaleSuppressFlagClearedOnConnect() {
         let (cam, drops) = makeCamera()
         cam.connectionState = .reconnecting

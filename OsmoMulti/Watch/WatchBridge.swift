@@ -199,6 +199,9 @@ extension WatchBridge: WCSessionDelegate {
             await manager.startAll()
         case "stopAll":
             await manager.stopAll()
+        case "sleepAll":
+            let slept = await manager.sleepAll()
+            log.info("WatchBridge: sleepAll → \(slept) camera(s)")
         case "switchMode":
             if let modeRaw = message["mode"] as? String,
                let intent = ModeIntent(rawValue: modeRaw) {

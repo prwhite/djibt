@@ -574,7 +574,9 @@ public final class OsmoCameraManager: NSObject {
                 OsmoLog.manager.error(
                     "Camera \(camera.name, privacy: .public) stale (\(Int(elapsed))s since last frame) — forcing reconnect"
                 )
-                camera.forceDisconnect()
+                // suppressDropEvent: false — a stalled-then-reset camera is a comms
+                // failure; it must feed the dropout event (grace still debounces).
+                camera.forceDisconnect(suppressDropEvent: false)
                 scheduleReconnect(camera: camera)
             }
         }

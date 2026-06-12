@@ -76,8 +76,14 @@ targets:
         # work with the phone pocketed. Always-on by design: the cost window is
         # bounded by cameras being on; no toggle (same action must not behave
         # differently on hidden state).
+        # location: keep CoreLocation delivering while backgrounded/locked so GPS
+        # push doesn't go stale → Void mid-recording with the phone pocketed. Only
+        # active while the user has GPS push enabled (the GPS toggle is the
+        # battery/privacy bound); shows the system location indicator while
+        # backgrounded — honest and intentional.
         UIBackgroundModes:
           - bluetooth-central
+          - location
         NSLocationWhenInUseUsageDescription: "Cam Control uses your location to geotag video footage on connected DJI Osmo cameras."
         ITSAppUsesNonExemptEncryption: false
         UILaunchScreen: {}

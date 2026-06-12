@@ -50,6 +50,10 @@ final class WatchViewModel: NSObject {
         send(["action": "stopAll"])
     }
 
+    func sleepAll() {
+        send(["action": "sleepAll"])
+    }
+
     func switchMode(_ mode: String) {
         send(["action": "switchMode", "mode": mode])
     }
