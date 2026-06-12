@@ -119,7 +119,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Notifications")
                 } footer: {
-                    Text("Notifies you when a camera unexpectedly drops out and doesn't reconnect within \(Int(manager.dropoutGracePeriod)) seconds. Going to sleep, disabling, or removing a camera won't alert.")
+                    Text("Notifies you when a camera unexpectedly drops out and doesn't reconnect within \(Int(manager.dropoutGracePeriod)) seconds of the drop being detected — detecting a silent drop (dead battery, out of range) can add several seconds. Going to sleep, disabling, or removing a camera won't alert.")
                 }
 
                 Section {

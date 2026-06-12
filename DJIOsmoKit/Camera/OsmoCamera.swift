@@ -211,10 +211,13 @@ public final class OsmoCamera: Identifiable {
     internal var bleConnection: OsmoBLEConnection?
 
     /// Disconnect and reset the BLE connection (for force-reconnect).
-    public func forceDisconnect() {
-        // User-initiated (disable toggle / force-reconnect): not a comms failure,
-        // so don't fire the unexpected-drop event for this transition.
-        suppressNextDropEvent = true
+    /// Tear down the connection immediately.
+    /// - Parameter suppressDropEvent: `true` (default) for user-initiated paths
+    ///   (disable toggle / force-reconnect) — not comms failures, no drop alert.
+    ///   The staleness watchdog passes `false`: a stalled-then-reset camera IS a
+    ///   comms failure and must feed the (grace-debounced) dropout event.
+    public func forceDisconnect(suppressDropEvent: Bool = true) {
+        suppressNextDropEvent = suppressDropEvent
         bleConnection?.disconnect()
         bleConnection = nil
         connectionState = .disconnected
