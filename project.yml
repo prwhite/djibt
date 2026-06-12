@@ -70,6 +70,14 @@ targets:
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         NSBluetoothAlwaysUsageDescription: "Cam Control requires Bluetooth to connect to and control DJI Osmo cameras."
+        # bluetooth-central: keep camera connections + event processing alive while
+        # backgrounded/locked — drop detection (and its notifications, which then
+        # mirror to Apple Watch when the phone is locked) and watch-relayed commands
+        # work with the phone pocketed. Always-on by design: the cost window is
+        # bounded by cameras being on; no toggle (same action must not behave
+        # differently on hidden state).
+        UIBackgroundModes:
+          - bluetooth-central
         NSLocationWhenInUseUsageDescription: "Cam Control uses your location to geotag video footage on connected DJI Osmo cameras."
         ITSAppUsesNonExemptEncryption: false
         UILaunchScreen: {}

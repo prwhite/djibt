@@ -31,7 +31,6 @@
 		4997EBDBA4DB8FA26BC9A8C9 /* CRCTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3EC743303679BC8DF0EFC38 /* CRCTests.swift */; };
 		4D9232CC60C795F68D343094 /* OsmoWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 455E2513988A17A0F2CC1588 /* OsmoWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		596EB903881E53379E832005 /* DJIOsmoKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 353451F0F10BCADDAA438278 /* DJIOsmoKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		5AD5DFD5E770B08AA221B2B4 /* WatchAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6FBF3A20C9DEA5CA477897B /* WatchAppDelegate.swift */; };
 		5E1B6CEB17BBF051CA0F5D62 /* OsmoCamera.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2801D329D80770AF5B55B9FE /* OsmoCamera.swift */; };
 		6881F981E6E4A493D32FAB12 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE44255BF0B5BFC256A3CE67 /* SettingsView.swift */; };
 		68A7E0BA84FA5A23A43D0492 /* ConnectionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6916C08A1CE408C53DBDED99 /* ConnectionState.swift */; };
@@ -183,7 +182,6 @@
 		DDAED9B4AB672CB7FA28552F /* djibt-ios.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = "djibt-ios.icon"; sourceTree = "<group>"; };
 		E3EC743303679BC8DF0EFC38 /* CRCTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CRCTests.swift; sourceTree = "<group>"; };
 		E5CB2752607DA6319914F6A2 /* FrameParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameParser.swift; sourceTree = "<group>"; };
-		E6FBF3A20C9DEA5CA477897B /* WatchAppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAppDelegate.swift; sourceTree = "<group>"; };
 		EB86E24EE94AF69E7E4E57A2 /* OsmoWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OsmoWatchApp.swift; sourceTree = "<group>"; };
 		EDCA5C70829E8EA39D4F8928 /* OsmoLocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OsmoLocationManager.swift; sourceTree = "<group>"; };
 		F459A47517A1E40A0207A7AC /* GlobalControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalControlsView.swift; sourceTree = "<group>"; };
@@ -409,7 +407,6 @@
 			isa = PBXGroup;
 			children = (
 				EB86E24EE94AF69E7E4E57A2 /* OsmoWatchApp.swift */,
-				E6FBF3A20C9DEA5CA477897B /* WatchAppDelegate.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -658,7 +655,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				D28B1B70A771347BEE54C437 /* OsmoWatchApp.swift in Sources */,
-				5AD5DFD5E770B08AA221B2B4 /* WatchAppDelegate.swift in Sources */,
 				80D238E6F1ED98E9687704F5 /* WatchControlView.swift in Sources */,
 				F0BCEE371E1B4A705890B449 /* WatchViewModel.swift in Sources */,
 			);

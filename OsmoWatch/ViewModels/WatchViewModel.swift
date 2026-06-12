@@ -1,7 +1,6 @@
 import Foundation
 import Observation
 import OSLog
-import UserNotifications
 import WatchConnectivity
 import WatchKit
 
@@ -35,14 +34,6 @@ final class WatchViewModel: NSObject {
         session.delegate = self
         session.activate()
         log.info("WatchViewModel init — activating WCSession")
-        // Watch-local notifications need the watch's OWN authorization (separate
-        // from the iPhone's): used for dropout alerts delivered via background wake.
-        Task {
-            let center = UNUserNotificationCenter.current()
-            if await center.notificationSettings().authorizationStatus == .notDetermined {
-                _ = try? await center.requestAuthorization(options: [.alert, .sound])
-            }
-        }
     }
 
     // MARK: - Commands
@@ -87,9 +78,9 @@ final class WatchViewModel: NSObject {
     // MARK: - Dropout Alert
 
     /// A camera dropped out (already grace-debounced + toggle-gated on the phone):
-    /// buzz the wrist and flash a transient banner. Used when the watch app is
-    /// active — via live message (watch-as-remote) or a queued delivery that
-    /// happens to arrive while the app is up.
+    /// buzz the wrist and flash a transient banner. Live-message delivery — only
+    /// arrives while the watch app is active (the watch-as-remote case). With the
+    /// phone locked, wrist delivery rides the system's notification mirroring.
     private func handleDropout(name: String) {
         log.info("camera dropout relayed: \(name, privacy: .public)")
         WKInterfaceDevice.current().play(.failure)
@@ -102,43 +93,6 @@ final class WatchViewModel: NSObject {
         }
     }
 
-    /// Queued dropout delivered via background wake (watch app wasn't active):
-    /// post a watch-local notification — the system presents it with a banner +
-    /// haptic without the app being foregrounded.
-    private func postDropoutNotification(name: String, cameraID: String) {
-        let content = UNMutableNotificationContent()
-        content.title = "\(name) disconnected"
-        content.body = "Connection lost — reconnecting automatically."
-        content.sound = .default
-        content.threadIdentifier = "camera-drops"
-        let request = UNNotificationRequest(
-            identifier: "camera-drop-\(cameraID)",
-            content: content,
-            trigger: nil
-        )
-        UNUserNotificationCenter.current().add(request)
-        log.info("posted local dropout notification: \(name, privacy: .public)")
-    }
-
-    /// Shared entry for both delivery paths: discard stale queued events (the
-    /// transfer queue survives e.g. a night on the charger — a morning buzz for
-    /// last night's drop is noise), then route by app state.
-    fileprivate func processDropoutEvent(_ payload: [String: Any]) {
-        let name = payload["name"] as? String ?? "Camera"
-        let cameraID = payload["cameraID"] as? String ?? "unknown"
-        if let sentAt = payload["sentAt"] as? TimeInterval {
-            let age = Date().timeIntervalSince1970 - sentAt
-            guard age < 120 else {
-                log.info("discarding stale dropout (\(Int(age))s old): \(name, privacy: .public)")
-                return
-            }
-        }
-        if WKApplication.shared().applicationState == .active {
-            handleDropout(name: name)
-        } else {
-            postDropoutNotification(name: name, cameraID: cameraID)
-        }
-    }
 }
 
 struct WatchMode: Identifiable, Equatable {
@@ -199,17 +153,9 @@ extension WatchViewModel: WCSessionDelegate {
     /// Live events from the iPhone (no reply expected). Currently: cameraDropout.
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
         guard message["event"] as? String == "cameraDropout" else { return }
+        let name = message["name"] as? String ?? "Camera"
         Task { @MainActor in
-            self.processDropoutEvent(message)
-        }
-    }
-
-    /// Queued events (transferUserInfo) — delivered via background wake when the
-    /// watch app wasn't reachable at send time (see WatchAppDelegate).
-    nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
-        guard userInfo["event"] as? String == "cameraDropout" else { return }
-        Task { @MainActor in
-            self.processDropoutEvent(userInfo)
+            self.handleDropout(name: name)
         }
     }
 

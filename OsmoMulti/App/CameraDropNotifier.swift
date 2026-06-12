@@ -6,27 +6,22 @@ import UserNotifications
 /// comms failure and didn't recover within the grace period) into a local
 /// notification.
 ///
-/// Because this app is foreground-only (BLE dies when backgrounded), drops are
-/// only detectable while the app is up — so the notification is presented as a
-/// banner + sound even in the foreground (the "phone propped up across the room
-/// during a shoot" case). Standard iOS mirroring delivers to Apple Watch only
-/// when the iPhone is locked, which can't coincide with detection here — so the
-/// watch is alerted directly instead: dropouts are relayed through WatchBridge
-/// and the watch app plays a wrist haptic (watch-as-remote scenario).
+/// With the `bluetooth-central` background mode, drops are detected (and
+/// alerted) in every app state:
+/// - **Foreground:** presented as a banner + sound (the "phone propped up
+///   across the room" case), plus a live wrist haptic if the watch app is open
+///   (relayed via WatchBridge — see `relayDropout`).
+/// - **Backgrounded / locked:** CoreBluetooth wakes the app, the notification
+///   posts normally, and when the phone is locked iOS mirrors it to a worn
+///   Apple Watch with the system haptic — no custom watch delivery needed.
 @MainActor
 final class CameraDropNotifier: NSObject {
 
     /// UserDefaults key for the Settings "Camera Drop Alerts" toggle. Default ON.
     static let enabledKey = "camera_drop_alerts_enabled"
 
-    /// Suppress alerts for this long after the app becomes active: resuming the
-    /// app tears down + rebuilds every BLE connection, and any grace timers that
-    /// expired while suspended would otherwise fire a stale-alert storm.
-    private static let resumeQuietWindow: TimeInterval = 15
-
     private let manager: OsmoCameraManager
     private let watchBridge: WatchBridge
-    private var lastBecameActive = Date.distantPast
 
     private var alertsEnabled: Bool {
         (UserDefaults.standard.object(forKey: Self.enabledKey) as? Bool) ?? true
@@ -47,13 +42,6 @@ final class CameraDropNotifier: NSObject {
             self?.notifyDropout(camera)
         }
 
-        NotificationCenter.default.addObserver(
-            forName: UIApplication.didBecomeActiveNotification,
-            object: nil, queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in self?.lastBecameActive = Date() }
-        }
-
         Task {
             let center = UNUserNotificationCenter.current()
             if await center.notificationSettings().authorizationStatus == .notDetermined {
@@ -64,14 +52,9 @@ final class CameraDropNotifier: NSObject {
 
     private func notifyDropout(_ camera: OsmoCamera) {
         guard alertsEnabled else { return }
-        // Backgrounding teardown: iOS kills every BLE link when the app leaves the
-        // foreground — those are lifecycle drops, not comms failures.
-        guard UIApplication.shared.applicationState == .active else { return }
-        // Resume storm: see resumeQuietWindow.
-        guard Date().timeIntervalSince(lastBecameActive) > Self.resumeQuietWindow else { return }
 
-        // Wrist haptic for the watch-as-remote case (same gates apply — the watch
-        // must never alert for lifecycle/disabled drops the phone would suppress).
+        // Live wrist haptic for the watch-as-remote case (watch app frontmost).
+        // Locked-phone wrist delivery rides the system's notification mirroring.
         watchBridge.relayDropout(camera)
 
         let content = UNMutableNotificationContent()
@@ -95,8 +78,8 @@ final class CameraDropNotifier: NSObject {
 
 extension CameraDropNotifier: UNUserNotificationCenterDelegate {
 
-    /// Present drop alerts even while the app is foregrounded — for this
-    /// foreground-only app that's the *primary* delivery path.
+    /// Present drop alerts as a banner even while the app is foregrounded —
+    /// the propped-up-phone shoot is a primary delivery scenario.
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification
