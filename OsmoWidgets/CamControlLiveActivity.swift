@@ -32,14 +32,10 @@ struct CamControlLiveActivity: Widget {
                     RecordingStatusLine(state: context.state)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    HStack {
+                    HStack(spacing: 10) {
                         GPSBadge(fix: context.state.gpsFix)
-                        if let mode = context.state.modeLabel {
-                            Text(mode)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
                         Spacer()
+                        ModeSegments(state: context.state)
                         ShutterButton(state: context.state)
                     }
                     .padding(.horizontal, 4)
@@ -73,13 +69,7 @@ private struct LockScreenActivityView: View {
             HStack(spacing: 12) {
                 RecordingStatusLine(state: state)
                 Spacer()
-                Button(intent: ActivityToggleModeIntent()) {
-                    Image(systemName: state.isPhotoMode ? "video.fill" : "camera.fill")
-                        .font(.title3)
-                        .frame(width: 40, height: 40)
-                }
-                .buttonStyle(.bordered)
-                .clipShape(Circle())
+                ModeSegments(state: state)
                 ShutterButton(state: state)
             }
         }
@@ -121,16 +111,46 @@ private struct RecordingStatusLine: View {
                     .font(.body.monospacedDigit().weight(.semibold))
                     .foregroundStyle(.red)
                     .frame(maxWidth: 64, alignment: .leading)
-            } else if let mode = state.modeLabel, state.connected > 0 {
-                Text("Ready · \(mode)")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
             } else {
+                // Mode is shown by the segmented control now, so the status line
+                // stays terse.
                 Text(state.connected > 0 ? "Ready" : "No cameras connected")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
         }
+    }
+}
+
+/// Segmented Video | Photo mode control — shows *current* mode (highlighted
+/// segment) and switches by tapping the other (absolute, not a toggle, so it
+/// never shows a "next state" the user has to decode). Disabled while recording
+/// or with no cameras connected.
+private struct ModeSegments: View {
+    let state: CamActivityAttributes.ContentState
+
+    private var disabled: Bool { state.isRecording || state.connected == 0 }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            segment(systemImage: "video.fill", active: !state.isPhotoMode, photo: false)
+            segment(systemImage: "camera.fill", active: state.isPhotoMode, photo: true)
+        }
+        .padding(2)
+        .background(.white.opacity(0.15), in: Capsule())
+        .opacity(disabled ? 0.45 : 1)
+    }
+
+    private func segment(systemImage: String, active: Bool, photo: Bool) -> some View {
+        Button(intent: ActivitySetModeIntent(photo: photo)) {
+            Image(systemName: systemImage)
+                .font(.footnote.weight(.semibold))
+                .frame(width: 32, height: 26)
+                .background(active ? Color.white.opacity(0.9) : Color.clear, in: Capsule())
+                .foregroundStyle(active ? Color.black : Color.white.opacity(0.6))
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
     }
 }
 

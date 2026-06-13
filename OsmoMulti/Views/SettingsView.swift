@@ -46,6 +46,32 @@ struct SettingsView: View {
         return "±\(meters) m · \(age)s old"
     }
 
+    /// GPS indicator color key, using the actual tinted satellite glyph so it maps
+    /// 1:1 to the bar/watch/Live-Activity icon. (The glyph is a template image,
+    /// which tints via foregroundStyle — no SF Symbol needed; an SF Symbol would
+    /// only matter for inline-in-text flow + Dynamic Type scaling.)
+    private var gpsLegend: some View {
+        Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 5) {
+            legendRow(.gray, "Off")
+            legendRow(.blue, "Standby — engages when a camera connects")
+            legendRow(.red, "No fix")
+            legendRow(.green, "Active with good fix")
+        }
+        .font(.caption)
+    }
+
+    private func legendRow(_ color: Color, _ label: String) -> some View {
+        GridRow {
+            Image("Satellite")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 13, height: 13)
+                .foregroundStyle(color)
+            Text(label)
+        }
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -111,9 +137,12 @@ struct SettingsView: View {
                 } header: {
                     Text("Location")
                 } footer: {
-                    Text(locationManager.isActive
-                        ? "Feeds iPhone GPS coordinates to connected cameras for video geotagging. GPS runs only while cameras are connected (works with the phone locked). 10 Hz uses more battery and BLE bandwidth, especially with many cameras.\n\nIndicator: ⚪ off · 🔵 standby, engages when a camera connects · 🔴 no fix · 🟢 good fix"
-                        : "Feeds iPhone GPS coordinates to connected cameras for video geotagging.\n\nIndicator: ⚪ off · 🔵 standby, engages when a camera connects · 🔴 no fix · 🟢 good fix")
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(locationManager.isActive
+                            ? "Feeds iPhone GPS coordinates to connected cameras for video geotagging. GPS runs only while cameras are connected (works with the phone locked). 10 Hz uses more battery and BLE bandwidth, especially with many cameras."
+                            : "Feeds iPhone GPS coordinates to connected cameras for video geotagging.")
+                        gpsLegend
+                    }
                 }
 
                 Section {
