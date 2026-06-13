@@ -37,12 +37,8 @@ struct CamControlLiveActivity: Widget {
                     RecordingStatusLine(state: context.state)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    HStack(spacing: 10) {
-                        ModeSegments(state: context.state)
-                        Spacer()
-                        ShutterButton(state: context.state)
-                    }
-                    .padding(.horizontal, 4)
+                    ControlsRow(state: context.state)
+                        .padding(.horizontal, 4)
                 }
             } compactLeading: {
                 // Camera glyph = app identity (the DI is otherwise anonymous), with
@@ -71,6 +67,8 @@ struct CamControlLiveActivity: Widget {
 private struct LockScreenActivityView: View {
     let state: CamActivityAttributes.ContentState
 
+    // Same visual order as the expanded Dynamic Island: top row (count ·
+    // GPS+battery), centered status, controls row.
     var body: some View {
         VStack(spacing: 10) {
             HStack {
@@ -80,16 +78,31 @@ private struct LockScreenActivityView: View {
                 GPSBadge(fix: state.gpsFix)
                 BatteryBadge(percent: state.batteryPercent)
             }
-            HStack(spacing: 12) {
-                RecordingStatusLine(state: state)
-                Spacer()
-                ModeSegments(state: state)
-                ShutterButton(state: state)
-            }
+            RecordingStatusLine(state: state)
+            ControlsRow(state: state)
         }
         .padding(14)
         .foregroundStyle(.white)
     }
+}
+
+/// Shared bottom controls — taller mode toggle + a wide capture pill that fills
+/// the remaining width. Used by both the lock screen and the expanded island so
+/// the two presentations match.
+private struct ControlsRow: View {
+    let state: CamActivityAttributes.ContentState
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ModeSegments(state: state)
+            ShutterButton(state: state)
+        }
+    }
+}
+
+private enum LAMetrics {
+    /// Shared height for the mode toggle + capture pill so they line up.
+    static let controlHeight: CGFloat = 44
 }
 
 // MARK: - Pieces
@@ -149,11 +162,11 @@ private struct ModeSegments: View {
 
     var body: some View {
         Button(intent: ActivityToggleModeIntent()) {
-            HStack(spacing: 0) {
+            HStack(spacing: 4) {
                 segmentLabel("video.fill", active: !state.isPhotoMode)
                 segmentLabel("camera.fill", active: state.isPhotoMode)
             }
-            .padding(2)
+            .padding(3)
             .background(.white.opacity(0.15), in: Capsule())
         }
         .buttonStyle(.plain)
@@ -163,25 +176,27 @@ private struct ModeSegments: View {
 
     private func segmentLabel(_ systemImage: String, active: Bool) -> some View {
         Image(systemName: systemImage)
-            .font(.footnote.weight(.semibold))
-            .frame(width: 32, height: 26)
+            .font(.subheadline.weight(.semibold))
+            .frame(width: 36, height: LAMetrics.controlHeight - 6)
             .background(active ? Color.white.opacity(0.9) : Color.clear, in: Capsule())
             .foregroundStyle(active ? Color.black : Color.white.opacity(0.6))
     }
 }
 
-/// Context-aware shutter: capture in photo mode, record/stop otherwise.
+/// Context-aware shutter: capture in photo mode, record/stop otherwise. Wide
+/// pill that fills the remaining width of the controls row, icon centered.
 private struct ShutterButton: View {
     let state: CamActivityAttributes.ContentState
 
     var body: some View {
         Button(intent: ActivityShutterIntent()) {
             Image(systemName: symbol)
-                .font(.title3)
-                .frame(width: 40, height: 40)
+                .font(.title3.weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .frame(height: LAMetrics.controlHeight)
         }
         .buttonStyle(.borderedProminent)
-        .clipShape(Circle())
+        .clipShape(Capsule())
         .tint(state.isPhotoMode ? .blue : .red)
         .disabled(state.connected == 0)
     }
