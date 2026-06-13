@@ -134,30 +134,26 @@ private struct RecordingStatusLine: View {
     }
 }
 
-/// Segmented Video | Photo mode control — shows *current* mode (highlighted
-/// segment) and switches by tapping the other (absolute, not a toggle, so it
-/// never shows a "next state" the user has to decode). Disabled while recording
-/// or with no cameras connected.
+/// Video | Photo mode control — shows *current* mode (highlighted segment), and
+/// the WHOLE pill is one tap target that toggles to the other mode (the segments
+/// are too small to require precise aiming). Disabled while recording or with no
+/// cameras connected.
 private struct ModeSegments: View {
     let state: CamActivityAttributes.ContentState
 
     private var disabled: Bool { state.isRecording || state.connected == 0 }
 
     var body: some View {
-        HStack(spacing: 0) {
-            Button(intent: ActivitySetVideoIntent()) {
+        Button(intent: ActivityToggleModeIntent()) {
+            HStack(spacing: 0) {
                 segmentLabel("video.fill", active: !state.isPhotoMode)
-            }
-            .buttonStyle(.plain)
-            .disabled(disabled)
-            Button(intent: ActivitySetPhotoIntent()) {
                 segmentLabel("camera.fill", active: state.isPhotoMode)
             }
-            .buttonStyle(.plain)
-            .disabled(disabled)
+            .padding(2)
+            .background(.white.opacity(0.15), in: Capsule())
         }
-        .padding(2)
-        .background(.white.opacity(0.15), in: Capsule())
+        .buttonStyle(.plain)
+        .disabled(disabled)
         .opacity(disabled ? 0.45 : 1)
     }
 

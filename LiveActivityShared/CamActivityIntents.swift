@@ -10,10 +10,10 @@ import AppIntents
 enum CamActivityAction: Sendable {
     /// Record/stop in video modes, capture in photo mode (context-aware shutter).
     case shutter
-    /// Set all cameras to photo (`true`) or video (`false`) mode. No-op if already
-    /// there — the segmented control sends the tapped segment's absolute mode
-    /// rather than a relative toggle, so it always reflects current state.
-    case setMode(photo: Bool)
+    /// Flip all cameras between video and photo. Reads the actual current mode at
+    /// tap time and switches to the other — parameterless, so no frozen-parameter
+    /// issue, and correct even if the displayed pill briefly lags.
+    case toggleMode
 }
 
 @MainActor
@@ -34,34 +34,19 @@ struct ActivityShutterIntent: LiveActivityIntent {
     }
 }
 
-// Two parameterless intents rather than one parameterized `setMode(photo:)`:
-// WidgetKit archives a Button's intent instance, and a `@Parameter` value gets
-// frozen at its first-rendered value — so a parameterized mode intent fires
-// correctly once, then keeps re-sending the original mode. Distinct parameterless
-// intents (like the shutter, which works repeatedly) have nothing to mis-encode.
-
-/// Set all cameras to video mode, from the Live Activity's segmented control.
-struct ActivitySetVideoIntent: LiveActivityIntent {
-    static let title: LocalizedStringResource = "Set Video Mode"
-    static let description: IntentDescription = "Set all connected cameras to video mode."
+/// Flip all cameras between video and photo, from the Live Activity's mode
+/// control. Parameterless (the whole segmented pill is one tap target): WidgetKit
+/// freezes a Button intent's `@Parameter` at its first-archived value, so a
+/// parameterized mode intent fires once then sticks — a parameterless toggle (like
+/// the shutter) has nothing to mis-encode and reads the live mode at tap time.
+struct ActivityToggleModeIntent: LiveActivityIntent {
+    static let title: LocalizedStringResource = "Toggle Camera Mode"
+    static let description: IntentDescription = "Switch all connected cameras between video and photo mode."
     static let openAppWhenRun = false
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        await LiveActivityActions.handler?(.setMode(photo: false))
-        return .result()
-    }
-}
-
-/// Set all cameras to photo mode, from the Live Activity's segmented control.
-struct ActivitySetPhotoIntent: LiveActivityIntent {
-    static let title: LocalizedStringResource = "Set Photo Mode"
-    static let description: IntentDescription = "Set all connected cameras to photo mode."
-    static let openAppWhenRun = false
-
-    @MainActor
-    func perform() async throws -> some IntentResult {
-        await LiveActivityActions.handler?(.setMode(photo: true))
+        await LiveActivityActions.handler?(.toggleMode)
         return .result()
     }
 }

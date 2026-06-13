@@ -54,12 +54,11 @@ final class CameraActivityController {
         case .shutter:
             let failed = await manager.shutterAll()
             log.info("activity shutter → failed=\(failed)")
-        case .setMode(let photo):
+        case .toggleMode:
             let isPhoto = manager.enabledConnectedCameras.first?.status.mode?.isPhotoMode == true
-            guard isPhoto != photo else { return }   // already in the tapped mode
-            let target: ModeIntent = photo ? .photo : .video
+            let target: ModeIntent = isPhoto ? .video : .photo   // flip from live mode
             await manager.switchModeAll(target)
-            log.info("activity set mode → \(target.rawValue, privacy: .public)")
+            log.info("activity toggle mode → \(target.rawValue, privacy: .public)")
         }
     }
 
