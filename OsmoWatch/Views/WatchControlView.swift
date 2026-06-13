@@ -227,11 +227,11 @@ private struct SlideToSleep: View {
                     // Fade the hint as the thumb travels over it.
                     .opacity(max(0, 1 - Double(offsetX / travel) * 1.6))
                 Circle()
-                    .fill(.orange.opacity(didTrigger ? 1.0 : 0.85))
+                    .fill(.blue.opacity(didTrigger ? 1.0 : 0.85))   // blue = sleep/standby color language
                     .overlay {
                         Image(systemName: didTrigger ? "moon.zzz.fill" : "moon.zzz")
                             .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(.black)
+                            .foregroundStyle(.white)
                     }
                     .frame(width: Self.thumbSize, height: Self.thumbSize)
                     .offset(x: Self.inset + offsetX)

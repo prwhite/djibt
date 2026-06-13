@@ -117,13 +117,15 @@ struct CameraRowView: View {
 
     private var statusColor: Color {
         switch camera.connectionState {
+        // Blue = "idle, comes back on its own" — same color language as GPS
+        // standby. Covers true sleep and the presumed-asleep passive wait below.
         case .connected:     return .green
-        case .sleeping:      return .orange
+        case .sleeping:      return .blue
         case .reconnecting:
             // Presumed-asleep (deep-sleep BLE drop, quiet passive wait) is still
-            // "sleeping" from the user's perspective → same orange as .sleeping.
+            // "sleeping" from the user's perspective → same blue as .sleeping.
             // Otherwise: passive wait (retries exhausted) idle → gray; active → yellow.
-            if camera.presumedAsleep { return .orange }
+            if camera.presumedAsleep { return .blue }
             return isPassiveReconnect ? .gray : .yellow
         case .handshaking,
              .connecting,
@@ -147,6 +149,12 @@ struct CameraRowView: View {
 
     private var subtitleColor: Color {
         if camera.connectionState == .failed { return .red }
+        // "Sleeping"/"Sleeping · Xm" reads blue to match the dot (idle, returns
+        // on its own) instead of generic gray.
+        if camera.connectionState == .sleeping
+            || (camera.presumedAsleep && camera.connectionState == .reconnecting) {
+            return .blue
+        }
         return isSubtitleStale ? .orange : .secondary
     }
 
