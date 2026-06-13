@@ -145,24 +145,28 @@ private struct ModeSegments: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            segment(systemImage: "video.fill", active: !state.isPhotoMode, photo: false)
-            segment(systemImage: "camera.fill", active: state.isPhotoMode, photo: true)
+            Button(intent: ActivitySetVideoIntent()) {
+                segmentLabel("video.fill", active: !state.isPhotoMode)
+            }
+            .buttonStyle(.plain)
+            .disabled(disabled)
+            Button(intent: ActivitySetPhotoIntent()) {
+                segmentLabel("camera.fill", active: state.isPhotoMode)
+            }
+            .buttonStyle(.plain)
+            .disabled(disabled)
         }
         .padding(2)
         .background(.white.opacity(0.15), in: Capsule())
         .opacity(disabled ? 0.45 : 1)
     }
 
-    private func segment(systemImage: String, active: Bool, photo: Bool) -> some View {
-        Button(intent: ActivitySetModeIntent(photo: photo)) {
-            Image(systemName: systemImage)
-                .font(.footnote.weight(.semibold))
-                .frame(width: 32, height: 26)
-                .background(active ? Color.white.opacity(0.9) : Color.clear, in: Capsule())
-                .foregroundStyle(active ? Color.black : Color.white.opacity(0.6))
-        }
-        .buttonStyle(.plain)
-        .disabled(disabled)
+    private func segmentLabel(_ systemImage: String, active: Bool) -> some View {
+        Image(systemName: systemImage)
+            .font(.footnote.weight(.semibold))
+            .frame(width: 32, height: 26)
+            .background(active ? Color.white.opacity(0.9) : Color.clear, in: Capsule())
+            .foregroundStyle(active ? Color.black : Color.white.opacity(0.6))
     }
 }
 

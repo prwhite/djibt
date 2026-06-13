@@ -34,23 +34,34 @@ struct ActivityShutterIntent: LiveActivityIntent {
     }
 }
 
-/// Set all cameras to a specific mode (video or photo) from the Live Activity's
-/// segmented mode control. Absolute, not a toggle — the tapped segment carries
-/// its target mode, so the control always shows current state.
-struct ActivitySetModeIntent: LiveActivityIntent {
-    static let title: LocalizedStringResource = "Set Camera Mode"
-    static let description: IntentDescription = "Set all connected cameras to video or photo mode."
+// Two parameterless intents rather than one parameterized `setMode(photo:)`:
+// WidgetKit archives a Button's intent instance, and a `@Parameter` value gets
+// frozen at its first-rendered value — so a parameterized mode intent fires
+// correctly once, then keeps re-sending the original mode. Distinct parameterless
+// intents (like the shutter, which works repeatedly) have nothing to mis-encode.
+
+/// Set all cameras to video mode, from the Live Activity's segmented control.
+struct ActivitySetVideoIntent: LiveActivityIntent {
+    static let title: LocalizedStringResource = "Set Video Mode"
+    static let description: IntentDescription = "Set all connected cameras to video mode."
     static let openAppWhenRun = false
-
-    @Parameter(title: "Photo Mode")
-    var photo: Bool
-
-    init() {}
-    init(photo: Bool) { self.photo = photo }
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        await LiveActivityActions.handler?(.setMode(photo: photo))
+        await LiveActivityActions.handler?(.setMode(photo: false))
+        return .result()
+    }
+}
+
+/// Set all cameras to photo mode, from the Live Activity's segmented control.
+struct ActivitySetPhotoIntent: LiveActivityIntent {
+    static let title: LocalizedStringResource = "Set Photo Mode"
+    static let description: IntentDescription = "Set all connected cameras to photo mode."
+    static let openAppWhenRun = false
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        await LiveActivityActions.handler?(.setMode(photo: true))
         return .result()
     }
 }
