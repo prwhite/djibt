@@ -25,17 +25,21 @@ struct CamControlLiveActivity: Widget {
                         .padding(.leading, 4)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    BatteryBadge(percent: context.state.batteryPercent)
-                        .padding(.trailing, 4)
+                    // GPS sits with battery (mirrors the lock-screen layout), not
+                    // stranded alone in the bottom row.
+                    HStack(spacing: 6) {
+                        GPSBadge(fix: context.state.gpsFix)
+                        BatteryBadge(percent: context.state.batteryPercent)
+                    }
+                    .padding(.trailing, 4)
                 }
                 DynamicIslandExpandedRegion(.center) {
                     RecordingStatusLine(state: context.state)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     HStack(spacing: 10) {
-                        GPSBadge(fix: context.state.gpsFix)
-                        Spacer()
                         ModeSegments(state: context.state)
+                        Spacer()
                         ShutterButton(state: context.state)
                     }
                     .padding(.horizontal, 4)
