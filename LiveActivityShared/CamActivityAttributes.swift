@@ -18,12 +18,10 @@ struct CamActivityAttributes: ActivityAttributes {
         var recordingStart: Date?
         /// Lowest battery across connected cameras (the one you care about).
         var batteryPercent: Int?
-        /// Phone GPS fix relayed for geotagging confidence: "off" / "noFix" / "good".
+        /// Phone GPS fix relayed for geotagging confidence: "off"/"standby"/"noFix"/"good".
         var gpsFix: String
-        /// Display label for the current mode (e.g. "Video", "Photo").
-        var modeLabel: String?
-        /// True when the representative camera is in a photo mode — flips the
-        /// shutter button between record/stop and capture.
+        /// True when the representative camera is in a photo mode — drives both the
+        /// segmented mode control's highlight and the shutter's capture-vs-record icon.
         var isPhotoMode: Bool
     }
 

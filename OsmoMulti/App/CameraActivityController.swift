@@ -110,7 +110,6 @@ final class CameraActivityController {
             recordingStart: recordingStart,
             batteryPercent: connected.map(\.status.batteryPercentage).min(),
             gpsFix: gpsFixString(),
-            modeLabel: representative.flatMap { $0.modeName ?? $0.status.mode?.displayName },
             isPhotoMode: isPhotoMode
         )
     }
