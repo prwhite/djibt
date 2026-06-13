@@ -5,15 +5,41 @@ struct WatchControlView: View {
 
     @Bindable var viewModel: WatchViewModel
 
-    @State private var selectedMode: String = "video"
-    /// Suppress sending a command when we programmatically sync the picker
-    /// to match the iPhone's current mode.
-    @State private var isSyncingMode = false
+    /// The mode the user just picked, shown optimistically until the iPhone
+    /// confirms it (or a timeout falls back to the iPhone's authoritative mode).
+    /// Decouples the picker from the switch-confirmation lag so an incidental
+    /// state push mid-switch can't snap it back or echo a contradicting command.
+    @State private var pendingMode: String?
+    @State private var pendingClear: Task<Void, Never>?
 
     private var modes: [WatchMode] {
         let allowed = Set(viewModel.availableModes)
         let filtered = WatchMode.allCases.filter { allowed.contains($0.value) }
         return filtered.isEmpty ? WatchMode.allCases : filtered
+    }
+
+    /// Effective current mode: the optimistic pending pick if a switch is in
+    /// flight, else the iPhone's authoritative mode. Drives both the picker
+    /// selection and the shutter's capture-vs-record affordance.
+    private var effectiveMode: String { pendingMode ?? viewModel.currentMode ?? "video" }
+
+    /// Picker selection. `get` is `effectiveMode`; `set` fires only on a real user
+    /// pick (programmatic updates flow through `get`, never `set`, so no echo).
+    private var modeBinding: Binding<String> {
+        Binding(
+            get: { effectiveMode },
+            set: { newValue in
+                guard newValue != (viewModel.currentMode ?? "video") else { return }
+                pendingMode = newValue
+                viewModel.switchMode(newValue)
+                pendingClear?.cancel()
+                pendingClear = Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(4))
+                    guard !Task.isCancelled else { return }
+                    pendingMode = nil   // never confirmed → fall back to iPhone truth
+                }
+            }
+        )
     }
 
     var body: some View {
@@ -28,11 +54,10 @@ struct WatchControlView: View {
             .navigationTitle("Cam Control")
         }
         .onChange(of: viewModel.currentMode) { _, newMode in
-            if let newMode, newMode != selectedMode {
-                guard modes.contains(where: { $0.value == newMode }) else { return }
-                isSyncingMode = true
-                selectedMode = newMode
-                isSyncingMode = false
+            // iPhone confirmed our pending pick → drop the optimistic override.
+            if let newMode, newMode == pendingMode {
+                pendingMode = nil
+                pendingClear?.cancel()
             }
         }
     }
@@ -122,7 +147,7 @@ struct WatchControlView: View {
 
     private var shutterButton: some View {
         Group {
-            if selectedMode == "photo" {
+            if effectiveMode == "photo" {
                 Button {
                     viewModel.shutterAll()
                 } label: {
@@ -153,17 +178,13 @@ struct WatchControlView: View {
     // MARK: - Mode Picker
 
     private var modeSection: some View {
-        Picker("Mode", selection: $selectedMode) {
+        Picker("Mode", selection: modeBinding) {
             ForEach(modes) { mode in
                 Label(mode.label, systemImage: mode.symbol)
                     .tag(mode.value)
             }
         }
         .pickerStyle(.navigationLink)
-        .onChange(of: selectedMode) { _, newValue in
-            guard !isSyncingMode else { return }
-            viewModel.switchMode(newValue)
-        }
     }
 
     // MARK: - Helpers
@@ -186,12 +207,14 @@ struct WatchControlView: View {
         }
     }
 
-    /// nil => indicator hidden (GPS off / unknown). red => noFix, green => good.
+    /// nil => indicator hidden (GPS off / unknown). blue => standby (armed, no
+    /// cameras — engages automatically), red => noFix, green => good.
     private func gpsColor(for fix: String) -> Color? {
         switch fix {
-        case "noFix": return .red
-        case "good":  return .green
-        default:      return nil   // "off" and any unexpected value: hidden
+        case "standby": return .blue
+        case "noFix":   return .red
+        case "good":    return .green
+        default:        return nil   // "off" and any unexpected value: hidden
         }
     }
 }
@@ -225,11 +248,11 @@ private struct SlideToSleep: View {
                     // Fade the hint as the thumb travels over it.
                     .opacity(max(0, 1 - Double(offsetX / travel) * 1.6))
                 Circle()
-                    .fill(.orange.opacity(didTrigger ? 1.0 : 0.85))
+                    .fill(.blue.opacity(didTrigger ? 1.0 : 0.85))   // blue = sleep/standby color language
                     .overlay {
                         Image(systemName: didTrigger ? "moon.zzz.fill" : "moon.zzz")
                             .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(.black)
+                            .foregroundStyle(.white)
                     }
                     .frame(width: Self.thumbSize, height: Self.thumbSize)
                     .offset(x: Self.inset + offsetX)

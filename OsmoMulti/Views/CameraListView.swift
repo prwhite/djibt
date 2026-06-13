@@ -164,7 +164,8 @@ struct CameraListView: View {
 /// Phone-global GPS fix at-a-glance indicator for the toolbar.
 /// Mirrors GlobalControlsView's ControlButton icon-over-caption idiom, but is
 /// a passive status display (no action). Color is the single source of truth
-/// from OsmoLocationManager.fixState: gray = off, red = noFix, green = good.
+/// from OsmoLocationManager.fixState: gray = off, blue = standby (armed, no
+/// cameras — re-engages automatically), red = noFix, green = good.
 private struct GPSTopBarIndicator: View {
     let fixState: GPSFixState
 
@@ -180,17 +181,19 @@ private struct GPSTopBarIndicator: View {
 
     private var tint: Color {
         switch fixState {
-        case .off:   return .gray
-        case .noFix: return .red
-        case .good:  return .green
+        case .off:     return .gray
+        case .standby: return .blue
+        case .noFix:   return .red
+        case .good:    return .green
         }
     }
 
     private var stateLabel: String {
         switch fixState {
-        case .off:   return "off"
-        case .noFix: return "no fix"
-        case .good:  return "good"
+        case .off:     return "off"
+        case .standby: return "standby — engages when a camera connects"
+        case .noFix:   return "no fix"
+        case .good:    return "good"
         }
     }
 }

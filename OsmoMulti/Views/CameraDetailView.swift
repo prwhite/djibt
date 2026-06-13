@@ -101,9 +101,14 @@ struct CameraDetailView: View {
     private var statusSection: some View {
         Section("Status") {
             // Presumed-asleep reads as Sleeping (it's quietly waiting for a button
-            // press on the camera), matching the row — not "Reconnecting…".
-            LabeledContent("Connection", value: camera.presumedAsleep && camera.connectionState == .reconnecting
-                ? "Sleeping" : camera.connectionState.displayLabel)
+            // press on the camera), matching the row — not "Reconnecting…". Blue =
+            // idle-but-returns-on-its-own, same as the row dot and GPS standby.
+            LabeledContent("Connection") {
+                let isSleepy = camera.connectionState == .sleeping
+                    || (camera.presumedAsleep && camera.connectionState == .reconnecting)
+                Text(isSleepy ? "Sleeping" : camera.connectionState.displayLabel)
+                    .foregroundStyle(isSleepy ? Color.blue : Color.secondary)
+            }
             if let rssi = camera.rssi {
                 LabeledContent("Signal") {
                     // Text LEFT, graph RIGHT so the graph pins to the trailing edge

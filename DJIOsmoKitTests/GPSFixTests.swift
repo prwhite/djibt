@@ -464,4 +464,72 @@ final class GPSFixTests: XCTestCase {
         XCTAssertFalse(mgr.hasFreshFix)
         XCTAssertEqual(mgr.fixState, .noFix)
     }
+
+    // MARK: - Location demand gating (CL runs only while cameras are connected)
+
+    @MainActor
+    private func makeDemandFixture() -> (OsmoLocationManager, OsmoCamera) {
+        let cam = OsmoCamera(name: "Cam", isEnabled: true)
+        let mgr = OsmoCameraManager(previewCameras: [cam])
+        let loc = OsmoLocationManager(cameraManager: mgr)
+        return (loc, cam)
+    }
+
+    @MainActor
+    func testDemandStartsAndStopsCL() {
+        let (loc, cam) = makeDemandFixture()
+        loc._testSetActive(true, location: nil)   // armed
+
+        loc._testDemandCheckOnce()
+        XCTAssertFalse(loc.isUpdatingLocation, "no cameras connected → standby")
+
+        cam.connectionState = .connected
+        loc._testDemandCheckOnce()
+        XCTAssertTrue(loc.isUpdatingLocation, "camera connected → CL running")
+
+        cam.connectionState = .reconnecting
+        for _ in 0..<(OsmoLocationManager.demandGraceTicks - 1) {
+            loc._testDemandCheckOnce()
+        }
+        XCTAssertTrue(loc.isUpdatingLocation, "grace not yet elapsed → CL stays up (blip tolerance)")
+
+        loc._testDemandCheckOnce()                 // tick that crosses the grace
+        XCTAssertFalse(loc.isUpdatingLocation, "no cameras past grace → CL stopped (standby)")
+
+        cam.connectionState = .connected
+        loc._testDemandCheckOnce()
+        XCTAssertTrue(loc.isUpdatingLocation, "camera back → CL restarts")
+    }
+
+    @MainActor
+    func testBlipResetsGraceCounter() {
+        let (loc, cam) = makeDemandFixture()
+        loc._testSetActive(true, location: nil)
+        cam.connectionState = .connected
+        loc._testDemandCheckOnce()
+        XCTAssertTrue(loc.isUpdatingLocation)
+
+        cam.connectionState = .reconnecting
+        for _ in 0..<30 { loc._testDemandCheckOnce() }   // half the grace
+        cam.connectionState = .connected
+        loc._testDemandCheckOnce()                       // demand back → counter resets
+        cam.connectionState = .reconnecting
+        for _ in 0..<(OsmoLocationManager.demandGraceTicks - 1) {
+            loc._testDemandCheckOnce()
+        }
+        XCTAssertTrue(loc.isUpdatingLocation, "grace restarts after a recovery — earlier ticks don't accumulate")
+    }
+
+    @MainActor
+    func testStandbyIsItsOwnState() {
+        let (loc, cam) = makeDemandFixture()
+        loc._testSetActive(true, location: makeLocation(accuracy: 5, age: 1))
+        // Armed, fresh fix in hand — but CL idle (no cameras): distinct standby
+        // state (blue), not off (gray, user-disabled) and not a live claim.
+        XCTAssertEqual(loc.fixState, .standby)
+
+        cam.connectionState = .connected
+        loc._testDemandCheckOnce()
+        XCTAssertEqual(loc.fixState, .good, "demand returns → CL runs → live state again")
+    }
 }
