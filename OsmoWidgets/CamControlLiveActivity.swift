@@ -41,12 +41,22 @@ struct CamControlLiveActivity: Widget {
                     .padding(.horizontal, 4)
                 }
             } compactLeading: {
-                Text("\(context.state.connected)/\(context.state.enabled)")
-                    .font(.caption2.monospacedDigit().weight(.semibold))
+                // Camera glyph = app identity (the DI is otherwise anonymous), with
+                // the connected/enabled count.
+                HStack(spacing: 3) {
+                    Image(systemName: "camera.fill")
+                        .font(.caption2)
+                        .foregroundStyle(ReadyDot.color(for: context.state))
+                    Text("\(context.state.connected)/\(context.state.enabled)")
+                        .font(.caption2.monospacedDigit().weight(.semibold))
+                }
             } compactTrailing: {
                 ReadyDot(state: context.state)
             } minimal: {
-                ReadyDot(state: context.state)
+                // Single-glyph slot: camera (identity) tinted by state.
+                Image(systemName: "camera.fill")
+                    .font(.caption2)
+                    .foregroundStyle(ReadyDot.color(for: context.state))
             }
         }
     }
@@ -88,10 +98,12 @@ private struct ReadyDot: View {
     var body: some View {
         Image(systemName: state.isRecording ? "record.circle.fill" : "circle.fill")
             .font(.caption2)
-            .foregroundStyle(color)
+            .foregroundStyle(Self.color(for: state))
     }
 
-    private var color: Color {
+    /// Shared state color: red recording · green ready · gray none. Also used to
+    /// tint the camera identity glyph in the compact/minimal island.
+    static func color(for state: CamActivityAttributes.ContentState) -> Color {
         if state.isRecording { return .red }
         return state.connected > 0 ? .green : .gray
     }

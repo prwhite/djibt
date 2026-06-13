@@ -90,8 +90,12 @@ final class CameraActivityController {
 
     private func snapshot() -> CamActivityAttributes.ContentState {
         let connected = manager.enabledConnectedCameras
-        let isRecording = connected.contains { $0.status.recordingStatus.isRecording }
         let representative = connected.first
+        let isPhotoMode = representative?.status.mode?.isPhotoMode == true
+        // A photo capture briefly flips the camera's recording flag; photo mode
+        // never "records", so gate it out — otherwise the REC pill flashes for a
+        // couple seconds on every shot.
+        let isRecording = !isPhotoMode && connected.contains { $0.status.recordingStatus.isRecording }
 
         // Anchor the auto-ticking timer once at the rec-start transition and
         // carry it forward — recomputing each tick would defeat diffing.
@@ -108,7 +112,7 @@ final class CameraActivityController {
             batteryPercent: connected.map(\.status.batteryPercentage).min(),
             gpsFix: gpsFixString(),
             modeLabel: representative.flatMap { $0.modeName ?? $0.status.mode?.displayName },
-            isPhotoMode: representative?.status.mode?.isPhotoMode == true
+            isPhotoMode: isPhotoMode
         )
     }
 
