@@ -51,3 +51,19 @@ field experience with plain bluetooth-central.
   could relabel/suppress for `.sleeping`.
 - **Small-device layout stress-test:** verify the camera row (long name +
   telemetry stack) on SE-class screens and large Dynamic Type sizes.
+
+## Osmo Pocket cameras — investigated, NOT viable over BLE (closed 2026-06-14)
+Researched + ran a hardware PoC on an Osmo Pocket 3; the conclusion applies to the
+Osmo Pocket line (same gimbal + Wi-Fi app architecture). **Dead end for this app's
+model.** Pocket cameras speak classic DUML (`0x55`) and over BLE pair + stream
+telemetry only — **capture/record/photo/gimbal are WiFi-gated** (canonical capture
+opcodes `0x01/0x01`, `0x01/0x02`, `0x01/0x7c` sent over BLE got zero camera
+response; two Mimo BLE sniffs showed no Pocket control traffic; reproduces
+lib-osmo-ble's gimbal "needs WiFi" finding; confirmed the phone joins the camera's
+Wi-Fi AP during Mimo use). WiFi-gated control is incompatible with the core
+**simultaneous-multi-camera-over-BLE** model (one AP / one camera at a time), so
+Osmo Pocket cameras are **not controllable devices here** — they'd be a separate
+single-cam WiFi app. The Action 4/5 + 360 family (R-SDK `0xAA`) is unaffected;
+BLE control there works and ships. Don't re-investigate without new evidence that
+DJI exposes Pocket capture over BLE. Full writeup + PoC:
+`docs.nogit/pocket3-feasibility-and-architecture.md` §12 (gitignored).

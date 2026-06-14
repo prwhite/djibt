@@ -148,6 +148,7 @@ Edit Scheme → Run → Arguments → Add "--preview-mode"
 
 ## Known Limitations
 
+- **Osmo Pocket cameras are not supported (investigated in depth, no-go).** We did a full protocol study plus a hardware proof-of-concept on an Osmo Pocket 3; the finding applies to the Osmo Pocket line, which shares the same gimbal + Wi-Fi app architecture. Pocket cameras speak a *different* DJI envelope — classic DUML (SOF `0x55`, CRC8+CRC16) — rather than the R-SDK (`0xAA`) framing this app uses for the Action/360 family. More decisively, their capture controls (record/photo/gimbal) are **gated behind a Wi-Fi session, not available over BLE**: the Mimo app drives the camera over its own Wi-Fi AP (confirmed — the phone joins that AP during use). Wi-Fi-gated control is fundamentally incompatible with this app's *simultaneous multi-camera over BLE* model (a phone joins only one Wi-Fi AP, hence one camera, at a time), so Osmo Pocket cameras are out of scope. See `BACKLOG.md`.
 - **Wake from iOS is not possible.** The DJI protocol wakes cameras via a broadcast manufacturer-data BLE advertisement, which iOS does not support. Users must press a button on the camera to wake it from sleep.
 - **Resolution changes are not implemented.** The public DJI BLE demo reports current resolution/fps in status, but does not document a set-resolution or set-fps command.
 - **Video download is not supported.** DJI Osmo cameras transfer video over direct Wi-Fi, using an undocumented protocol. This feature is not implemented.
