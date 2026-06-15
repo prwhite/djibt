@@ -41,10 +41,11 @@ struct CamControlLiveActivity: Widget {
                         .padding(.horizontal, 4)
                 }
             } compactLeading: {
-                // Camera glyph = app identity (the DI is otherwise anonymous), with
-                // the connected/enabled count.
+                // Mode glyph (video/photo) tinted by state, with the
+                // connected/enabled count — says at a glance what mode the rig is
+                // in (color carries recording/ready/none; the trailing dot too).
                 HStack(spacing: 3) {
-                    Image(systemName: "camera.fill")
+                    Image(systemName: context.state.modeSymbol)
                         .font(.caption2)
                         .foregroundStyle(ReadyDot.color(for: context.state))
                     Text("\(context.state.connected)/\(context.state.enabled)")
@@ -53,13 +54,19 @@ struct CamControlLiveActivity: Widget {
             } compactTrailing: {
                 ReadyDot(state: context.state)
             } minimal: {
-                // Single-glyph slot: camera (identity) tinted by state.
-                Image(systemName: "camera.fill")
+                // Single-glyph slot: mode glyph (video/photo) tinted by state.
+                Image(systemName: context.state.modeSymbol)
                     .font(.caption2)
                     .foregroundStyle(ReadyDot.color(for: context.state))
             }
         }
     }
+}
+
+private extension CamActivityAttributes.ContentState {
+    /// Capture-mode glyph — matches the in-LA ModeSegments (video.fill / camera.fill)
+    /// so the compact island shows what mode the rig is in and what a tap captures.
+    var modeSymbol: String { isPhotoMode ? "camera.fill" : "video.fill" }
 }
 
 // MARK: - Lock Screen
