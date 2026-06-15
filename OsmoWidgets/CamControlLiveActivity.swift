@@ -20,7 +20,7 @@ struct CamControlLiveActivity: Widget {
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     Label("\(context.state.connected)/\(context.state.enabled)",
-                          systemImage: "camera.fill")
+                          systemImage: context.state.modeSymbol)
                         .font(.headline)
                         .padding(.leading, 4)
                 }
@@ -64,8 +64,9 @@ struct CamControlLiveActivity: Widget {
 }
 
 private extension CamActivityAttributes.ContentState {
-    /// Capture-mode glyph — matches the in-LA ModeSegments (video.fill / camera.fill)
-    /// so the compact island shows what mode the rig is in and what a tap captures.
+    /// Capture-mode glyph — matches the in-LA ModeSegments (video.fill / camera.fill).
+    /// Used for every leading/identity glyph (compact, minimal, expanded, lock
+    /// screen) so the mode reads consistently as the activity expands/collapses.
     var modeSymbol: String { isPhotoMode ? "camera.fill" : "video.fill" }
 }
 
@@ -79,7 +80,7 @@ private struct LockScreenActivityView: View {
     var body: some View {
         VStack(spacing: 10) {
             HStack {
-                Label("\(state.connected)/\(state.enabled)", systemImage: "camera.fill")
+                Label("\(state.connected)/\(state.enabled)", systemImage: state.modeSymbol)
                     .font(.headline)
                 Spacer()
                 GPSBadge(fix: state.gpsFix)
