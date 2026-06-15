@@ -28,12 +28,21 @@ final class CameraActivityController {
     /// app being terminated while an activity is live.
     private static let staleAfter: TimeInterval = 120
 
+    /// `@AppStorage` key for the in-app "Camera Live Activity" toggle. Default
+    /// `true` is registered in `start()` so this controller's raw-`UserDefaults`
+    /// read and SettingsView's `@AppStorage` agree on first launch.
+    static let enabledKey = "liveActivityEnabled"
+
     init(cameraManager: OsmoCameraManager, locationManager: OsmoLocationManager) {
         self.manager = cameraManager
         self.locationManager = locationManager
     }
 
     func start() {
+        // Default the in-app Live Activity toggle ON for first launch, so the
+        // raw read in tick() matches SettingsView's @AppStorage default.
+        UserDefaults.standard.register(defaults: [Self.enabledKey: true])
+
         // Execute Live Activity button intents. The widget extension only
         // compiles these intent types; perform() runs here in the app process.
         LiveActivityActions.handler = { [weak self] action in
@@ -66,6 +75,14 @@ final class CameraActivityController {
 
     private func tick() {
         let state = snapshot()
+
+        // In-app opt-out (Settings → Live Activity). Read each tick so the toggle
+        // takes effect within ~1 s with no extra observation: when turned off,
+        // tear down any live activity and stop starting new ones.
+        guard UserDefaults.standard.bool(forKey: Self.enabledKey) else {
+            if activity != nil { end() }
+            return
+        }
 
         if state.connected > 0 {
             disconnectedTicks = 0

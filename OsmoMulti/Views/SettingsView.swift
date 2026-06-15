@@ -1,3 +1,4 @@
+import ActivityKit
 import DJIOsmoKit
 import SwiftUI
 
@@ -10,6 +11,12 @@ struct SettingsView: View {
     @State private var showClearConfirmation = false
     /// Camera-drop alert toggle; CameraDropNotifier reads the same key. Default on.
     @AppStorage(CameraDropNotifier.enabledKey) private var dropAlertsEnabled = true
+    /// Live Activity toggle; CameraActivityController reads the same key (its
+    /// default is registered there). Default on.
+    @AppStorage(CameraActivityController.enabledKey) private var liveActivityEnabled = true
+    /// OS-level "Live Activities" switch (iOS Settings → Cam Control). Seeded at
+    /// view creation and kept live by `.task` while Settings is open.
+    @State private var systemActivitiesEnabled = ActivityAuthorizationInfo().areActivitiesEnabled
 
     private let timeoutOptions: [(label: String, seconds: TimeInterval)] = [
         ("2 seconds",  2),
@@ -154,6 +161,17 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    Toggle("Camera Live Activity", isOn: $liveActivityEnabled)
+                        .disabled(!systemActivitiesEnabled)
+                } header: {
+                    Text("Live Activity")
+                } footer: {
+                    Text(systemActivitiesEnabled
+                        ? "Shows a live status card in the Dynamic Island and on the Lock Screen while cameras are connected — battery, GPS, recording state, plus shutter and mode controls."
+                        : "Disabled because Live Activities are turned off for Cam Control in iOS Settings → Cam Control → Live Activities. Turn them on there to use this.")
+                }
+
+                Section {
                     Link(destination: URL(string: "https://github.com/prwhite/djibt/issues")!) {
                         Label("Report an Issue", systemImage: "arrow.up.right")
                     }
@@ -189,6 +207,12 @@ struct SettingsView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
+                }
+            }
+            .task {
+                // Reflect OS-level Live Activities switch changes live while open.
+                for await enabled in ActivityAuthorizationInfo().activityEnablementUpdates {
+                    systemActivitiesEnabled = enabled
                 }
             }
         }
