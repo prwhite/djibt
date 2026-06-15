@@ -96,6 +96,8 @@ struct WatchControlView: View {
                 viewModel.sleepAll()
             }
             .listRowBackground(Color.clear)
+
+            versionFooter
         }
         .animation(.easeInOut, value: viewModel.dropoutAlert)
     }
@@ -185,6 +187,25 @@ struct WatchControlView: View {
             }
         }
         .pickerStyle(.navigationLink)
+    }
+
+    // MARK: - Version
+
+    /// Build identity at the bottom of the list — so after a TestFlight update you
+    /// can confirm on the wrist which build the watch is actually running. Watch-app
+    /// updates are silent and can lag the phone, so this is the only reliable tell.
+    private var versionFooter: some View {
+        Text(appVersion)
+            .font(.caption2)
+            .foregroundStyle(.tertiary)
+            .frame(maxWidth: .infinity)
+            .listRowBackground(Color.clear)
+    }
+
+    private var appVersion: String {
+        let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        let b = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
+        return "v\(v) (\(b))"
     }
 
     // MARK: - Helpers
