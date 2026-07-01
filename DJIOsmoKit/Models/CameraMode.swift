@@ -14,6 +14,7 @@ public enum CameraMode: UInt8, CaseIterable, Equatable, Hashable {
     case subjectFollow = 0x34
     // 360° modes (Osmo 360 — dual lens)
     case panoVideo      = 0x38  // 360° Video
+    case panoHyperlapse = 0x3A  // 360° Hyperlapse (verified live via diagnostics)
     case panoTimelapse  = 0x3B  // 360° Timelapse
     case panoSelfie     = 0x3C  // 360° Selfie (auto-reframe)
     case panoPhoto      = 0x3F  // 360° Photo
@@ -35,6 +36,7 @@ public enum CameraMode: UInt8, CaseIterable, Equatable, Hashable {
         case .lowLight:         return "SuperNight"
         case .subjectFollow:    return "Subject Tracking"
         case .panoVideo:        return "360° Video"
+        case .panoHyperlapse:   return "360° Hyperlapse"
         case .panoTimelapse:    return "360° Timelapse"
         case .panoSelfie:       return "360° Selfie"
         case .panoPhoto:        return "360° Photo"
@@ -49,7 +51,7 @@ public enum CameraMode: UInt8, CaseIterable, Equatable, Hashable {
     public var supportsRecording: Bool {
         switch self {
         case .video, .hyperlapse, .timelapse, .slowMotion, .livestream, .lowLight, .subjectFollow,
-             .panoVideo, .panoTimelapse, .panoSelfie, .panoVortex, .panoSupernight,
+             .panoVideo, .panoHyperlapse, .panoTimelapse, .panoSelfie, .panoVortex, .panoSupernight,
              .singleBoost, .singleSupernight:
             return true
         default:
@@ -68,7 +70,7 @@ public enum CameraMode: UInt8, CaseIterable, Equatable, Hashable {
     /// Whether this is a 360°/panoramic variant (dual-lens capture).
     public var isPanoMode: Bool {
         switch self {
-        case .panoVideo, .panoPhoto, .panoTimelapse, .panoSelfie, .panoVortex, .panoSupernight:
+        case .panoVideo, .panoPhoto, .panoTimelapse, .panoHyperlapse, .panoSelfie, .panoVortex, .panoSupernight:
             return true
         default:
             return false
@@ -78,7 +80,7 @@ public enum CameraMode: UInt8, CaseIterable, Equatable, Hashable {
     /// Whether this mode only exists on the Osmo 360 hardware (pano or single-lens).
     public var is360Exclusive: Bool {
         switch self {
-        case .panoVideo, .panoPhoto, .panoTimelapse, .panoSelfie, .panoVortex, .panoSupernight,
+        case .panoVideo, .panoPhoto, .panoTimelapse, .panoHyperlapse, .panoSelfie, .panoVortex, .panoSupernight,
              .singleBoost, .singleSupernight:
             return true
         default:
@@ -94,7 +96,7 @@ public enum CameraMode: UInt8, CaseIterable, Equatable, Hashable {
         case .slowMotion:                                   return .slowMotion
         case .lowLight:                                     return .superNight
         case .timelapse, .panoTimelapse:                    return .timelapse
-        case .hyperlapse:                                   return .hyperlapse
+        case .hyperlapse, .panoHyperlapse:                  return .hyperlapse
         case .subjectFollow:                                return .subjectTracking
         case .uvc:                                          return nil
         case .panoSupernight, .singleSupernight:             return .superNight
@@ -155,6 +157,7 @@ public enum CameraMode: UInt8, CaseIterable, Equatable, Hashable {
         case .subjectFollow:    return "person.fill.viewfinder"
         case .panoVideo:        return "video"
         case .panoPhoto:        return "camera"
+        case .panoHyperlapse:   return "figure.walk"
         case .panoTimelapse:    return "timelapse"
         case .panoSelfie:       return "person.fill.viewfinder"
         case .panoVortex:       return "arrow.trianglehead.2.counterclockwise.rotate.90"
