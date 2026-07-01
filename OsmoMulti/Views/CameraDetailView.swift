@@ -187,7 +187,7 @@ struct CameraDetailView: View {
     private var unknownCodesSection: some View {
         if !camera.diagnosticUnknowns.isEmpty {
             Section("Unrecognized Codes") {
-                Text("This camera reports values this app version doesn't recognize yet — likely a newer model or firmware, so a few fields read \"Unk.\" Cycle the camera through its modes to collect them all, then tap Copy and send this to the developer to add support.")
+                Text("This camera reports values this app version doesn't recognize yet — likely a newer model or firmware (those fields show a blue \"?\"). Each new code is listed below in the order seen, newest last, as you switch modes. Tap Copy and send this to the developer to add support.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 ForEach(camera.diagnosticUnknowns.reportLines, id: \.self) { line in

@@ -84,7 +84,7 @@ final class DiagnosticUnknownsTests: XCTestCase {
 
     // MARK: - Accumulator
 
-    func testAccumulatorUnionsDistinctCodesAndDeDups() {
+    func testAccumulatorRecordsDistinctCodesInFirstSeenOrderAndDeDups() {
         var acc = DiagnosticUnknowns()
         XCTAssertTrue(acc.isEmpty)
 
@@ -92,27 +92,38 @@ final class DiagnosticUnknownsTests: XCTestCase {
         XCTAssertFalse(acc.merge([.resolution: 0x2A]), "duplicate adds nothing")
         XCTAssertTrue(acc.merge([.mode: 0x1B, .resolution: 0x30]), "new mode + new resolution")
 
-        XCTAssertEqual(acc.codes[.resolution], [0x2A, 0x30])
-        XCTAssertEqual(acc.codes[.mode], [0x1B])
+        // History preserves first-seen order (within a frame: StatusField.allCases order).
+        XCTAssertEqual(acc.history, [
+            .init(field: .resolution, code: 0x2A),
+            .init(field: .mode, code: 0x1B),
+            .init(field: .resolution, code: 0x30),
+        ])
         XCTAssertFalse(acc.isEmpty)
     }
 
-    /// The "cycle the camera through its modes, collect everything, copy once" flow.
-    func testAccumulatorCollectsAcrossSuccessivePushes() {
+    /// The "cycle the camera through its modes, watch each new code appear on its own line
+    /// (newest at the bottom)" flow — the thing that fixes reading which code a mode emits.
+    func testAccumulatorAppendsNewestLast() {
         var acc = DiagnosticUnknowns()
         acc.merge(CameraStatus.parse(from: statusBytes(res: 0x90))!.unmapped)
         acc.merge(CameraStatus.parse(from: statusBytes(res: 0x91))!.unmapped)
         acc.merge(CameraStatus.parse(from: statusBytes(res: 0x90))!.unmapped) // repeat — no-op
         acc.merge(CameraStatus.parse(from: statusBytes(res: 0x92))!.unmapped)
-        XCTAssertEqual(acc.codes[.resolution], [0x90, 0x91, 0x92])
-        XCTAssertEqual(acc.reportLines, ["resolution: 0x90, 0x91, 0x92"])
+        XCTAssertEqual(acc.reportLines, [
+            "resolution  0x90",
+            "resolution  0x91",
+            "resolution  0x92",
+        ])
     }
 
-    func testReportLinesOnlyListsPopulatedFieldsSorted() {
+    func testReportLinesOnePerCodeInHistoryOrder() {
         var acc = DiagnosticUnknowns()
         acc.merge([.mode: 0x40, .resolution: 0x30])
         acc.merge([.resolution: 0x2A])
-        // Order follows StatusField.allCases (mode before resolution); codes sorted.
-        XCTAssertEqual(acc.reportLines, ["mode: 0x40", "resolution: 0x2a, 0x30"])
+        XCTAssertEqual(acc.reportLines, [
+            "mode  0x40",
+            "resolution  0x30",
+            "resolution  0x2a",
+        ])
     }
 }

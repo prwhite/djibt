@@ -47,7 +47,12 @@ public struct CameraStatus: Equatable {
     }
 
     public enum VideoResolution: UInt8, Equatable {
+        // Osmo 360 has its own resolution×lens code space (verified live via the in-app
+        // diagnostics). The code tracks resolution + lens/format (Wide "/W" vs Selfie
+        // reframe), NOT fps — e.g. 6K/30 and 6K/24 Wide are both 0x75.
+        case res2K_360Selfie = 8     // 360 Selfie 2K/240
         case res1080p      = 10
+        case res4K_360Selfie = 14    // 360 Selfie 4K/30
         case res4K_16_9    = 16
         case res2K7_16_9   = 45
         case res1080p_9_16 = 66
@@ -56,9 +61,17 @@ public struct CameraStatus: Equatable {
         case res4K_4_3     = 103
         case res4K_9_16    = 109
         case res360        = 111   // Osmo 360 equirectangular capture
+        case res4K_360Wide = 115   // 360 Pano-Wide 4K/24
+        case res6K_360Wide = 117   // 360 Pano + SuperNight 6K Wide (fps-agnostic)
+        case res3K_360Selfie = 121  // 360 Selfie 3K/30
 
         public var displayName: String {
             switch self {
+            case .res2K_360Selfie: return "2K"
+            case .res3K_360Selfie: return "3K"
+            case .res4K_360Selfie: return "4K"
+            case .res4K_360Wide:   return "4K"
+            case .res6K_360Wide:   return "6K"
             case .res1080p:      return "1080P"
             case .res4K_16_9:    return "4K 16:9"
             case .res2K7_16_9:   return "2.7K 16:9"
