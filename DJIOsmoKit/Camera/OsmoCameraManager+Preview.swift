@@ -34,7 +34,8 @@ public extension OsmoCameraManager {
             remainingPhotoCount: 0,
             remainingStorageMB: 28_672,
             remainingRecordTimeSec: 5_420,
-            temperatureWarning: 0
+            temperatureWarning: 0,
+            unmapped: [:]
         )
 
         // 2. Connected, photo mode, critically low battery, good signal
@@ -58,7 +59,8 @@ public extension OsmoCameraManager {
             remainingPhotoCount: 245,
             remainingStorageMB: 512,
             remainingRecordTimeSec: 0,
-            temperatureWarning: 0
+            temperatureWarning: 0,
+            unmapped: [:]
         )
 
         // 3. Connected but stale — last frame 5 s ago (triggers orange subtitle), fair signal
@@ -82,7 +84,8 @@ public extension OsmoCameraManager {
             remainingPhotoCount: 0,
             remainingStorageMB: 3_200,
             remainingRecordTimeSec: 1_800,
-            temperatureWarning: 0
+            temperatureWarning: 0,
+            unmapped: [:]
         )
 
         // 4. Reconnecting (yellow dot)
@@ -108,7 +111,8 @@ public extension OsmoCameraManager {
             remainingPhotoCount: 0,
             remainingStorageMB: 15_360,
             remainingRecordTimeSec: 3_600,
-            temperatureWarning: 1
+            temperatureWarning: 1,
+            unmapped: [:]
         )
 
         // 6. Connected 360 camera in panoramic video mode, weak signal
@@ -137,14 +141,43 @@ public extension OsmoCameraManager {
             remainingPhotoCount: 0,
             remainingStorageMB: 45_056,
             remainingRecordTimeSec: 7_200,
-            temperatureWarning: 0
+            temperatureWarning: 0,
+            unmapped: [:]
         )
+
+        // 8. Connected, reporting resolution + fps codes this build can't map (simulates
+        //    a newer model like the Action 6) — exercises the "Unk" row chip and the
+        //    self-hiding "Unrecognized Codes" diagnostics section.
+        let cam8 = OsmoCamera(name: "Osmo Action 6", isEnabled: true)
+        cam8.connectionState = .connected
+        cam8.lastSeenDate = Date()
+        cam8.rssi = -55
+        cam8.rssiHistory = [-56, -55, -54, -55, -57, -55, -54, -55, -56, -55]
+        cam8.status = CameraStatus(
+            mode: .video,
+            recordingStatus: .liveView,
+            recordingSeconds: 0,
+            batteryPercentage: 88,
+            powerMode: .normal,
+            rawMode: CameraMode.video.rawValue,
+            videoResolution: nil,
+            frameRate: nil,
+            stabilizationMode: .rs,
+            rawStabilization: CameraStatus.StabilizationMode.rs.rawValue,
+            photoRatio: nil,
+            remainingPhotoCount: 0,
+            remainingStorageMB: 61_440,
+            remainingRecordTimeSec: 7_200,
+            temperatureWarning: 0,
+            unmapped: [.resolution: 0x2A, .frameRate: 0x14]
+        )
+        cam8.diagnosticUnknowns.merge(cam8.status.unmapped)
 
         // 7. Disabled (shown in Inactive section)
         let cam7 = OsmoCamera(name: "Osmo Action 4 (B)", isEnabled: false)
         cam7.connectionState = .disconnected
 
-        return [cam1, cam2, cam3, cam4, cam5, cam6, cam7]
+        return [cam1, cam2, cam3, cam4, cam5, cam6, cam8, cam7]
     }
 }
 #endif

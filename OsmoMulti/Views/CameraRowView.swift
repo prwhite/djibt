@@ -182,37 +182,49 @@ struct CameraRowView: View {
         camera.status.recordingStatus.isRecording && isVideoMode
     }
 
-    private var statusSegments: [String] {
+    /// A telemetry chip. `unknown` marks a value this build can't name (new camera /
+    /// firmware) — rendered as a blue "Unk" that signals "tap the row for diagnostics".
+    private typealias StatusSegment = (text: String, unknown: Bool)
+
+    private var statusSegments: [StatusSegment] {
         guard hasLiveStatus else { return [] }
-        var segments: [String] = []
+        var segments: [StatusSegment] = []
         if isVideoMode {
-            if let res = camera.status.videoResolution?.displayName { segments.append(res) }
-            if let fps = camera.status.frameRate?.displayName { segments.append(fps) }
+            if let res = camera.status.videoResolution?.displayName {
+                segments.append((res, false))
+            } else if camera.status.unmapped[.resolution] != nil {
+                segments.append(("?", true))
+            }
+            if let fps = camera.status.frameRate?.displayName {
+                segments.append((fps, false))
+            } else if camera.status.unmapped[.frameRate] != nil {
+                segments.append(("?", true))
+            }
             if camera.isPanoCamera {
-                segments.append("EIS N/A")
+                segments.append(("EIS N/A", false))
             } else if let stabilization = camera.status.stabilizationMode?.displayName {
-                segments.append(stabilization)
-            } else if camera.status.rawStabilization != 0xFF {
-                segments.append("EIS unknown")
+                segments.append((stabilization, false))
+            } else if camera.status.unmapped[.stabilization] != nil && camera.status.rawStabilization != 0xFF {
+                segments.append(("?", true))
             }
 
             if segments.isEmpty, let modeParameters = camera.modeParameters, !modeParameters.isEmpty {
-                segments.append(modeParameters)
+                segments.append((modeParameters, false))
             }
         } else {
-            if let ratio = camera.status.photoRatio?.displayName { segments.append(ratio) }
-            if camera.status.remainingPhotoCount > 0 { segments.append("\(camera.status.remainingPhotoCount) photos") }
+            if let ratio = camera.status.photoRatio?.displayName { segments.append((ratio, false)) }
+            if camera.status.remainingPhotoCount > 0 { segments.append(("\(camera.status.remainingPhotoCount) photos", false)) }
         }
         let mb = camera.status.remainingStorageMB
         if mb > 0 {
             if isVideoMode && camera.status.remainingRecordTimeSec > 0 {
-                segments.append(formatStorage(mb) + " / ~\(formatCompactDuration(Int(camera.status.remainingRecordTimeSec)))")
+                segments.append((formatStorage(mb) + " / ~\(formatCompactDuration(Int(camera.status.remainingRecordTimeSec)))", false))
             }
             else {
-                segments.append(formatStorage(mb))
+                segments.append((formatStorage(mb), false))
             }
         }
-        
+
         return segments
     }
 
@@ -226,16 +238,29 @@ struct CameraRowView: View {
             // wrapping and expanding the row height. (Recording duration moved to
             // the far-right indicator.)
             HStack(spacing: 4) {
-                ForEach(Array(segments.enumerated()), id: \.offset) { index, label in
-                    if index.isMultiple(of: 2) {
+                ForEach(Array(segments.enumerated()), id: \.offset) { index, segment in
+                    if segment.unknown {
+                        // Unknown value → always a blue pill (a "tap the row for
+                        // diagnostics" link cue), regardless of its slot in the alternating
+                        // scheme. A bare, un-pilled "?" read oddly, so pill it uniformly.
+                        Text(segment.text)
+                            .font(.caption2)
+                            .lineLimit(1)
+                            .foregroundStyle(.white)
+                            // Wider than the data pills' 4pt so a single "?" gives a
+                            // comfortable tap target and matches their visual weight.
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 1)
+                            .background(Color.blue, in: .rect(cornerRadius: 3))
+                    } else if index.isMultiple(of: 2) {
                         // Plain: system foreground on background
-                        Text(label)
+                        Text(segment.text)
                             .font(.caption2)
                             .lineLimit(1)
                             .foregroundStyle(.primary)
                     } else {
                         // Inverted: system background on foreground pill
-                        Text(label)
+                        Text(segment.text)
                             .font(.caption2)
                             .lineLimit(1)
                             .foregroundStyle(.background)

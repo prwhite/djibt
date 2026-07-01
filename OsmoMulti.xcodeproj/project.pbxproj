@@ -61,6 +61,7 @@
 		BBFED5FDB3C21C96D3A0A9CD /* ConnectionCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97A0C3C5D3CC6AC613EBFCAA /* ConnectionCommand.swift */; };
 		BFF5DF596CFC3F8A83ED8766 /* CameraDropNotifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 007BF4B45048FBFAED6ED6AA /* CameraDropNotifier.swift */; };
 		CACC83F5E3367323F06DD518 /* GPSPushCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D82B5852DB15814F0429594 /* GPSPushCommand.swift */; };
+		CE5958481D0E315AD14A2721 /* DiagnosticUnknownsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AFC7C27B85431191B9CA877 /* DiagnosticUnknownsTests.swift */; };
 		D28B1B70A771347BEE54C437 /* OsmoWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB86E24EE94AF69E7E4E57A2 /* OsmoWatchApp.swift */; };
 		D3A6BF72ECFD46DCC620D7D4 /* ModeDetailsPushCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5748F9425ECD83D3EE0F0C6B /* ModeDetailsPushCommand.swift */; };
 		D7458693C464FCC7949E4C69 /* CameraDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5154755099B80CB654708951 /* CameraDetailView.swift */; };
@@ -70,6 +71,7 @@
 		EE45C36217677383E88D4E73 /* OsmoLocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDCA5C70829E8EA39D4F8928 /* OsmoLocationManager.swift */; };
 		EFEFE08A6D17D116007BF5EC /* OsmoWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = FD00D2B5302B0E4684DB8A4B /* OsmoWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		F0BCEE371E1B4A705890B449 /* WatchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EA2991A288C4BAE21024128 /* WatchViewModel.swift */; };
+		F6732F749CCF8FF982913CCA /* DiagnosticUnknowns.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4540D918082FE01FE4B3936E /* DiagnosticUnknowns.swift */; };
 		F7F11D57C1C281440F02B74C /* OsmoCameraManager+Preview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B0A99BDBAF28DB315FE2AA8 /* OsmoCameraManager+Preview.swift */; };
 		F9628096EEA3E7FF751D227F /* FrameBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = D89BC62CAB62EB2AF2705EDC /* FrameBuilder.swift */; };
 		FD7D35A738741DB080A6C091 /* WatchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69A871470DA3A519D7F9EC81 /* WatchBridge.swift */; };
@@ -160,6 +162,7 @@
 		0EA2991A288C4BAE21024128 /* WatchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchViewModel.swift; sourceTree = "<group>"; };
 		14CBEF2F29EDD094645BE89F /* OsmoBLEConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OsmoBLEConnection.swift; sourceTree = "<group>"; };
 		16BC89933A607C29647FF0EB /* ModeCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModeCommand.swift; sourceTree = "<group>"; };
+		1AFC7C27B85431191B9CA877 /* DiagnosticUnknownsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticUnknownsTests.swift; sourceTree = "<group>"; };
 		1F7C475380786E9EF225C441 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		23DA1C44DC0134E8C5AB57FA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		2430493209B0B966F9D0D5F0 /* CameraIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraIntents.swift; sourceTree = "<group>"; };
@@ -173,6 +176,7 @@
 		40400697BA320D8E1824DF73 /* StatusSubscribeCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusSubscribeCommand.swift; sourceTree = "<group>"; };
 		4068EC99D53D899A6F2CCDFF /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		4517D2ECD87BC34C38F77BF6 /* KeyReportCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyReportCommand.swift; sourceTree = "<group>"; };
+		4540D918082FE01FE4B3936E /* DiagnosticUnknowns.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticUnknowns.swift; sourceTree = "<group>"; };
 		455E2513988A17A0F2CC1588 /* OsmoWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OsmoWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4B0A99BDBAF28DB315FE2AA8 /* OsmoCameraManager+Preview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "OsmoCameraManager+Preview.swift"; sourceTree = "<group>"; };
 		4E8263B15ABB871DCD551183 /* GPSFixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPSFixTests.swift; sourceTree = "<group>"; };
@@ -271,6 +275,7 @@
 			isa = PBXGroup;
 			children = (
 				E3EC743303679BC8DF0EFC38 /* CRCTests.swift */,
+				1AFC7C27B85431191B9CA877 /* DiagnosticUnknownsTests.swift */,
 				7C724D28814A8206C2616F50 /* DropoutTests.swift */,
 				68D8C8ADE10B30ADA4DE66C3 /* FrameTests.swift */,
 				4E8263B15ABB871DCD551183 /* GPSFixTests.swift */,
@@ -326,6 +331,7 @@
 				F488F37BC194C985DEC62F18 /* CameraMode.swift */,
 				3312CE9941F41DB906D52CB1 /* CameraStatus.swift */,
 				6916C08A1CE408C53DBDED99 /* ConnectionState.swift */,
+				4540D918082FE01FE4B3936E /* DiagnosticUnknowns.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -697,6 +703,7 @@
 				ADBA3C21DF0DABF9AFF7BF31 /* CameraStatus.swift in Sources */,
 				BBFED5FDB3C21C96D3A0A9CD /* ConnectionCommand.swift in Sources */,
 				68A7E0BA84FA5A23A43D0492 /* ConnectionState.swift in Sources */,
+				F6732F749CCF8FF982913CCA /* DiagnosticUnknowns.swift in Sources */,
 				1BE92A02CD2AE74D3DEA2585 /* FirstSeenLogger.swift in Sources */,
 				F9628096EEA3E7FF751D227F /* FrameBuilder.swift in Sources */,
 				D9CC6824B4F1BC37F152ED4E /* FrameParser.swift in Sources */,
@@ -760,6 +767,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4997EBDBA4DB8FA26BC9A8C9 /* CRCTests.swift in Sources */,
+				CE5958481D0E315AD14A2721 /* DiagnosticUnknownsTests.swift in Sources */,
 				39D7C929BFD72A8F2AAB6B3C /* DropoutTests.swift in Sources */,
 				2492B25AAEDEB87B14CE3DB8 /* FrameTests.swift in Sources */,
 				965779F6C3FFAAF09E1C28E8 /* GPSFixTests.swift in Sources */,

@@ -25,6 +25,7 @@ struct CameraDetailView: View {
                 retrySection
             }
             statusSection
+            unknownCodesSection
             controlsSection
             diagnosticsSection
         }
@@ -175,6 +176,47 @@ struct CameraDetailView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Unrecognized Codes
+
+    /// Self-hiding: only appears when the camera has reported status codes this build
+    /// can't map (new model / firmware). Accumulates across the session, so a tester can
+    /// cycle the camera through its modes and copy every code at once — no log-diving.
+    @ViewBuilder
+    private var unknownCodesSection: some View {
+        if !camera.diagnosticUnknowns.isEmpty {
+            Section("Unrecognized Codes") {
+                Text("This camera reports values this app version doesn't recognize yet — likely a newer model or firmware, so a few fields read \"Unk.\" Cycle the camera through its modes to collect them all, then tap Copy and send this to the developer to add support.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                ForEach(camera.diagnosticUnknowns.reportLines, id: \.self) { line in
+                    Text(line)
+                        .font(.caption.monospaced())
+                        .textSelection(.enabled)
+                }
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    UIPasteboard.general.string = unknownCodesReport
+                    viewModel.showToast("Diagnostics copied")
+                } label: {
+                    Label("Copy Diagnostics", systemImage: "doc.on.doc")
+                }
+                .buttonStyle(PressFeedbackButtonStyle())
+            }
+        }
+    }
+
+    /// The copyable blob: app build + camera model/SDK context + the accumulated codes.
+    private var unknownCodesReport: String {
+        var lines: [String] = []
+        let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        let b = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
+        lines.append("Cam Control \(v) (\(b)) — unrecognized camera codes")
+        if let product = camera.productName { lines.append("model: \(product)") }
+        if let sdk = camera.sdkVersion { lines.append("sdk: \(sdk)") }
+        lines.append(contentsOf: camera.diagnosticUnknowns.reportLines)
+        return lines.joined(separator: "\n")
     }
 
     // MARK: - Controls

@@ -162,9 +162,12 @@ public struct CameraStatus: Equatable {
     public let remainingRecordTimeSec: UInt32
     /// Temperature warning level. 0 = normal, >0 = overheating warning.
     public let temperatureWarning: UInt8
+    /// Codes we couldn't map on this frame: field → raw byte (new/unsupported values).
+    public let unmapped: [StatusField: UInt8]
 
-    /// Logs unmapped enum bytes once per unique value — prevents per-second log spam.
-    nonisolated(unsafe) private static var stabilizationLogger = FirstSeenLogger<UInt8>()
+    /// Logs each unique (field, code) unmapped pair once — prevents per-second log spam.
+    private struct SeenCode: Hashable { let field: StatusField; let code: UInt8 }
+    nonisolated(unsafe) private static var codeLogger = FirstSeenLogger<SeenCode>()
 
     // MARK: - Sentinel
 
@@ -183,7 +186,8 @@ public struct CameraStatus: Equatable {
         remainingPhotoCount: 0,
         remainingStorageMB: 0,
         remainingRecordTimeSec: 0,
-        temperatureWarning: 0
+        temperatureWarning: 0,
+        unmapped: [:]
     )
 
     // MARK: - Init
@@ -203,7 +207,8 @@ public struct CameraStatus: Equatable {
         remainingPhotoCount: UInt32,
         remainingStorageMB: UInt32,
         remainingRecordTimeSec: UInt32,
-        temperatureWarning: UInt8
+        temperatureWarning: UInt8,
+        unmapped: [StatusField: UInt8]
     ) {
         self.mode = mode
         self.recordingStatus = recordingStatus
@@ -220,6 +225,7 @@ public struct CameraStatus: Equatable {
         self.remainingStorageMB = remainingStorageMB
         self.remainingRecordTimeSec = remainingRecordTimeSec
         self.temperatureWarning = temperatureWarning
+        self.unmapped = unmapped
     }
 
     /// Parse from the raw DATA payload bytes (after CmdSet + CmdID have been stripped).
@@ -249,8 +255,21 @@ public struct CameraStatus: Equatable {
         let powerMode = PowerMode(rawValue: bytes[28]) ?? .normal
         let temperatureWarning = bytes[30]
         let batteryPercentage = min(100, max(0, Int(bytes[37])))
-        if stabilizationMode == nil && rawStabilization != 0 && stabilizationLogger.insertIfNew(rawStabilization) {
-            OsmoLog.camera.info("Unmapped stabilization byte: 0x\(String(rawStabilization, radix: 16), privacy: .public) (mode=0x\(String(rawMode, radix: 16), privacy: .public))")
+        // Codes our enums predate (new camera model / firmware, e.g. Osmo Action 6's
+        // 8K / square modes) come back nil and would otherwise vanish from the readout
+        // with no trace. Capture the raw byte per field for the in-app diagnostics. A `0`
+        // in a slot means "not applicable" (e.g. no video resolution in photo mode).
+        var unmapped: [StatusField: UInt8] = [:]
+        if mode == nil { unmapped[.mode] = rawMode }
+        if videoResolution == nil, bytes[2] != 0 { unmapped[.resolution] = bytes[2] }
+        if frameRate == nil, bytes[3] != 0 { unmapped[.frameRate] = bytes[3] }
+        if stabilizationMode == nil, rawStabilization != 0 { unmapped[.stabilization] = rawStabilization }
+        if photoRatio == nil, bytes[8] != 0 { unmapped[.photoRatio] = bytes[8] }
+        // Log each unique (field, code) once as a backstop to the in-app diagnostics.
+        for (field, code) in unmapped {
+            if codeLogger.insertIfNew(SeenCode(field: field, code: code)) {
+                OsmoLog.camera.info("Unmapped \(field.label, privacy: .public) byte: 0x\(String(code, radix: 16), privacy: .public) (mode=0x\(String(rawMode, radix: 16), privacy: .public))")
+            }
         }
         return CameraStatus(
             mode: mode,
@@ -267,7 +286,8 @@ public struct CameraStatus: Equatable {
             remainingPhotoCount: remainingPhotoCount,
             remainingStorageMB: remainingStorageMB,
             remainingRecordTimeSec: remainingRecordTimeSec,
-            temperatureWarning: temperatureWarning
+            temperatureWarning: temperatureWarning,
+            unmapped: unmapped
         )
     }
 }

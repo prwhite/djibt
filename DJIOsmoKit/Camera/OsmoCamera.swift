@@ -90,6 +90,10 @@ public final class OsmoCamera: Identifiable {
     public internal(set) var disconnectedSince: Date?
     /// Most recently received camera status. `.unknown` until first notification arrives.
     public internal(set) var status: CameraStatus = .unknown
+    /// Distinct status codes this session that this build can't map (new camera model /
+    /// firmware). Collected live for the detail-view diagnostics so a tester can cycle a
+    /// camera through its modes and report the codes without log-diving.
+    public internal(set) var diagnosticUnknowns = DiagnosticUnknowns()
     /// When the last valid status notification was received from this camera.
     public internal(set) var lastSeenDate: Date?
     /// Whether this camera is actively managed. Disabled cameras are not connected to.
@@ -439,6 +443,12 @@ public final class OsmoCamera: Identifiable {
                 }
                 confirmModeIfNeeded(parsed.mode)
                 if parsed != status { status = parsed }
+                // Fold any codes we couldn't map into the session diagnostics — only
+                // reassign (triggering observation) when something new was actually added.
+                if !parsed.unmapped.isEmpty {
+                    var collected = diagnosticUnknowns
+                    if collected.merge(parsed.unmapped) { diagnosticUnknowns = collected }
+                }
                 if !isPanoCamera, let mode = parsed.mode, mode.is360Exclusive {
                     isPanoCamera = true
                     OsmoLog.camera.info("Camera \(self.name, privacy: .public) detected as 360°/panoramic")
