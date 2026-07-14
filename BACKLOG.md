@@ -67,3 +67,56 @@ single-cam WiFi app. The Action 4/5 + 360 family (R-SDK `0xAA`) is unaffected;
 BLE control there works and ships. Don't re-investigate without new evidence that
 DJI exposes Pocket capture over BLE. Full writeup + PoC:
 `docs.nogit/pocket3-feasibility-and-architecture.md` §12 (gitignored).
+
+## Field report — 13-camera TV commercial shoot (2026-07, NZ operator)
+Freelance camera op ran the app across a 2-day shoot: **~10 cameras controlled
+simultaneously without issue** (mix of Action 4 / Action 5 Pro / one Osmo 360 / a
+newer resolution-missing body). Core loop — cut-and-roll between takes + glanceable
+card/battery/rec state — validated in the field; fast relink after out-of-range
+praised unprompted. The items below are **candidates from that report — not
+committed**; several may not be worth doing.
+
+### Fleet-scale dropout notifications (candidate)
+At 10 cameras with cars driving out of range, per-drop alerts were constant noise →
+operator turned notifications **off entirely** (losing the drops that actually
+matter). Leading idea: a sub-pref to notify **once per camera per session** rather
+than on every drop — cheaper and less clutter than expected-vs-unexpected
+classification. Alternatives (rate-limit, per-camera mute, global quiet mode) noted
+but heavier.
+
+### Live Activity at fleet scale (candidate — likely not worth)
+The LA shows only the **top camera** in the list; at N=10 that's near-useless. A
+fleet-summary LA ("8 rec / 2 idle / 1 low batt") was floated, but the read is that
+**multi-camera status in the LA clutters fast** and may not earn its place. Park
+unless the LA is reworked anyway. The single-camera limitation was the operator's
+actual reason for disabling it.
+
+### Live Activity teardown while backgrounded (investigated — not a bug)
+Operator saw the lock-screen LA "there even when I exited the app." Lifecycle
+(`CameraActivityController`) is driven by a **1 Hz foreground timer**: starts on ≥1
+`.connected` camera, ends 30 s (`endAfterDisconnectedTicks`) after the connected
+count hits 0 (`.immediate` dismissal), `staleDate` 120 s dims stale content. A
+`.sleeping` camera does **not** count as connected, so an all-sleep rig correctly
+starts the 30 s end countdown. **The gap:** that logic only runs on the foreground
+timer — if the rig goes down while the app is backgrounded/killed, the auto-end
+can't fire, so the LA freezes, dims at 120 s, and lingers until the app is reopened
+(timer resumes → 30 s → end) or iOS reaps the stale activity. This is
+**ActivityKit-by-design persistence + foreground-only teardown, not a CoreBluetooth
+leak** (sleep drops the count; disconnect drops the count). Optional fix:
+event-driven teardown (end on connected→0 from the state change, not just the tick)
+so a backgrounded sleep/disconnect dismisses it promptly; relates to the
+**CoreBluetooth state restoration** item above. Low priority unless the LA is kept
+as-is.
+
+### MIMO coexistence — surface "in use by another controller" (candidate)
+Confirmed on set: a camera bound to DJI Mimo (for the live-video rig) is **invisible
+to this app until disconnected** — the hard BLE one-controller-per-camera limit, not
+a bug. Candidate: an in-app hint ("in use by another controller") instead of the
+camera silently not appearing, plus documenting the boundary. Cameras feeding a
+live-video path genuinely can't also be ours.
+
+### Help-site FAQ material (for the planned help site)
+Real-user FAQ fodder from the same report: (1) **one controller per camera** — Mimo
+and this app can't share a camera; (2) **put Mimo on 5.8 GHz, not 2.4 GHz** — 2.4 GHz
+Wi-Fi contends with our 2.4 GHz BLE and made *both* laggy (operator confirmed 5.8
+fixed it). Feed into the help/support page.
