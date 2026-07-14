@@ -135,10 +135,6 @@ struct CameraDetailView: View {
                     }
                 }
             }
-//            LabeledContent("Mode", value: hasLiveStatus ? modeDisplayName : "—")
-//            if hasLiveStatus, let modeParameters = camera.modeParameters {
-//                LabeledContent("Mode Parameters", value: modeParameters)
-//            }
             LabeledContent("Battery", value: hasLiveStatus ? "\(camera.status.batteryPercentage)%" : "—")
 
             if hasLiveStatus {

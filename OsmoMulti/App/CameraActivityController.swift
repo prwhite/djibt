@@ -7,9 +7,10 @@ private let log = Logger(subsystem: "net.prehiti.payton.CamControl", category: "
 
 /// Owns the camera-session Live Activity: starts it when the rig comes up,
 /// pushes diffed state updates (1 s tick, change-driven like WatchBridge), ends
-/// it when the rig has been gone for a while, and executes the activity's
-/// button intents (`LiveActivityActions.handler` — LiveActivityIntents run in
-/// this process even when tapped from the lock screen).
+/// it (event-driven off the connection-change signal, so it works while
+/// backgrounded) once the rig has been gone past a grace period, and executes the
+/// activity's button intents (`LiveActivityActions.handler` — LiveActivityIntents
+/// run in this process even when tapped from the lock screen).
 @MainActor
 final class CameraActivityController {
 
@@ -19,11 +20,15 @@ final class CameraActivityController {
     private var activity: Activity<CamActivityAttributes>?
     private var timer: Timer?
     private var lastState: CamActivityAttributes.ContentState?
-    /// Consecutive ticks with zero connected cameras — ends the activity after
-    /// `Self.endAfterDisconnectedTicks` (transient drops shouldn't kill it).
-    private var disconnectedTicks = 0
+    /// Pending teardown after the live set emptied; cancelled if a camera returns
+    /// during the grace period.
+    private var endTask: Task<Void, Never>?
 
-    private static let endAfterDisconnectedTicks = 30
+    /// Grace period after the last camera leaves the live set before the activity
+    /// ends — rides out a transient total drop. Driven by a cancellable task off the
+    /// connection-change event, so it also fires while backgrounded (not just on the
+    /// foreground tick).
+    private static let endGracePeriod: TimeInterval = 30
     /// Content older than this renders as stale (system dims it) — covers the
     /// app being terminated while an activity is live.
     private static let staleAfter: TimeInterval = 120
@@ -49,9 +54,18 @@ final class CameraActivityController {
             await self?.handle(action)
         }
 
+        // Event-driven teardown: react the instant a camera connects / disconnects /
+        // sleeps, so the activity ends promptly when the rig empties even while the
+        // app is backgrounded (the foreground timer below can't tick then).
+        manager.onConnectionStateChange = { [weak self] in
+            self?.evaluate()
+        }
+
+        // Foreground cadence for content updates (recording clock, battery, GPS) and
+        // as a fallback driver for start/teardown while the app is active.
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
-                self?.tick()
+                self?.evaluate()
             }
         }
     }
@@ -73,35 +87,55 @@ final class CameraActivityController {
 
     // MARK: - Lifecycle + Updates
 
-    private func tick() {
+    /// Evaluate current state and drive the activity. Called both by the 1 s
+    /// foreground timer and by `manager.onConnectionStateChange` (event-driven), so
+    /// teardown works even when the app is backgrounded and the timer is idle.
+    private func evaluate() {
         let state = snapshot()
 
-        // In-app opt-out (Settings → Live Activity). Read each tick so the toggle
-        // takes effect within ~1 s with no extra observation: when turned off,
-        // tear down any live activity and stop starting new ones.
+        // In-app opt-out (Settings → Live Activity). Checked on every evaluation so
+        // the toggle takes effect within ~1 s: when turned off, tear down any live
+        // activity and stop starting new ones.
         guard UserDefaults.standard.bool(forKey: Self.enabledKey) else {
             if activity != nil { end() }
             return
         }
 
         if state.connected > 0 {
-            disconnectedTicks = 0
+            cancelPendingEnd()
             if activity == nil {
                 requestActivity(with: state)
             } else if state != lastState {
                 update(with: state)
             }
         } else if activity != nil {
-            // Keep showing the (accurate) zero-connected state while the rig is
-            // briefly down; tear the activity down once it's clearly over.
-            disconnectedTicks += 1
+            // Rig is down. Push the accurate zero-connected state, then schedule
+            // teardown after the grace period (rides out a transient total drop).
             if state != lastState {
                 update(with: state)
             }
-            if disconnectedTicks >= Self.endAfterDisconnectedTicks {
-                end()
+            scheduleEnd()
+        }
+    }
+
+    /// Schedule the activity to end after `endGracePeriod`, unless a camera returns
+    /// first (which cancels it). Idempotent — a call while one is pending is a no-op.
+    private func scheduleEnd() {
+        guard endTask == nil else { return }
+        endTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(Self.endGracePeriod))
+            guard !Task.isCancelled, let self else { return }
+            if self.snapshot().connected == 0 {
+                self.end()            // clears endTask
+            } else {
+                self.endTask = nil    // a camera came back during the grace
             }
         }
+    }
+
+    private func cancelPendingEnd() {
+        endTask?.cancel()
+        endTask = nil
     }
 
     private func snapshot() -> CamActivityAttributes.ContentState {
@@ -168,7 +202,7 @@ final class CameraActivityController {
         let finalState = lastState ?? snapshot()
         self.activity = nil
         lastState = nil
-        disconnectedTicks = 0
+        cancelPendingEnd()
         Task {
             await activity.end(.init(state: finalState, staleDate: nil), dismissalPolicy: .immediate)
             log.info("Live Activity ended")

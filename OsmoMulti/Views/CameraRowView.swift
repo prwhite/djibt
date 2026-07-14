@@ -190,26 +190,31 @@ struct CameraRowView: View {
         guard hasLiveStatus else { return [] }
         var segments: [StatusSegment] = []
         if isVideoMode {
-            if let res = camera.status.videoResolution?.displayName {
-                segments.append((res, false))
-            } else if camera.status.unmapped[.resolution] != nil {
-                segments.append(("?", true))
+            // Prefer the camera's own mode-detail string (res/fps/aspect, from the 1D06
+            // push) over our byte-decoded resolution+fps — the resolution byte isn't a
+            // reliable 1:1 lookup across 360 modes. Fall back to the decoded values for
+            // cameras/modes that don't send 1D06 (older Action firmware).
+            if let params = camera.modeParameters, !params.isEmpty {
+                segments.append((params, false))
+            } else {
+                if let res = camera.status.videoResolution?.displayName {
+                    segments.append((res, false))
+                } else if camera.status.unmapped[.resolution] != nil {
+                    segments.append(("?", true))
+                }
+                if let fps = camera.status.frameRate?.displayName {
+                    segments.append((fps, false))
+                } else if camera.status.unmapped[.frameRate] != nil {
+                    segments.append(("?", true))
+                }
             }
-            if let fps = camera.status.frameRate?.displayName {
-                segments.append((fps, false))
-            } else if camera.status.unmapped[.frameRate] != nil {
-                segments.append(("?", true))
-            }
+            // Stabilization stays separate — the mode-detail string doesn't include it.
             if camera.isPanoCamera {
                 segments.append(("EIS N/A", false))
             } else if let stabilization = camera.status.stabilizationMode?.displayName {
                 segments.append((stabilization, false))
             } else if camera.status.unmapped[.stabilization] != nil && camera.status.rawStabilization != 0xFF {
                 segments.append(("?", true))
-            }
-
-            if segments.isEmpty, let modeParameters = camera.modeParameters, !modeParameters.isEmpty {
-                segments.append((modeParameters, false))
             }
         } else {
             if let ratio = camera.status.photoRatio?.displayName { segments.append((ratio, false)) }

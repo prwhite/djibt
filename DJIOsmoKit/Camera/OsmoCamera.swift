@@ -66,6 +66,11 @@ public final class OsmoCamera: Identifiable {
             } else if connectionState == .connected {
                 suppressNextDropEvent = false   // hygiene: never carry a stale flag into a live session
             }
+            // Event-driven signal that the live set may have changed. Lets the Live
+            // Activity controller tear down the instant the rig empties — even while
+            // backgrounded, since a BLE sleep/disconnect wakes us right here — rather
+            // than waiting on its foreground timer.
+            onConnectionStateChanged?()
         }
     }
     /// One-shot: set by user-initiated disconnect paths so the next
@@ -74,6 +79,11 @@ public final class OsmoCamera: Identifiable {
     /// Fired on an unexpected connected→not-live transition (comms failure).
     /// Assigned by `OsmoCameraManager`, which debounces it into `onCameraDropout`.
     var onUnexpectedDrop: ((OsmoCamera) -> Void)?
+    /// Fired on ANY connection-state transition. Assigned by `OsmoCameraManager`,
+    /// which forwards it to its aggregate `onConnectionStateChange` so consumers can
+    /// react the instant the live set changes — including in the background —
+    /// instead of polling.
+    var onConnectionStateChanged: (() -> Void)?
     /// The state before the most recent transition. Used to distinguish sleeping
     /// cameras (which legitimately wait in passive reconnect) from stuck retries.
     public internal(set) var previousConnectionState: ConnectionState = .disconnected
@@ -437,10 +447,13 @@ public final class OsmoCamera: Identifiable {
                     let hex = Array(frame.payload).map { String(format: "%02X", $0) }.joined(separator: " ")
                     OsmoLog.camera.info("Mode 0x\(String(parsed.rawMode, radix: 16, uppercase: true), privacy: .public) (\(label, privacy: .public)) on \(self.name, privacy: .public) — raw payload (\(frame.payload.count)B): \(hex, privacy: .private)")
                 }
-                if parsed.rawMode != previousRawMode {
-                    modeName = nil
-                    modeParameters = nil
-                }
+                // Deliberately do NOT clear modeName/modeParameters on a mode change. The
+                // 1D06 mode-details push that sets them is unsolicited and can arrive just
+                // BEFORE this 1D02 mode-change frame; clearing here would clobber a fresh
+                // 1D06 for the new mode, and since the camera sends 1D06 only once per
+                // switch, it'd stay lost until the mode is re-asserted (the reported "?"
+                // bug). The next 1D06 replaces them; the mode/resolution the row shows for
+                // the mode itself comes from status.mode, which is always current.
                 confirmModeIfNeeded(parsed.mode)
                 if parsed != status { status = parsed }
                 // Fold any codes we couldn't map into the session diagnostics — only

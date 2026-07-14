@@ -22,7 +22,7 @@ public final class OsmoCameraManager: NSObject {
     // MARK: - Observable State
 
     public private(set) var cameras: [OsmoCamera] = [] {
-        didSet { wireDropDetection() }   // idempotent; covers add, persistence load, preview
+        didSet { wirePerCameraHooks() }   // idempotent; covers add, persistence load, preview
     }
     public private(set) var isScanning: Bool = false
 
@@ -34,6 +34,12 @@ public final class OsmoCameraManager: NSObject {
     /// Rejoins fire nothing.
     public var onCameraDropout: ((OsmoCamera) -> Void)?
 
+    /// Fired whenever any camera's connection state changes (connect / disconnect /
+    /// sleep / reconnect). Lets the Live Activity controller tear down promptly when
+    /// the live set empties — even while backgrounded — instead of waiting on its
+    /// foreground timer.
+    public var onConnectionStateChange: (() -> Void)?
+
     /// How long a dropped camera gets to auto-reconnect before `onCameraDropout`
     /// fires. Most BLE blips recover in 2–8 s (and the camera keeps recording on
     /// its own meanwhile), so alerting instantly would cry wolf.
@@ -41,13 +47,17 @@ public final class OsmoCameraManager: NSObject {
 
     private var dropoutTasks: [UUID: Task<Void, Never>] = [:]
 
-    /// (Re)assign every camera's unexpected-drop hook. Reassignment is idempotent,
-    /// so running it on each `cameras` mutation is safe and catches all creation
-    /// paths (addCamera, persistence load, preview fixtures).
-    private func wireDropDetection() {
+    /// (Re)assign every camera's per-camera hooks (unexpected-drop + connection-state
+    /// change). Reassignment is idempotent, so running it on each `cameras` mutation
+    /// is safe and catches all creation paths (addCamera, persistence load, preview
+    /// fixtures).
+    private func wirePerCameraHooks() {
         for camera in cameras {
             camera.onUnexpectedDrop = { [weak self] cam in
                 self?.scheduleDropoutCheck(cam)
+            }
+            camera.onConnectionStateChanged = { [weak self] in
+                self?.onConnectionStateChange?()
             }
         }
     }
