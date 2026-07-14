@@ -15,7 +15,7 @@ APP := $(DERIVED)/Build/Products/$(CONFIG)-iphoneos/OsmoMulti.app
 XCBS := xcodebuild -project $(PROJECT) -scheme $(SCHEME) -destination 'generic/platform=iOS' -configuration $(CONFIG) -derivedDataPath $(DERIVED)
 NOSIGN := CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
 
-.PHONY: help build build-ci gen signing-local test runtimes devices install install-watch deploy logs logs-watch clean
+.PHONY: help build build-ci gen signing-local doctor test runtimes devices install install-watch deploy logs logs-watch clean
 
 help: ## Show this help
 	@sed \
@@ -40,6 +40,9 @@ signing-local: ## Scaffold Config/Signing.local.xcconfig (local signing override
 		cp Config/Signing.local.xcconfig.example Config/Signing.local.xcconfig; \
 		echo "✓ Created Config/Signing.local.xcconfig — edit DEVELOPMENT_TEAM + BUNDLE_ID_PREFIX, then rebuild."; \
 	fi
+
+doctor: ## Diagnose code-signing state before a device build (read-only, ~2s)
+	@./scripts/signing-doctor.sh
 
 test: ## Compile DJIOsmoKit unit tests (no signing)
 	xcodebuild -project $(PROJECT) -target DJIOsmoKitTests -sdk iphoneos -configuration $(CONFIG) $(NOSIGN) build
