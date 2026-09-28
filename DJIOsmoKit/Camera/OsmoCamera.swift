@@ -435,7 +435,6 @@ public final class OsmoCamera: Identifiable {
         if frame.cmdSet == 0x1D && frame.cmdID == 0x02 {
             // Camera status push
             if let parsed = CameraStatus.parse(from: Array(frame.payload)) {
-                let previousRawMode = status.rawMode
                 let modeStr = parsed.mode?.displayName ?? "raw=0x\(String(parsed.rawMode, radix: 16, uppercase: true))"
                 let resStr = parsed.videoResolution?.displayName ?? "raw=\(Array(frame.payload)[2])"
                 let fpsStr = parsed.frameRate?.displayName ?? "raw=\(Array(frame.payload)[3])"
