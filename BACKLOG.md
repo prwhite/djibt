@@ -91,22 +91,10 @@ fleet-summary LA ("8 rec / 2 idle / 1 low batt") was floated, but the read is th
 unless the LA is reworked anyway. The single-camera limitation was the operator's
 actual reason for disabling it.
 
-### Live Activity teardown while backgrounded (investigated — not a bug)
-Operator saw the lock-screen LA "there even when I exited the app." Lifecycle
-(`CameraActivityController`) is driven by a **1 Hz foreground timer**: starts on ≥1
-`.connected` camera, ends 30 s (`endAfterDisconnectedTicks`) after the connected
-count hits 0 (`.immediate` dismissal), `staleDate` 120 s dims stale content. A
-`.sleeping` camera does **not** count as connected, so an all-sleep rig correctly
-starts the 30 s end countdown. **The gap:** that logic only runs on the foreground
-timer — if the rig goes down while the app is backgrounded/killed, the auto-end
-can't fire, so the LA freezes, dims at 120 s, and lingers until the app is reopened
-(timer resumes → 30 s → end) or iOS reaps the stale activity. This is
-**ActivityKit-by-design persistence + foreground-only teardown, not a CoreBluetooth
-leak** (sleep drops the count; disconnect drops the count). Optional fix:
-event-driven teardown (end on connected→0 from the state change, not just the tick)
-so a backgrounded sleep/disconnect dismisses it promptly; relates to the
-**CoreBluetooth state restoration** item above. Low priority unless the LA is kept
-as-is.
+### Live Activity teardown while backgrounded (shipped 2026-07-14)
+Teardown is now **event-driven** off the cameras' connection-state change, not just
+the 1 Hz foreground timer — a rig going down while backgrounded ends the LA after a
+cancellable 30 s grace (`CameraActivityController`, commit `2c71192`).
 
 ### MIMO coexistence — surface "in use by another controller" (candidate)
 Confirmed on set: a camera bound to DJI Mimo (for the live-video rig) is **invisible
